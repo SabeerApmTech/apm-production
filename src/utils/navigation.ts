@@ -34,8 +34,9 @@ export const navItems: NavItem[] = [
     label: "Schedules",
     icon: CalendarRange,
     children: [
-      { label: "View Schedules", path: "/schedules" },
-      { label: "Create Schedule", path: "/schedules/create" },
+      { label: "Pending Schedules", path: "/pending-schedules" },
+      { label: "Completed Schedule", path: "/completed-schedules" },
+      { label: "Handover To Store", path: "/handover-to-store" },
     ],
   },
   {
@@ -68,8 +69,8 @@ export const navItems: NavItem[] = [
     label: "Master Data",
     icon: Database,
     children: [
-      { label: "Categories", path: "/master-data/categories" },
       { label: "Products", path: "/master-data/products" },
+      { label: "Company", path: "/master-data/company" },
     ],
   },
   {

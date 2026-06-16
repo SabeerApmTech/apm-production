@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { EmployeeRow } from "./EmployeePage"
 
 const schema = z.object({
+  employeeId: z.string().min(1, "Employee ID is required"),
   name: z.string().min(1, "Employee name is required"),
   dob: z.string().min(1, "Date of birth is required"),
   phone: z
@@ -53,12 +54,13 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
     resolver: zodResolver(schema),
     defaultValues: row
       ? {
+          employeeId: row.employeeId,
           name: row.name,
           dob: toInputDate(row.dob),
           phone: row.phone,
           employmentType: row.employmentType,
         }
-      : { name: "", dob: "", phone: "", employmentType: undefined },
+      : { employeeId: "", name: "", dob: "", phone: "", employmentType: undefined },
   })
 
   const { isSubmitting } = form.formState
@@ -68,6 +70,20 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
 
         <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="employeeId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Employee ID</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. APM0001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="name"
@@ -81,23 +97,23 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control}
-            name="dob"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date of Birth</FormLabel>
-                <DatePicker
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Pick a date"
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
+
+        <FormField
+          control={form.control}
+          name="dob"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date of Birth</FormLabel>
+              <DatePicker
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Pick a date"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

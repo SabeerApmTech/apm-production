@@ -6,6 +6,10 @@ import { Manager } from "./pages/user_management/manager/Manager";
 import { Supervisor } from "./pages/user_management/supervisor/Supervisor";
 import { Operator } from "./pages/user_management/operator/Operator";
 import { Department } from "./pages/department/Department";
+import { Products } from "./pages/master_data/products/Products";
+import { Company } from "./pages/master_data/company/Company";
+import { PendingSchedules } from "./pages/pending_schedules/PendingSchedules"
+import { CompletedSchedules } from "./pages/completed_schedules/CompletedSchedules";
 
 function App() {
   return (
@@ -18,6 +22,10 @@ function App() {
           <Route path="/user-management/supervisor" element={<Supervisor />} />
           <Route path="/user-management/operator" element={<Operator />} />
           <Route path="/department" element={<Department />} />
+          <Route path="/master-data/products" element={<Products />} />
+          <Route path="/master-data/company" element={<Company />} />
+          <Route path="/pending-schedules" element={<PendingSchedules />} />
+          <Route path="/completed-schedules" element={<CompletedSchedules />} />
         </Route>
       </Routes>
     </BrowserRouter>

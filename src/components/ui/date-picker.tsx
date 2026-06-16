@@ -72,7 +72,7 @@ export function DatePicker({
           }}
           captionLayout="dropdown-buttons"
           fromYear={1950}
-          toYear={new Date().getFullYear()}
+          toYear={new Date().getFullYear() + 10}
           classNames={{ caption_label: "hidden" }}
           initialFocus
         />

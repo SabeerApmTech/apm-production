@@ -1,16 +1,20 @@
 import { useRef, useState, useCallback, useMemo, useLayoutEffect } from "react"
 import { AgGridReact } from "ag-grid-react"
-import type { ColDef, GridReadyEvent, GridApi } from "ag-grid-community"
+import type {
+  ColDef, GridReadyEvent, GridApi,
+  RowClickedEvent, RowClassParams, RowStyle, RowDragEndEvent,
+} from "ag-grid-community"
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community"
-import { Search, Trash2, Plus } from "lucide-react"
+import * as XLSX from "xlsx"
+import { Search, Trash2, Plus, FileSpreadsheet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const AG_HEADER_HEIGHT = 44
-const AG_ROW_HEIGHT = 52
-const AG_BORDER = 2      // 1px top + 1px bottom
-const TOOLBAR_GAP = 16   // gap-4
+const AG_ROW_HEIGHT    = 52
+const AG_BORDER        = 2
+const TOOLBAR_GAP      = 16
 
 export interface DataTableProps<T> {
   title: string
@@ -19,6 +23,12 @@ export interface DataTableProps<T> {
   onAdd?: () => void
   onDelete?: (rows: T[]) => void
   checkbox?: boolean
+  onRowClicked?: (event: RowClickedEvent<T>) => void
+  getRowStyle?: (params: RowClassParams<T>) => RowStyle | undefined | null
+  rowDrag?: boolean
+  hideSno?: boolean
+  onRowDragEnd?: (newOrder: T[]) => void
+  toolbarExtra?: React.ReactNode
 }
 
 export function DataTable<T>({
@@ -28,20 +38,26 @@ export function DataTable<T>({
   onAdd,
   onDelete,
   checkbox = false,
+  onRowClicked,
+  getRowStyle,
+  rowDrag = false,
+  hideSno = false,
+  onRowDragEnd,
+  toolbarExtra,
 }: DataTableProps<T>) {
-  const gridApiRef = useRef<GridApi<T> | null>(null)
+  const gridApiRef   = useRef<GridApi<T> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const toolbarRef = useRef<HTMLDivElement>(null)
-  const [search, setSearch] = useState("")
+  const toolbarRef   = useRef<HTMLDivElement>(null)
+  const [search, setSearch]             = useState("")
   const [selectedCount, setSelectedCount] = useState(0)
-  const [gridHeight, setGridHeight] = useState(400)
+  const [gridHeight, setGridHeight]     = useState(400)
 
   const contentHeight = AG_HEADER_HEIGHT + rowData.length * AG_ROW_HEIGHT + AG_BORDER
 
   useLayoutEffect(() => {
     const recalc = () => {
       const container = containerRef.current
-      const toolbar = toolbarRef.current
+      const toolbar   = toolbarRef.current
       if (!container || !toolbar) return
       const available = container.offsetHeight - toolbar.offsetHeight - TOOLBAR_GAP
       setGridHeight(Math.min(contentHeight, Math.max(120, available)))
@@ -57,6 +73,20 @@ export function DataTable<T>({
     []
   )
 
+  const dragColumn = useMemo<ColDef<T>>(
+    () => ({
+      headerName: "",
+      rowDrag: true,
+      width: 44,
+      maxWidth: 44,
+      sortable: false,
+      resizable: false,
+      suppressMovable: true,
+      cellStyle: { padding: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" },
+    }),
+    []
+  )
+
   const snoColumn = useMemo<ColDef<T>>(
     () => ({
       headerName: "S.No",
@@ -66,10 +96,12 @@ export function DataTable<T>({
     []
   )
 
-  const allColumnDefs = useMemo(
-    () => [snoColumn, ...columnDefs],
-    [snoColumn, columnDefs]
-  )
+  const allColumnDefs = useMemo(() => {
+    const leading: ColDef<T>[] = []
+    if (rowDrag) leading.push(dragColumn)
+    if (!hideSno) leading.push(snoColumn)
+    return [...leading, ...columnDefs]
+  }, [rowDrag, hideSno, dragColumn, snoColumn, columnDefs])
 
   const selectionColumnDef = useMemo(
     () => (checkbox ? { width: 48, maxWidth: 48, pinned: "left" as const } : undefined),
@@ -94,8 +126,7 @@ export function DataTable<T>({
   }, [])
 
   const onSelectionChanged = useCallback(() => {
-    const count = gridApiRef.current?.getSelectedRows().length ?? 0
-    setSelectedCount(count)
+    setSelectedCount(gridApiRef.current?.getSelectedRows().length ?? 0)
   }, [])
 
   const handleDelete = useCallback(() => {
@@ -103,11 +134,32 @@ export function DataTable<T>({
     if (rows.length) onDelete?.(rows)
   }, [onDelete])
 
+  const handleRowDragEnd = useCallback((e: RowDragEndEvent<T>) => {
+    if (!onRowDragEnd) return
+    const newOrder: T[] = []
+    e.api.forEachNodeAfterFilterAndSort((node) => {
+      if (node.data) newOrder.push(node.data)
+    })
+    onRowDragEnd(newOrder)
+  }, [onRowDragEnd])
+
+  const exportToExcel = useCallback(() => {
+    const exportCols = columnDefs.filter((col) => col.field)
+    const headers = ["S.No", ...exportCols.map((col) => col.headerName ?? String(col.field ?? ""))]
+    const rows = rowData.map((row, i) => [
+      i + 1,
+      ...exportCols.map((col) => (row as Record<string, unknown>)[col.field as string] ?? ""),
+    ])
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, title)
+    XLSX.writeFile(wb, `${title}.xlsx`)
+  }, [columnDefs, rowData, title])
+
   return (
     <div ref={containerRef} className="flex flex-1 flex-col gap-4 min-h-0">
       {/* Toolbar */}
-      <div ref={toolbarRef} className="shrink-0 flex flex-wrap items-center gap-3">
-        {/* Delete icon + selected count */}
+      <div ref={toolbarRef} className="shrink-0 flex flex-wrap items-end gap-3">
         {checkbox && (
           <div className="flex items-center gap-2">
             <button
@@ -130,14 +182,10 @@ export function DataTable<T>({
           </div>
         )}
 
-        {/* Total row count */}
-        <span className="text-sm font-medium text-gray-500">
-          Count: {rowData.length}
-        </span>
-
         <div className="flex-1" />
 
-        {/* Search */}
+        {toolbarExtra}
+
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -149,7 +197,20 @@ export function DataTable<T>({
           />
         </div>
 
-        {/* Add button — only when handler is provided */}
+        <button
+          onClick={exportToExcel}
+          disabled={rowData.length === 0}
+          title="Export to Excel"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-lg border transition-all",
+            rowData.length > 0
+              ? "border-green-400 bg-green-500 text-white shadow-sm hover:bg-green-600 active:bg-green-700"
+              : "border-green-200 bg-green-50 text-green-400 cursor-default"
+          )}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+        </button>
+
         {onAdd && (
           <button
             onClick={onAdd}
@@ -161,13 +222,13 @@ export function DataTable<T>({
         )}
       </div>
 
-      {/* Grid container — fixed calculated height, border never scrolls */}
+      {/* Grid */}
       <div
         style={{ height: gridHeight }}
-        className="overflow-hidden rounded-xl border border-gray-200 shadow-sm shrink-0"
+        className="flex flex-col overflow-hidden rounded-xl border border-gray-200 shadow-sm shrink-0"
       >
         <div
-          className="ag-theme-quartz h-full w-full"
+          className="ag-theme-quartz flex-1 w-full min-h-0"
           style={
             {
               "--ag-font-family": "inherit",
@@ -196,10 +257,17 @@ export function DataTable<T>({
             onGridReady={onGridReady}
             onGridSizeChanged={onGridSizeChanged}
             onSelectionChanged={onSelectionChanged}
+            onRowClicked={onRowClicked}
+            getRowStyle={getRowStyle}
+            rowDragManaged={rowDrag}
+            onRowDragEnd={rowDrag ? handleRowDragEnd : undefined}
             suppressMovableColumns
             suppressCellFocus
             animateRows
           />
+        </div>
+        <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-2">
+          <span className="text-sm font-semibold text-gray-500">Count: {rowData.length}</span>
         </div>
       </div>
     </div>

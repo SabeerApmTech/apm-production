@@ -22,13 +22,18 @@ button {
   display: none;
 }
 
-/* Remove the divider between the AG Grid selection (checkbox) column and the first data column */
+/* Remove all borders and outlines from the AG Grid selection column */
 .ag-theme-quartz .ag-cell[col-id="ag-Grid-SelectionColumn"],
 .ag-theme-quartz .ag-header-cell[col-id="ag-Grid-SelectionColumn"] {
-  border-right: none !important;
+  border: none !important;
+  outline: none !important;
 }
 .ag-theme-quartz .ag-header-cell[col-id="ag-Grid-SelectionColumn"] .ag-header-cell-resize {
   display: none;
+}
+.ag-theme-quartz .ag-header-cell[col-id="ag-Grid-SelectionColumn"] .ag-checkbox-input-wrapper {
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 @layer utilities {

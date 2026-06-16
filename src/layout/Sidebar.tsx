@@ -41,7 +41,7 @@ export function AppSidebar() {
     setOpenItems((prev) => ({ [label]: !prev[label] }))
 
   return (
-    <Sidebar className="bg-[#0d1b2e]">
+    <Sidebar className="bg-[#27375D]">
       {/* Logo */}
       <SidebarHeader className="flex items-center px-5 py-5">
         <img src={companyLogo} alt="APM" className="h-9 w-auto object-contain" />
