@@ -7,53 +7,49 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ScheduleFormDrawer } from "./ScheduleFormDrawer"
-import { DeleteScheduleDialog } from "./DeleteScheduleDialog"
-import { AllocationDialog } from "./AllocationDialog"
-import type { ScheduleFormValues } from "./ScheduleFormDrawer"
+import { DeleteDialog } from "@/shared/DeleteDialog"
+import { AllocationDialog } from "@/pages/schedules/pending_schedules/AllocationDialog"
+import { ReworkScheduleFormDrawer } from "./ReworkScheduleFormDrawer"
+import type { ReworkScheduleFormValues } from "./ReworkScheduleFormDrawer"
 
 /* ── Types ─────────────────────────────────────────────── */
-export interface ScheduleRow {
+export interface ReworkScheduleRow {
   id: number
   priorityNo: number
   priorityLevel: "High" | "Medium" | "Low"
-  scheduleDate: string
-  scheduleId: string
+  reworkScheduleDate: string
+  reworkScheduleId: string
   company: string
   product: string
   noOfOperations: number
   targetQty: number
   producedQty: number
   pendingQty: number
-  handoverQty: number
   targetDate: string
   createdBy: string
 }
 
 /* ── Mock data ──────────────────────────────────────────── */
-const initialSchedules: ScheduleRow[] = [
+const initialSchedules: ReworkScheduleRow[] = [
   {
     id: 1, priorityNo: 1, priorityLevel: "High",
-    scheduleDate: "26/05/2026", scheduleId: "S001-26",
+    reworkScheduleDate: "26/05/2026", reworkScheduleId: "RS001-26",
     company: "Lakshika", product: "AIS 140",
-    noOfOperations: 19, targetQty: 3000, producedQty: 1000,
-    pendingQty: 2000, handoverQty: 1000,
+    noOfOperations: 19, targetQty: 3000, producedQty: 1000, pendingQty: 2000,
     targetDate: "31/5/2026", createdBy: "2547 : Basheer",
   },
   {
     id: 2, priorityNo: 2, priorityLevel: "Medium",
-    scheduleDate: "26/05/2026", scheduleId: "S002-26",
+    reworkScheduleDate: "26/05/2026", reworkScheduleId: "RS002-26",
     company: "Kingstrack", product: "Dashcam",
-    noOfOperations: 8, targetQty: 2000, producedQty: 0,
-    pendingQty: 2000, handoverQty: 1000,
+    noOfOperations: 8, targetQty: 2000, producedQty: 500, pendingQty: 1500,
     targetDate: "20/5/2026", createdBy: "2547 : Basheer",
   },
   {
     id: 3, priorityNo: 3, priorityLevel: "Low",
-    scheduleDate: "26/05/2026", scheduleId: "S003-26",
+    reworkScheduleDate: "26/05/2026", reworkScheduleId: "RS003-26",
     company: "Kingstrack", product: "CC TV",
-    noOfOperations: 12, targetQty: 3000, producedQty: 1200,
-    pendingQty: 1800, handoverQty: 1000,
+    noOfOperations: 12, targetQty: 3000, producedQty: 1200, pendingQty: 1800,
     targetDate: "10/6/2026", createdBy: "2547 : Basheer",
   },
 ]
@@ -81,7 +77,7 @@ const PRIORITY_STYLES: Record<string, string> = {
   Low:    "bg-green-500 text-white",
 }
 
-function PriorityLevelBadge({ value }: ICellRendererParams<ScheduleRow>) {
+function PriorityLevelBadge({ value }: ICellRendererParams<ReworkScheduleRow>) {
   if (!value) return null
   return (
     <div className="flex h-full items-center">
@@ -92,7 +88,7 @@ function PriorityLevelBadge({ value }: ICellRendererParams<ScheduleRow>) {
   )
 }
 
-function TargetDateCell({ value }: ICellRendererParams<ScheduleRow>) {
+function TargetDateCell({ value }: ICellRendererParams<ReworkScheduleRow>) {
   const past = isDatePast(String(value ?? ""))
   return (
     <span className={cn("text-sm font-medium", past ? "text-red-500" : "text-gray-700")}>
@@ -101,7 +97,7 @@ function TargetDateCell({ value }: ICellRendererParams<ScheduleRow>) {
   )
 }
 
-interface AllocateCellParams extends ICellRendererParams<ScheduleRow> {
+interface AllocateCellParams extends ICellRendererParams<ReworkScheduleRow> {
   onAllocate?: (id: number) => void
 }
 
@@ -118,12 +114,12 @@ function AllocateCell({ data, onAllocate }: AllocateCellParams) {
   )
 }
 
-interface ScheduleActionCellParams extends ICellRendererParams<ScheduleRow> {
+interface ActionCellParams extends ICellRendererParams<ReworkScheduleRow> {
   onEdit?:   (id: number) => void
   onDelete?: (id: number) => void
 }
 
-function ScheduleActionsCell({ data, onEdit, onDelete }: ScheduleActionCellParams) {
+function ActionsCell({ data, onEdit, onDelete }: ActionCellParams) {
   return (
     <div className="flex h-full items-center gap-0.5">
       <button
@@ -143,25 +139,21 @@ function ScheduleActionsCell({ data, onEdit, onDelete }: ScheduleActionCellParam
 }
 
 /* ── Page ───────────────────────────────────────────────── */
-export function PendingSchedules() {
-  const [schedules, setSchedules]           = useState<ScheduleRow[]>(initialSchedules)
-  const [newOrder, setNewOrder]             = useState<ScheduleRow[] | null>(null)
-  const [isDirty, setIsDirty]               = useState(false)
+export function PendingReworkSchedules() {
+  const [schedules, setSchedules]       = useState<ReworkScheduleRow[]>(initialSchedules)
+  const [newOrder,  setNewOrder]        = useState<ReworkScheduleRow[] | null>(null)
+  const [isDirty,   setIsDirty]         = useState(false)
   const [confirmPriorityOpen, setConfirmPriorityOpen] = useState(false)
-  const [drawerOpen, setDrawerOpen]         = useState(false)
-  const [editId, setEditId]                 = useState<number | null>(null)
-  const [deleteId, setDeleteId]             = useState<number | null>(null)
-  const [allocationId, setAllocationId]     = useState<number | null>(null)
+  const [drawerOpen, setDrawerOpen]     = useState(false)
+  const [editId,    setEditId]          = useState<number | null>(null)
+  const [deleteId,  setDeleteId]        = useState<number | null>(null)
+  const [allocationId, setAllocationId] = useState<number | null>(null)
 
   const editSchedule = schedules.find((s) => s.id === editId)
 
-  /* ── Drag ── */
-  const handleRowDragEnd = useCallback((reordered: ScheduleRow[]) => {
+  const handleRowDragEnd = useCallback((reordered: ReworkScheduleRow[]) => {
     const changed = reordered.some((s, i) => s.id !== schedules[i]?.id)
-    if (changed) {
-      setNewOrder(reordered)
-      setIsDirty(true)
-    }
+    if (changed) { setNewOrder(reordered); setIsDirty(true) }
   }, [schedules])
 
   const handleConfirmPriority = useCallback(() => {
@@ -173,12 +165,7 @@ export function PendingSchedules() {
     setConfirmPriorityOpen(false)
   }, [newOrder])
 
-  const cancelPriorityUpdate = useCallback(() => {
-    setConfirmPriorityOpen(false)
-  }, [])
-
-  /* ── CRUD ── */
-  const handleAdd = useCallback((data: ScheduleFormValues) => {
+  const handleAdd = useCallback((data: ReworkScheduleFormValues) => {
     const next = Math.max(0, ...schedules.map((s) => s.id)) + 1
     setSchedules((prev) => [
       ...prev,
@@ -186,22 +173,21 @@ export function PendingSchedules() {
         id: next,
         priorityNo: prev.length + 1,
         priorityLevel: data.priorityLevel,
-        scheduleDate: fromIsoDate(data.scheduleDate),
-        scheduleId: `S${String(next).padStart(3, "0")}-26`,
+        reworkScheduleDate: fromIsoDate(data.reworkScheduleDate),
+        reworkScheduleId: `RS${String(next).padStart(3, "0")}-26`,
         company: data.company,
         product: data.product,
         noOfOperations: data.noOfOperations,
         targetQty: data.targetQty,
         producedQty: 0,
         pendingQty: data.targetQty,
-        handoverQty: 0,
         targetDate: fromIsoDate(data.targetDate),
         createdBy: "2547 : Basheer",
       },
     ])
   }, [schedules])
 
-  const handleEdit = useCallback((data: ScheduleFormValues) => {
+  const handleEdit = useCallback((data: ReworkScheduleFormValues) => {
     if (editId === null) return
     setSchedules((prev) =>
       prev.map((s) =>
@@ -209,7 +195,7 @@ export function PendingSchedules() {
           ? {
               ...s,
               priorityLevel: data.priorityLevel,
-              scheduleDate: fromIsoDate(data.scheduleDate),
+              reworkScheduleDate: fromIsoDate(data.reworkScheduleDate),
               company: data.company,
               product: data.product,
               noOfOperations: data.noOfOperations,
@@ -227,35 +213,33 @@ export function PendingSchedules() {
     setDeleteId(null)
   }, [deleteId])
 
-  /* ── Columns ── */
-  const openEdit   = useCallback((id: number) => { setEditId(id);   setDrawerOpen(true) }, [])
+  const openEdit   = useCallback((id: number) => { setEditId(id); setDrawerOpen(true) }, [])
   const openDelete = useCallback((id: number) => setDeleteId(id), [])
   const openAlloc  = useCallback((id: number) => setAllocationId(id), [])
 
-  const columnDefs = useMemo<ColDef<ScheduleRow>[]>(
+  const columnDefs = useMemo<ColDef<ReworkScheduleRow>[]>(
     () => [
-      { field: "priorityNo",     headerName: "Priority No",      maxWidth: 100, sortable: false },
-      { field: "priorityLevel",  headerName: "Priority Level",   cellRenderer: PriorityLevelBadge, sortable: false, minWidth: 120 },
-      { field: "scheduleDate",   headerName: "Schedule Date",    minWidth: 120 },
-      { field: "scheduleId",     headerName: "Schedule ID",      minWidth: 100 },
-      { field: "company",        headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "product",        headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 100 },
-      { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
-      { field: "targetQty",      headerName: "Target Qty",       minWidth: 100 },
-      { field: "producedQty",    headerName: "Produced Qty",     minWidth: 110 },
-      { field: "pendingQty",     headerName: "Pending Qty",      minWidth: 100 },
-      { field: "handoverQty",    headerName: "Handover Qty",     minWidth: 110 },
-      { field: "targetDate",     headerName: "Target Date",      cellRenderer: TargetDateCell, minWidth: 110 },
-      { field: "createdBy",      headerName: "Created By",       minWidth: 130 },
+      { field: "priorityNo",          headerName: "Priority No",          maxWidth: 100, sortable: false },
+      { field: "priorityLevel",       headerName: "Priority Level",       cellRenderer: PriorityLevelBadge, sortable: false, minWidth: 120 },
+      { field: "reworkScheduleDate",  headerName: "Rework Schedule Date", minWidth: 160 },
+      { field: "reworkScheduleId",    headerName: "Rework Schedule ID",   minWidth: 150 },
+      { field: "company",             headerName: "Company",              cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      { field: "product",             headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 100 },
+      { field: "noOfOperations",      headerName: "No of Operations",     minWidth: 140 },
+      { field: "targetQty",           headerName: "Target Qty",           minWidth: 100 },
+      { field: "producedQty",         headerName: "Produced Qty",         minWidth: 120 },
+      { field: "pendingQty",          headerName: "Pending Qty",          minWidth: 110 },
+      { field: "targetDate",          headerName: "Target Date",          cellRenderer: TargetDateCell, minWidth: 110 },
+      { field: "createdBy",           headerName: "Created By",           minWidth: 130 },
       {
-        headerName: "Staff Allocated",
+        headerName: "Staff Allocation",
         cellRenderer: AllocateCell,
         cellRendererParams: { onAllocate: openAlloc },
-        sortable: false, minWidth: 120,
+        sortable: false, minWidth: 130,
       },
       {
         headerName: "Actions",
-        cellRenderer: ScheduleActionsCell,
+        cellRenderer: ActionsCell,
         cellRendererParams: { onEdit: openEdit, onDelete: openDelete },
         sortable: false, maxWidth: 90,
       },
@@ -275,8 +259,8 @@ export function PendingSchedules() {
 
   return (
     <>
-      <DataTable<ScheduleRow>
-        title="Schedule"
+      <DataTable<ReworkScheduleRow>
+        title="Rework Schedule"
         rowData={schedules}
         columnDefs={columnDefs}
         rowDrag
@@ -286,17 +270,16 @@ export function PendingSchedules() {
         toolbarExtra={updatePriorityButton}
       />
 
-      {/* Priority update confirmation */}
       <Dialog open={confirmPriorityOpen} onOpenChange={(o) => { if (!o) setConfirmPriorityOpen(false) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Update Priority Order</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600 mt-1">
-            Are you sure you want to save the new priority order? This will reassign priority numbers to all schedules.
+            Are you sure you want to save the new priority order? This will reassign priority numbers to all rework schedules.
           </p>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={cancelPriorityUpdate}>Cancel</Button>
+            <Button variant="outline" onClick={() => setConfirmPriorityOpen(false)}>Cancel</Button>
             <Button onClick={handleConfirmPriority} className="bg-blue-500 hover:bg-blue-600 text-white">
               Confirm
             </Button>
@@ -304,7 +287,7 @@ export function PendingSchedules() {
         </DialogContent>
       </Dialog>
 
-      <ScheduleFormDrawer
+      <ReworkScheduleFormDrawer
         key={editId ?? "new"}
         open={drawerOpen}
         onClose={() => { setDrawerOpen(false); setEditId(null) }}
@@ -312,10 +295,12 @@ export function PendingSchedules() {
         onSubmit={editId !== null ? handleEdit : handleAdd}
       />
 
-      <DeleteScheduleDialog
+      <DeleteDialog
         open={deleteId !== null}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
+        title="Delete Rework Schedule"
+        description="Are you sure you want to delete this rework schedule? This action cannot be undone."
       />
 
       <AllocationDialog

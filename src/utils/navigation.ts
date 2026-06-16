@@ -28,7 +28,10 @@ export const navItems: NavItem[] = [
   {
     label: "Dashboard",
     icon: LayoutDashboard,
-    path: "/",
+    children: [
+      { label: "Employee Wise Live Tracking", path: "/dashboard/employee-wise-tracking" },
+      { label: "Schedule Wise Live Tracking", path: "/dashboard/schedule-wise-tracking" },
+    ],
   },
   {
     label: "Schedules",
@@ -43,25 +46,29 @@ export const navItems: NavItem[] = [
     label: "Production Data",
     icon: Factory,
     children: [
-      { label: "Overview", path: "/production" },
-      { label: "Reports", path: "/production/reports" },
+      { label: "Transaction Log", path: "/production/log" },
+      { label: "Production History", path: "/production/history" },
     ],
   },
   {
     label: "Rework Schedules",
     icon: CalendarClock,
     children: [
-      { label: "View", path: "/rework-schedules" },
-      { label: "Create", path: "/rework-schedules/create" },
+      { label: "Pending Rework Schedules", path: "/rework-schedules/pending" },
+      { label: "Completed Rework Schedules", path: "/rework-schedules/completed" },
+      { label: "Handover To Store", path: "/rework-schedules/handover-to-store" },
     ],
   },
   {
     label: "Rework Data",
     icon: ClipboardList,
-    path: "/rework-data",
+    children: [
+      { label: "Rework Transaction Log", path: "/rework-data/log" },
+      { label: "Rework Production History", path: "/rework-data/history" },
+    ],
   },
   {
-    label: "Tickets Data",
+    label: "Tickets",
     icon: Ticket,
     path: "/tickets",
   },

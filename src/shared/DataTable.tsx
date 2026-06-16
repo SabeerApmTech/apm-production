@@ -3,11 +3,13 @@ import { AgGridReact } from "ag-grid-react"
 import type {
   ColDef, GridReadyEvent, GridApi,
   RowClickedEvent, RowClassParams, RowStyle, RowDragEndEvent,
+  IDetailCellRendererParams, IsFullWidthRowParams, RowHeightParams,
 } from "ag-grid-community"
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community"
 import * as XLSX from "xlsx"
 import { Search, Trash2, Plus, FileSpreadsheet } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DatePicker } from "@/components/ui/date-picker"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -15,6 +17,7 @@ const AG_HEADER_HEIGHT = 44
 const AG_ROW_HEIGHT    = 52
 const AG_BORDER        = 2
 const TOOLBAR_GAP      = 16
+const COUNT_STRIP_H    = 37
 
 export interface DataTableProps<T> {
   title: string
@@ -29,6 +32,18 @@ export interface DataTableProps<T> {
   hideSno?: boolean
   onRowDragEnd?: (newOrder: T[]) => void
   toolbarExtra?: React.ReactNode
+  showDateFilter?: boolean
+  onDateFilter?: (from: string, to: string) => void
+  masterDetail?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  detailCellRendererParams?: Partial<IDetailCellRendererParams<T, any>>
+  isRowMaster?: (dataItem: T) => boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  isFullWidthRow?: (params: IsFullWidthRowParams<T>) => boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fullWidthCellRenderer?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getRowHeight?: (params: RowHeightParams<T>) => number | undefined | null
 }
 
 export function DataTable<T>({
@@ -44,15 +59,37 @@ export function DataTable<T>({
   hideSno = false,
   onRowDragEnd,
   toolbarExtra,
+  showDateFilter = false,
+  onDateFilter,
+  masterDetail = false,
+  detailCellRendererParams,
+  isRowMaster,
+  isFullWidthRow,
+  fullWidthCellRenderer,
+  getRowHeight,
 }: DataTableProps<T>) {
   const gridApiRef   = useRef<GridApi<T> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const toolbarRef   = useRef<HTMLDivElement>(null)
-  const [search, setSearch]             = useState("")
+  const [search, setSearch]               = useState("")
   const [selectedCount, setSelectedCount] = useState(0)
-  const [gridHeight, setGridHeight]     = useState(400)
+  const [gridHeight, setGridHeight]       = useState(400)
+  const [fromDate, setFromDate]           = useState("")
+  const [toDate,   setToDate]             = useState("")
 
-  const contentHeight = AG_HEADER_HEIGHT + rowData.length * AG_ROW_HEIGHT + AG_BORDER
+  const handleFromDate = useCallback((val: string) => {
+    setFromDate(val); onDateFilter?.(val, toDate)
+  }, [toDate, onDateFilter])
+
+  const handleToDate = useCallback((val: string) => {
+    setToDate(val); onDateFilter?.(fromDate, val)
+  }, [fromDate, onDateFilter])
+
+  const handleClearDates = useCallback(() => {
+    setFromDate(""); setToDate(""); onDateFilter?.("", "")
+  }, [onDateFilter])
+
+  const contentHeight = AG_HEADER_HEIGHT + rowData.length * AG_ROW_HEIGHT + AG_BORDER + COUNT_STRIP_H
 
   useLayoutEffect(() => {
     const recalc = () => {
@@ -182,9 +219,30 @@ export function DataTable<T>({
           </div>
         )}
 
-        <div className="flex-1" />
+        {showDateFilter && (
+          <div className="flex flex-row items-end gap-3">
+            <div className="flex flex-col gap-1 w-36 sm:w-44">
+              <span className="text-xs font-medium text-gray-500">From Date</span>
+              <DatePicker value={fromDate} onChange={handleFromDate} placeholder="From date" />
+            </div>
+            <div className="flex flex-col gap-1 w-36 sm:w-44">
+              <span className="text-xs font-medium text-gray-500">To Date</span>
+              <DatePicker value={toDate} onChange={handleToDate} placeholder="To date" />
+            </div>
+            {(fromDate || toDate) && (
+              <button
+                onClick={handleClearDates}
+                className="h-10 rounded-lg border border-gray-200 px-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
 
         {toolbarExtra}
+
+        <div className="flex-1" />
 
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -264,6 +322,12 @@ export function DataTable<T>({
             suppressMovableColumns
             suppressCellFocus
             animateRows
+            masterDetail={masterDetail}
+            detailCellRendererParams={detailCellRendererParams}
+            isRowMaster={isRowMaster}
+            isFullWidthRow={isFullWidthRow}
+            fullWidthCellRenderer={fullWidthCellRenderer}
+            getRowHeight={getRowHeight}
           />
         </div>
         <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-2">

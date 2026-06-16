@@ -1,9 +1,14 @@
-import { useLocation } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, ChevronDown, Menu, UserCircle2 } from "lucide-react"
 import { navItems } from "@/utils/navigation"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
+const EXTRA_TITLES: Record<string, string> = {
+  "/notifications": "Notifications",
+}
+
 function getPageTitle(pathname: string): string {
+  if (EXTRA_TITLES[pathname]) return EXTRA_TITLES[pathname]
   for (const item of navItems) {
     if (item.path && pathname === item.path) return item.label
     if (item.children) {
@@ -16,6 +21,7 @@ function getPageTitle(pathname: string): string {
 
 export function Header() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const title = getPageTitle(pathname)
 
   return (
@@ -33,6 +39,7 @@ export function Header() {
         {/* Bell */}
         <button
           aria-label="Notifications"
+          onClick={() => navigate("/notifications")}
           className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
         >
           <Bell className="h-5 w-5" />
