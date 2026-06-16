@@ -67,13 +67,6 @@ function isDatePast(dateStr: string): boolean {
   return new Date(Number(y), Number(m) - 1, Number(d)) < new Date()
 }
 
-function toIsoDate(dateStr: string): string {
-  const parts = dateStr.split("/")
-  if (parts.length !== 3) return ""
-  const [d, m, y] = parts
-  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
-}
-
 function fromIsoDate(isoStr: string): string {
   const parts = isoStr.split("-")
   if (parts.length !== 3) return isoStr

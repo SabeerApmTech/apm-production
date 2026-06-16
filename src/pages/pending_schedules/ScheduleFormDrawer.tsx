@@ -22,8 +22,8 @@ const schema = z.object({
   scheduleDate:   z.string().min(1, "Schedule date is required"),
   company:        z.string().min(1, "Company is required"),
   product:        z.string().min(1, "Product is required"),
-  noOfOperations: z.coerce.number({ invalid_type_error: "Required" }).min(1, "Min 1"),
-  targetQty:      z.coerce.number({ invalid_type_error: "Required" }).min(1, "Min 1"),
+  noOfOperations: z.coerce.number({ error: "Required" }).min(1, "Min 1"),
+  targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:     z.string().min(1, "Target date is required"),
   priorityLevel:  z.enum(["High", "Medium", "Low"], { error: "Select a priority" }),
 })

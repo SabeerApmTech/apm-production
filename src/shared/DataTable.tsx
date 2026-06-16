@@ -258,7 +258,7 @@ export function DataTable<T>({
             onGridSizeChanged={onGridSizeChanged}
             onSelectionChanged={onSelectionChanged}
             onRowClicked={onRowClicked}
-            getRowStyle={getRowStyle}
+            getRowStyle={getRowStyle ? (p) => getRowStyle(p) ?? undefined : undefined}
             rowDragManaged={rowDrag}
             onRowDragEnd={rowDrag ? handleRowDragEnd : undefined}
             suppressMovableColumns
