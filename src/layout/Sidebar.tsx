@@ -2,7 +2,8 @@ import { NavLink, useLocation } from "react-router-dom"
 import { ChevronDown } from "lucide-react"
 import { useState } from "react"
 import companyLogo from "@/assets/company-logo-white.png"
-import { navItems } from "@/utils/navigation"
+import { navItems, operatorNavItems } from "@/utils/navigation"
+import { getRole } from "@/utils/auth"
 import { cn } from "@/lib/utils"
 import {
   Collapsible,
@@ -23,22 +24,16 @@ import {
 
 export function AppSidebar() {
   const location = useLocation()
+  const role = getRole()
+  const items = role === 'operator' ? operatorNavItems : navItems
 
   const isChildActive = (children?: { path: string }[]) =>
     children?.some((c) => location.pathname.startsWith(c.path)) ?? false
 
-  const [openItems, setOpenItems] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-    navItems.forEach((item) => {
-      if (item.children && isChildActive(item.children)) {
-        initial[item.label] = true
-      }
-    })
-    return initial
-  })
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
 
   const toggleItem = (label: string) =>
-    setOpenItems((prev) => ({ [label]: !prev[label] }))
+    setOpenItems((prev) => ({ ...prev, [label]: !prev[label] }))
 
   return (
     <Sidebar className="bg-[#27375D]">
@@ -49,7 +44,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-3 pb-4">
         <SidebarMenu>
-          {navItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon
 
             /* Leaf item — no children */
@@ -75,7 +70,7 @@ export function AppSidebar() {
             }
 
             /* Collapsible parent item */
-            const isOpen = openItems[item.label] ?? false
+            const isOpen = openItems[item.label] ?? isChildActive(item.children)
             const hasActiveChild = isChildActive(item.children)
 
             return (

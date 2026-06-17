@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, ChevronDown, Menu, UserCircle2 } from "lucide-react"
-import { navItems } from "@/utils/navigation"
+import { navItems, operatorNavItems } from "@/utils/navigation"
+import { getRole } from "@/utils/auth"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 const EXTRA_TITLES: Record<string, string> = {
@@ -9,7 +10,8 @@ const EXTRA_TITLES: Record<string, string> = {
 
 function getPageTitle(pathname: string): string {
   if (EXTRA_TITLES[pathname]) return EXTRA_TITLES[pathname]
-  for (const item of navItems) {
+  const allItems = [...navItems, ...operatorNavItems]
+  for (const item of allItems) {
     if (item.path && pathname === item.path) return item.label
     if (item.children) {
       const match = item.children.find((c) => pathname.startsWith(c.path))
@@ -23,6 +25,7 @@ export function Header() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const title = getPageTitle(pathname)
+  const role = getRole()
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6">
@@ -48,14 +51,16 @@ export function Header() {
           </span>
         </button>
 
-        {/* Admin user */}
-        <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-          <UserCircle2 className="h-7 w-7 shrink-0 text-gray-500" />
-          <span className="hidden sm:inline-flex items-center gap-1">
-            Admin
-            <ChevronDown className="h-4 w-4 text-gray-400" />
-          </span>
-        </button>
+        {/* Admin user — hidden for operators */}
+        {role !== 'operator' && (
+          <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+            <UserCircle2 className="h-7 w-7 shrink-0 text-gray-500" />
+            <span className="hidden sm:inline-flex items-center gap-1">
+              Admin
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </span>
+          </button>
+        )}
       </div>
     </header>
   )

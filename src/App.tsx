@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { DashboardLayout } from "@/layout/DashboardLayout";
+import { PageSkeleton } from "@/components/PageSkeleton";
+// import { getRole } from "@/utils/auth";
 
 const Login                  = lazy(() => import("./pages/auth/Login").then(m => ({ default: m.Login })));
 const Manager                = lazy(() => import("./pages/user_management/manager/Manager").then(m => ({ default: m.Manager })));
@@ -23,35 +25,66 @@ const Tickets                = lazy(() => import("./pages/tickets/Tickets").then
 const Notifications          = lazy(() => import("./pages/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const EmployeeWiseLiveTracking  = lazy(() => import("./pages/dashboard/employee_tracking/EmployeeWiseLiveTracking").then(m => ({ default: m.EmployeeWiseLiveTracking })));
 const ScheduleWiseLiveTracking  = lazy(() => import("./pages/dashboard/schedule_tracking/ScheduleWiseLiveTracking").then(m => ({ default: m.ScheduleWiseLiveTracking })));
+const LiveTrackingPage       = lazy(() => import("./pages/live_tracking/LiveTracking").then(m => ({ default: m.LiveTracking })));
+const ProductionMonitoring   = lazy(() => import("./pages/production_monitoring/ProductionMonitoring").then(m => ({ default: m.ProductionMonitoring })));
+
+/** Redirects unauthenticated users to /login */
+function ProtectedLayout() {
+  // const role = getRole();
+  // if (!role) return <Navigate to="/login" replace />;
+  return <DashboardLayout />;
+}
+
+/** Redirects operators away from admin-only routes */
+function AdminRoute() {
+  // const role = getRole();
+  // if (role === 'operator') return <Navigate to="/production-monitoring" replace />;
+  return <Outlet />;
+}
+
+/** Sends users to their role's home on root visit */
+function RoleRedirect() {
+  // const role = getRole();
+  // if (role === 'operator') return <Navigate to="/production-monitoring" replace />;
+  return <Navigate to="/dashboard/employee-wise-tracking" replace />;
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="flex h-screen items-center justify-center text-sm text-gray-400">Loading...</div>}>
+      <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard/employee-wise-tracking" replace />} />
-            <Route path="/user-management/manager" element={<Manager />} />
-            <Route path="/user-management/supervisor" element={<Supervisor />} />
-            <Route path="/user-management/operator" element={<Operator />} />
-            <Route path="/department" element={<Department />} />
-            <Route path="/master-data/products" element={<Products />} />
-            <Route path="/master-data/company" element={<Company />} />
-            <Route path="/pending-schedules" element={<PendingSchedules />} />
-            <Route path="/completed-schedules" element={<CompletedSchedules />} />
-            <Route path="/handover-to-store" element={<HandoverToStore />} />
-            <Route path="/production/log" element={<TransactionLog />} />
-            <Route path="/production/history" element={<ProductionHistory />} />
-            <Route path="/rework-schedules/pending" element={<PendingReworkSchedules />} />
-            <Route path="/rework-schedules/completed" element={<CompletedReworkSchedules />} />
-            <Route path="/rework-schedules/handover-to-store" element={<ReworkHandoverToStore />} />
-            <Route path="/rework-data/log" element={<ReworkTransactionLog />} />
-            <Route path="/rework-data/history" element={<ReworkHistory />} />
-            <Route path="/tickets" element={<Tickets />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/dashboard/employee-wise-tracking" element={<EmployeeWiseLiveTracking />} />
-            <Route path="/dashboard/schedule-wise-tracking" element={<ScheduleWiseLiveTracking />} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<RoleRedirect />} />
+
+            {/* Operator-accessible routes */}
+            <Route path="/live-tracking" element={<LiveTrackingPage />} />
+            <Route path="/production-monitoring" element={<ProductionMonitoring />} />
+
+            {/* Admin-only routes — operators are redirected to /live-tracking */}
+            <Route element={<AdminRoute />}>
+              <Route path="/user-management/manager" element={<Manager />} />
+              <Route path="/user-management/supervisor" element={<Supervisor />} />
+              <Route path="/user-management/operator" element={<Operator />} />
+              <Route path="/department" element={<Department />} />
+              <Route path="/master-data/products" element={<Products />} />
+              <Route path="/master-data/company" element={<Company />} />
+              <Route path="/pending-schedules" element={<PendingSchedules />} />
+              <Route path="/completed-schedules" element={<CompletedSchedules />} />
+              <Route path="/handover-to-store" element={<HandoverToStore />} />
+              <Route path="/production/log" element={<TransactionLog />} />
+              <Route path="/production/history" element={<ProductionHistory />} />
+              <Route path="/rework-schedules/pending" element={<PendingReworkSchedules />} />
+              <Route path="/rework-schedules/completed" element={<CompletedReworkSchedules />} />
+              <Route path="/rework-schedules/handover-to-store" element={<ReworkHandoverToStore />} />
+              <Route path="/rework-data/log" element={<ReworkTransactionLog />} />
+              <Route path="/rework-data/history" element={<ReworkHistory />} />
+              <Route path="/tickets" element={<Tickets />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/dashboard/employee-wise-tracking" element={<EmployeeWiseLiveTracking />} />
+              <Route path="/dashboard/schedule-wise-tracking" element={<ScheduleWiseLiveTracking />} />
+            </Route>
           </Route>
         </Routes>
       </Suspense>

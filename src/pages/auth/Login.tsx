@@ -1,21 +1,43 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import companyLogo from "@/assets/company-logo.png"
 import productionProducts from "@/assets/production-products.png"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { setRole } from "@/utils/auth"
 
 export const Login = () => {
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [employeeId, setEmployeeId] = useState("")
   const [password, setPassword] = useState("")
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setRole('admin')
+    navigate('/dashboard/employee-wise-tracking')
+  }
 
   return (
     <div className="h-dvh overflow-hidden flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-4xl flex flex-col md:flex-row rounded-2xl overflow-hidden shadow-2xl bg-white">
 
         {/* Left — Form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-8 sm:py-12 sm:px-12">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-8 sm:py-12 sm:px-12 relative">
+
+          {/* Operator Login — top-right corner of card */}
+          <button
+            type="button"
+            onClick={() => {
+              setRole('operator')
+              navigate('/production-monitoring')
+            }}
+            className="absolute top-4 right-4 text-xs rounded-lg px-3 py-1.5 border font-medium transition text-[#1a2a4a] border-[#1a2a4a] hover:bg-[#1a2a4a] hover:text-white"
+          >
+            Operator Login
+          </button>
+
           <img
             src={companyLogo}
             alt="APM Logo"
@@ -25,7 +47,7 @@ export const Login = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome Back</h1>
           <p className="text-sm text-gray-500 mb-6">Sign in to continue to your account.</p>
 
-          <form onSubmit={(e) => { e.preventDefault() }} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Employee Id */}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="employeeId" className="text-gray-700">Employee Id</Label>

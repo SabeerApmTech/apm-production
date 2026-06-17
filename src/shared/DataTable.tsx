@@ -15,9 +15,7 @@ ModuleRegistry.registerModules([AllCommunityModule])
 
 const AG_HEADER_HEIGHT = 44
 const AG_ROW_HEIGHT    = 52
-const AG_BORDER        = 2
 const TOOLBAR_GAP      = 16
-const COUNT_STRIP_H    = 37
 
 export interface DataTableProps<T> {
   title: string
@@ -89,21 +87,19 @@ export function DataTable<T>({
     setFromDate(""); setToDate(""); onDateFilter?.("", "")
   }, [onDateFilter])
 
-  const contentHeight = AG_HEADER_HEIGHT + rowData.length * AG_ROW_HEIGHT + AG_BORDER + COUNT_STRIP_H
-
   useLayoutEffect(() => {
     const recalc = () => {
       const container = containerRef.current
       const toolbar   = toolbarRef.current
       if (!container || !toolbar) return
       const available = container.offsetHeight - toolbar.offsetHeight - TOOLBAR_GAP
-      setGridHeight(Math.min(contentHeight, Math.max(120, available)))
+      setGridHeight(Math.max(120, available))
     }
     recalc()
     const ro = new ResizeObserver(recalc)
     if (containerRef.current) ro.observe(containerRef.current)
     return () => ro.disconnect()
-  }, [contentHeight])
+  }, [])
 
   const defaultColDef = useMemo<ColDef>(
     () => ({ sortable: true, resizable: true, filter: false, flex: 1, minWidth: 100 }),

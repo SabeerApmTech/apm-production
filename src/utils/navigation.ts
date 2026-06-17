@@ -8,7 +8,8 @@ import {
   Database,
   UserCog,
   Building2,
-  Settings,
+  Monitor,
+  Navigation,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -93,13 +94,18 @@ export const navItems: NavItem[] = [
     label: "Department",
     icon: Building2,
     path: "/department",
+  }
+]
+
+export const operatorNavItems: NavItem[] = [
+  {
+    label: "Production Monitoring",
+    icon: Monitor,
+    path: "/production-monitoring",
   },
   {
-    label: "Settings",
-    icon: Settings,
-    children: [
-      { label: "General", path: "/settings" },
-      { label: "Notifications", path: "/settings/notifications" },
-    ],
+    label: "Live Tracking",
+    icon: Navigation,
+    path: "/live-tracking",
   },
 ]
