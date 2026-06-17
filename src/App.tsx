@@ -21,7 +21,6 @@ const CompletedReworkSchedules = lazy(() => import("./pages/rework_schedules/com
 const ReworkHandoverToStore  = lazy(() => import("./pages/rework_schedules/handover_to_store/HandoverToStore").then(m => ({ default: m.ReworkHandoverToStore })));
 const ReworkTransactionLog   = lazy(() => import("./pages/rework_data/transaction_log/TransactionLog").then(m => ({ default: m.ReworkTransactionLog })));
 const ReworkHistory          = lazy(() => import("./pages/rework_data/rework_history/ReworkHistory").then(m => ({ default: m.ReworkHistory })));
-const Tickets                = lazy(() => import("./pages/tickets/Tickets").then(m => ({ default: m.Tickets })));
 const Notifications          = lazy(() => import("./pages/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const EmployeeWiseLiveTracking  = lazy(() => import("./pages/dashboard/employee_tracking/EmployeeWiseLiveTracking").then(m => ({ default: m.EmployeeWiseLiveTracking })));
 const ScheduleWiseLiveTracking  = lazy(() => import("./pages/dashboard/schedule_tracking/ScheduleWiseLiveTracking").then(m => ({ default: m.ScheduleWiseLiveTracking })));
@@ -80,7 +79,6 @@ function App() {
               <Route path="/rework-schedules/handover-to-store" element={<ReworkHandoverToStore />} />
               <Route path="/rework-data/log" element={<ReworkTransactionLog />} />
               <Route path="/rework-data/history" element={<ReworkHistory />} />
-              <Route path="/tickets" element={<Tickets />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/dashboard/employee-wise-tracking" element={<EmployeeWiseLiveTracking />} />
               <Route path="/dashboard/schedule-wise-tracking" element={<ScheduleWiseLiveTracking />} />

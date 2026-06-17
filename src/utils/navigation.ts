@@ -4,7 +4,6 @@ import {
   Factory,
   CalendarClock,
   ClipboardList,
-  Ticket,
   Database,
   UserCog,
   Building2,
@@ -67,11 +66,6 @@ export const navItems: NavItem[] = [
       { label: "Rework Transaction Log", path: "/rework-data/log" },
       { label: "Rework Production History", path: "/rework-data/history" },
     ],
-  },
-  {
-    label: "Tickets",
-    icon: Ticket,
-    path: "/tickets",
   },
   {
     label: "Master Data",
