@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
+import { toIsoDate } from "@/utils/date"
+import { COMPANIES, PRODUCTS, PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
 import type { ReworkScheduleRow } from "./PendingReworkSchedules"
 
 const schema = z.object({
@@ -28,16 +30,6 @@ const schema = z.object({
 })
 
 export type ReworkScheduleFormValues = z.infer<typeof schema>
-
-const COMPANIES = ["Lakshika", "Kingstrack", "ABC"]
-const PRODUCTS  = ["AIS 140 Standard", "Dashcam", "CCTV"]
-
-function toIso(dateStr: string): string {
-  const parts = dateStr.split("/")
-  if (parts.length !== 3) return ""
-  const [d, m, y] = parts
-  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
-}
 
 interface Props {
   open: boolean
@@ -53,12 +45,12 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
     resolver: zodResolver(schema) as Resolver<ReworkScheduleFormValues>,
     defaultValues: schedule
       ? {
-          reworkScheduleDate: toIso(schedule.reworkScheduleDate),
+          reworkScheduleDate: toIsoDate(schedule.reworkScheduleDate),
           company:            schedule.company,
           product:            schedule.product,
           noOfOperations:     schedule.noOfOperations,
           targetQty:          schedule.targetQty,
-          targetDate:         toIso(schedule.targetDate),
+          targetDate:         toIsoDate(schedule.targetDate),
           priorityLevel:      schedule.priorityLevel,
         }
       : {
@@ -162,13 +154,10 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
               <FormLabel>Priority Level</FormLabel>
               <FormControl>
                 <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-6 pt-1">
-                  {(["High", "Medium", "Low"] as const).map((opt) => (
+                  {PRIORITY_LEVELS.map((opt) => (
                     <label key={opt} className="flex cursor-pointer items-center gap-2">
                       <RadioGroupItem value={opt} />
-                      <Label className={cn(
-                        "cursor-pointer font-semibold text-sm",
-                        opt === "High" ? "text-red-600" : opt === "Medium" ? "text-yellow-600" : "text-green-600"
-                      )}>
+                      <Label className={cn("cursor-pointer font-semibold text-sm", PRIORITY_TEXT_STYLES[opt])}>
                         {opt}
                       </Label>
                     </label>

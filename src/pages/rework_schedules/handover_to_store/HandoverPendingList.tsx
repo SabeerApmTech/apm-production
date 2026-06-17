@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react"
-import type { ColDef, ICellRendererParams } from "ag-grid-community"
+import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
+import { ReadyToMoveCell } from "@/shared/renderers/ReadyToMoveCell"
+import { ActionButtonCell } from "@/shared/renderers/ActionButtonCell"
 import { HandoverDialog } from "./HandoverDialog"
 import type { ReworkHandoverPendingRow, ReworkHandoverFormData } from "./HandoverDialog"
 
@@ -9,27 +11,6 @@ const MOCK_PENDING: ReworkHandoverPendingRow[] = [
   { id: 2, reworkScheduleId: "RS001 - 26", company: "Lakshitha", product: "AIS 140", targetQty: 3000, deliveredQty: 500,  pendingQty: 2500, readyToMove: 1000 },
   { id: 3, reworkScheduleId: "RS002 - 26", company: "Kingstrack", product: "Dashcam", targetQty: 2000, deliveredQty: 800, pendingQty: 1200, readyToMove: 300  },
 ]
-
-function ReadyToMoveCell({ value }: ICellRendererParams<ReworkHandoverPendingRow>) {
-  return <span className="font-semibold text-green-600">{value}</span>
-}
-
-interface ActionCellParams extends ICellRendererParams<ReworkHandoverPendingRow> {
-  onHandover?: (row: ReworkHandoverPendingRow) => void
-}
-
-function ActionCell({ data, onHandover }: ActionCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onHandover?.(data) }}
-        className="rounded-md bg-blue-500 px-4 py-1 text-xs font-semibold text-white hover:bg-blue-600 transition-colors"
-      >
-        Handover
-      </button>
-    </div>
-  )
-}
 
 export function HandoverPendingList() {
   const [rows,      setRows]      = useState<ReworkHandoverPendingRow[]>(MOCK_PENDING)
@@ -50,8 +31,8 @@ export function HandoverPendingList() {
       { field: "readyToMove",      headerName: "Ready To Move",      cellRenderer: ReadyToMoveCell, minWidth: 130 },
       {
         headerName: "Action",
-        cellRenderer: ActionCell,
-        cellRendererParams: { onHandover: (row: ReworkHandoverPendingRow) => setDialogRow(row) },
+        cellRenderer: ActionButtonCell,
+        cellRendererParams: { onAction: (row: ReworkHandoverPendingRow) => setDialogRow(row), label: "Handover" },
         sortable: false, minWidth: 110,
       },
     ],

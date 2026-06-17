@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react"
-import type { ColDef, ICellRendererParams } from "ag-grid-community"
-import { Trash2 } from "lucide-react"
+import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
+import { DeleteCell } from "@/shared/renderers/DeleteCell"
 
 interface ReworkTransactionRow {
   id: number
@@ -24,22 +24,6 @@ const MOCK_TRANSACTIONS: ReworkTransactionRow[] = [
   { id: 3, dateTime: "27/05/2026\n09:30 AM", employeeId: "1045", employeeName: "Ravi",   reworkScheduleId: "RS001-26", company: "Lakshitha", product: "AIS 140",   operation: "Firmware Flashing", status: "Running", successfulQty: 800 },
 ]
 
-interface DeleteCellParams extends ICellRendererParams<ReworkTransactionRow> {
-  onDelete?: (id: number) => void
-}
-
-function DeleteCell({ data, onDelete }: DeleteCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onDelete?.(data.id) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
 
 export function ReworkTransactionLog() {
   const [rows,     setRows]     = useState<ReworkTransactionRow[]>(MOCK_TRANSACTIONS)

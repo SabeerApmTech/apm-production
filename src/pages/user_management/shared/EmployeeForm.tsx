@@ -15,6 +15,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { toInputDate } from "@/utils/date"
 import type { EmployeeRow } from "./EmployeePage"
 
 const schema = z.object({
@@ -30,18 +31,6 @@ const schema = z.object({
 })
 
 export type EmployeeFormValues = z.infer<typeof schema>
-
-function toInputDate(dob: string): string {
-  const months: Record<string, string> = {
-    Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-    May: "05", Jun: "06", Jul: "07", Aug: "08",
-    Sep: "09", Oct: "10", Nov: "11", Dec: "12",
-  }
-  const [d, m, y] = dob.split("-")
-  if (!d || !m || !y || !months[m]) return ""
-  const yr = parseInt(y) > 30 ? `19${y}` : `20${y}`
-  return `${yr}-${months[m]}-${d.padStart(2, "0")}`
-}
 
 interface EmployeeFormProps {
   row?: EmployeeRow

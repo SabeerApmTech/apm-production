@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react"
-import type { ColDef, ICellRendererParams } from "ag-grid-community"
-import { Trash2 } from "lucide-react"
+import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
+import { DeleteCell } from "@/shared/renderers/DeleteCell"
 
 interface ReworkHandoverLogRow {
   id: number
@@ -22,22 +22,6 @@ const MOCK_LOG: ReworkHandoverLogRow[] = [
   { id: 2, dateTime: "09/06/2026\n02:00 pm", reworkScheduleId: "RS002 - 26", company: "Kingstrack", product: "Dashcam", handoverQty: 800,  givenBy: "Ravi",     receivedBy: "Ashwin", storeLocation: "Main Store", remarks: "-" },
 ]
 
-interface DeleteCellParams extends ICellRendererParams<ReworkHandoverLogRow> {
-  onDelete?: (id: number) => void
-}
-
-function DeleteCell({ data, onDelete }: DeleteCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onDelete?.(data.id) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
 
 export function HandoverTransactionLog() {
   const [rows,     setRows]     = useState<ReworkHandoverLogRow[]>(MOCK_LOG)

@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react"
-import type { ColDef, ICellRendererParams } from "ag-grid-community"
-import { Trash2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
+import { StatusCell } from "@/shared/StatusCell"
+import { DeleteCell } from "@/shared/renderers/DeleteCell"
 
 export interface TransactionRow {
   id: number
@@ -27,32 +27,6 @@ const MOCK_TRANSACTIONS: TransactionRow[] = [
   { id: 3, dateTime: "26/05/2026\n11:00 AM", employeeId: "1045", employeeName: "Ravi",    scheduleId: "S001-26", company: "Lakshitha", product: "AIS 140",   operation: "Firmware Flashing", status: "Running", successfulQty: 800,  rejectedQty: 0,   reason: "-",                remarks: "-" },
 ]
 
-function StatusCell({ value }: ICellRendererParams<TransactionRow>) {
-  const isRunning = value === "Running"
-  return (
-    <div className="flex h-full items-center gap-2">
-      <span className={cn("h-2 w-2 rounded-full shrink-0", isRunning ? "bg-green-500" : "bg-red-500")} />
-      <span className={cn("text-sm font-medium", isRunning ? "text-green-600" : "text-red-600")}>{value}</span>
-    </div>
-  )
-}
-
-interface DeleteCellParams extends ICellRendererParams<TransactionRow> {
-  onDelete?: (id: number) => void
-}
-
-function DeleteCell({ data, onDelete }: DeleteCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onDelete?.(data.id) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
 
 export function HandoverTransactionLog() {
   const [rows,     setRows]     = useState<TransactionRow[]>(MOCK_TRANSACTIONS)
