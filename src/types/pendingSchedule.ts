@@ -13,6 +13,7 @@ export interface RawPendingScheduleRecord {
   productName: string
   noOfOperations: number
   targetQty: number
+  producedQty: number
   targetDate: string
   createdByEmpId: string
   createdByEmpName: string
@@ -36,6 +37,7 @@ export interface PendingScheduleRecord {
   productName: string
   noOfOperations: number
   targetQty: number
+  producedQty: number
   /** Display format (DD/MM/YYYY) — converted from the API's ISO date on fetch. */
   targetDate: string
   createdByEmpId: string

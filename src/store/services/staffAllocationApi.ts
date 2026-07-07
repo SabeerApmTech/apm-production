@@ -10,7 +10,7 @@ import type {
 export const staffAllocationApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getOperationsBySchedule: builder.query<OperationStepRecord[], number>({
-      query: (pendingScheduleId) => `/Operation/${pendingScheduleId}`,
+      query: (pendingScheduleId) => `/PendingSchedule/get-operations-of-schedule/${pendingScheduleId}`,
       transformResponse: (res: ApiResponse<OperationStepRecord[]>) => res.data,
       providesTags: (_result, _error, pendingScheduleId) => [
         { type: "ScheduleOperations", id: pendingScheduleId },

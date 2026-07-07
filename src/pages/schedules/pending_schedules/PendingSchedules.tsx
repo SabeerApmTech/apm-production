@@ -14,6 +14,7 @@ import { TargetDateCell } from "@/shared/renderers/TargetDateCell"
 import { EditDeleteCell } from "@/shared/renderers/EditDeleteCell"
 import { ActionButtonCell } from "@/shared/renderers/ActionButtonCell"
 import { getAuthUser } from "@/utils/auth"
+import { STAFF_ALLOCATION_BUTTON_STYLES, type StaffAllocationStatus } from "@/shared/constants"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import type { PendingScheduleRecord } from "@/types/pendingSchedule"
 import {
@@ -131,6 +132,7 @@ export function PendingSchedules() {
       { field: "productName",    headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 100 },
       { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
       { field: "targetQty",      headerName: "Target Qty",       minWidth: 100 },
+      { field: "producedQty",    headerName: "Produced Qty",     minWidth: 110 },
       { field: "targetDate",     headerName: "Target Date",      cellRenderer: TargetDateCell, minWidth: 110 },
       {
         headerName: "Created By",
@@ -145,6 +147,8 @@ export function PendingSchedules() {
           onAction: (data: PendingScheduleRecord) => openAlloc(data.pendingScheduleId),
           label: "Allocate",
           disabled: !canAllocate,
+          getButtonClass: (data: PendingScheduleRecord) =>
+            STAFF_ALLOCATION_BUTTON_STYLES[data.staffAllocationStatus as StaffAllocationStatus],
         },
         sortable: false, minWidth: 120,
       },
