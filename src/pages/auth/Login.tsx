@@ -1,22 +1,33 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { Loader2 } from "lucide-react"
 import companyLogo from "@/assets/company-logo.png"
 import productionProducts from "@/assets/production-products.png"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { setRole } from "@/utils/auth"
+import { setAuthUser } from "@/utils/auth"
+import { useLoginMutation } from "@/store/services/authApi"
+import { getApiErrorMessage } from "@/utils/apiError"
 
 export const Login = () => {
   const navigate = useNavigate()
+  const [login, { isLoading }] = useLoginMutation()
   const [showPassword, setShowPassword] = useState(false)
   const [employeeId, setEmployeeId] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setRole('admin')
-    navigate('/dashboard/employee-wise-tracking')
+    setError(null)
+    try {
+      const res = await login({ employeeId, password }).unwrap()
+      setAuthUser(res.data)
+      navigate('/dashboard/employee-wise-tracking')
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Invalid employee ID or password"))
+    }
   }
 
   return (
@@ -25,18 +36,6 @@ export const Login = () => {
 
         {/* Left — Form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-8 sm:py-12 sm:px-12 relative">
-
-          {/* Operator Login — top-right corner of card */}
-          <button
-            type="button"
-            onClick={() => {
-              setRole('operator')
-              navigate('/production-monitoring')
-            }}
-            className="absolute top-4 right-4 text-xs rounded-lg px-3 py-1.5 border font-medium transition text-[#1a2a4a] border-[#1a2a4a] hover:bg-[#1a2a4a] hover:text-white"
-          >
-            Operator Login
-          </button>
 
           <img
             src={companyLogo}
@@ -95,12 +94,17 @@ export const Login = () => {
               </div>
             </div>
 
+            {error && (
+              <p className="text-sm text-red-600" role="alert">{error}</p>
+            )}
+
             {/* Sign In */}
             <Button
               type="submit"
+              disabled={isLoading}
               className="mt-2 w-full bg-[#1a2a4a] hover:bg-[#22355e] active:bg-[#111e36] text-white font-semibold py-3 tracking-wide"
             >
-              Sign In
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Sign In"}
             </Button>
           </form>
         </div>

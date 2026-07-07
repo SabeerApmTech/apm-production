@@ -2,24 +2,18 @@ import { useState, useCallback, useMemo } from "react"
 import type { ColDef, ICellRendererParams } from "ag-grid-community"
 import { Pencil } from "lucide-react"
 import { DataTable } from "@/shared/DataTable"
+import { DeleteDialog } from "@/shared/DeleteDialog"
 import { CompanyDialog } from "./CompanyDialog"
-
-/* ── Types ─────────────────────────────────────────────── */
-export interface CompanyRow {
-  id: number
-  companyName: string
-  location: string
-}
-
-/* ── Mock data ──────────────────────────────────────────── */
-const initialCompanies: CompanyRow[] = [
-  { id: 1, companyName: "Lakshika",   location: "Chennai" },
-  { id: 2, companyName: "Kingstrack", location: "Chennai" },
-  { id: 3, companyName: "ABC",        location: "Chennai" },
-]
+import type { CompanyRecord } from "@/types/company"
+import {
+  useGetCompaniesQuery,
+  useCreateCompanyMutation,
+  useUpdateCompanyMutation,
+  useDeleteCompaniesMutation,
+} from "@/store/services/companyApi"
 
 /* ── Action cell ────────────────────────────────────────── */
-interface ActionCellParams extends ICellRendererParams<CompanyRow> {
+interface ActionCellParams extends ICellRendererParams<CompanyRecord> {
   onEdit?: (id: number) => void
 }
 
@@ -27,7 +21,7 @@ function ActionCell({ data, onEdit }: ActionCellParams) {
   return (
     <div className="flex h-full items-center">
       <button
-        onClick={(e) => { e.stopPropagation(); if (data) onEdit?.(data.id) }}
+        onClick={(e) => { e.stopPropagation(); if (data) onEdit?.(data.companyId) }}
         className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
       >
         <Pencil className="h-4 w-4" />
@@ -38,36 +32,44 @@ function ActionCell({ data, onEdit }: ActionCellParams) {
 
 /* ── Page ───────────────────────────────────────────────── */
 export function Company() {
-  const [companies, setCompanies]     = useState<CompanyRow[]>(initialCompanies)
+  const { data, isLoading } = useGetCompaniesQuery()
+  const companies = useMemo(() => data ?? [], [data])
+
+  const [createCompany] = useCreateCompanyMutation()
+  const [updateCompany] = useUpdateCompanyMutation()
+  const [deleteCompanies] = useDeleteCompaniesMutation()
+
   const [dialogOpen, setDialogOpen]   = useState(false)
-  const [editCompany, setEditCompany] = useState<CompanyRow | undefined>()
+  const [editCompany, setEditCompany] = useState<CompanyRecord | undefined>()
+  const [deleteRows, setDeleteRows]   = useState<CompanyRecord[] | null>(null)
 
   const openEditDialog = useCallback((id: number) => {
-    setEditCompany(companies.find((c) => c.id === id))
+    setEditCompany(companies.find((c) => c.companyId === id))
   }, [companies])
 
-  const handleDelete = useCallback((rows: CompanyRow[]) => {
-    const ids = new Set(rows.map((r) => r.id))
-    setCompanies((prev) => prev.filter((c) => !ids.has(c.id)))
-  }, [])
+  const closeDelete = useCallback(() => setDeleteRows(null), [])
 
-  const handleAdd = useCallback((company: Omit<CompanyRow, "id">) => {
-    setCompanies((prev) => [
-      ...prev,
-      { ...company, id: Math.max(0, ...prev.map((c) => c.id)) + 1 },
-    ])
-  }, [])
+  const handleDelete = useCallback(async () => {
+    if (!deleteRows?.length) return
+    try {
+      await deleteCompanies(deleteRows.map((r) => r.companyId)).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteRows, deleteCompanies])
 
-  const handleEdit = useCallback((id: number, companyName: string, location: string) => {
-    setCompanies((prev) =>
-      prev.map((c) => c.id === id ? { ...c, companyName, location } : c)
-    )
-  }, [])
+  const handleAdd = useCallback(async (company: { companyName: string; companyLocation: string }) => {
+    await createCompany(company).unwrap()
+  }, [createCompany])
 
-  const columnDefs = useMemo<ColDef<CompanyRow>[]>(
+  const handleEdit = useCallback(async (companyId: number, companyName: string, companyLocation: string) => {
+    await updateCompany({ companyId, body: { companyName, companyLocation } }).unwrap()
+  }, [updateCompany])
+
+  const columnDefs = useMemo<ColDef<CompanyRecord>[]>(
     () => [
       { field: "companyName", headerName: "Company Name", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
-      { field: "location",    headerName: "Location" },
+      { field: "companyLocation", headerName: "Location" },
       { headerName: "Action", cellRenderer: ActionCell, cellRendererParams: { onEdit: openEditDialog }, sortable: false, maxWidth: 80 },
     ],
     [openEditDialog]
@@ -75,22 +77,31 @@ export function Company() {
 
   return (
     <>
-      <DataTable<CompanyRow>
+      <DataTable<CompanyRecord>
         title="Company"
         rowData={companies}
         columnDefs={columnDefs}
+        loading={isLoading}
         onAdd={() => setDialogOpen(true)}
-        onDelete={handleDelete}
+        onDelete={setDeleteRows}
         checkbox
       />
 
       <CompanyDialog
-        key={editCompany?.id ?? "new"}
+        key={editCompany?.companyId ?? "new"}
         open={dialogOpen || editCompany !== undefined}
         onClose={() => { setDialogOpen(false); setEditCompany(undefined) }}
         company={editCompany}
         onAdd={handleAdd}
         onEdit={handleEdit}
+      />
+
+      <DeleteDialog
+        open={!!deleteRows}
+        onClose={closeDelete}
+        onConfirm={handleDelete}
+        title="Delete Company"
+        description={`Are you sure you want to delete the selected compan${deleteRows && deleteRows.length > 1 ? "ies" : "y"}? This action cannot be undone.`}
       />
     </>
   )

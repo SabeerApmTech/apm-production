@@ -155,12 +155,15 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
               <FormControl>
                 <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-6 pt-1">
                   {PRIORITY_LEVELS.map((opt) => (
-                    <label key={opt} className="flex cursor-pointer items-center gap-2">
-                      <RadioGroupItem value={opt} />
-                      <Label className={cn("cursor-pointer font-semibold text-sm", PRIORITY_TEXT_STYLES[opt])}>
+                    <div key={opt} className="flex items-center gap-2">
+                      <RadioGroupItem value={opt} id={`priorityLevel-${opt}`} />
+                      <Label
+                        htmlFor={`priorityLevel-${opt}`}
+                        className={cn("cursor-pointer font-semibold text-sm", PRIORITY_TEXT_STYLES[opt])}
+                      >
                         {opt}
                       </Label>
-                    </label>
+                    </div>
                   ))}
                 </RadioGroup>
               </FormControl>

@@ -14,17 +14,22 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Trash2 } from "lucide-react"
+import { GripVertical, Loader2, Trash2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { Operation, ProductRow } from "./Products"
-
-type StageType = "production" | "rework"
+import { DeleteDialog } from "@/shared/DeleteDialog"
+import type { OperationRow, OperationType } from "@/types/product"
+import {
+  useGetOperationsQuery,
+  useAddOperationMutation,
+  useDeleteOperationsMutation,
+  useReorderOperationsMutation,
+} from "@/store/services/productApi"
 
 interface SortableRowProps {
-  op: Operation
+  op: OperationRow
   seqNo: number
   selected: boolean
-  onToggle: (id: string) => void
+  onToggle: (id: number) => void
 }
 
 function SortableRow({ op, seqNo, selected, onToggle }: SortableRowProps) {
@@ -58,43 +63,68 @@ function SortableRow({ op, seqNo, selected, onToggle }: SortableRowProps) {
         className="h-4 w-4 cursor-pointer accent-blue-500"
       />
       <span className="w-12 shrink-0 text-center text-gray-400">{seqNo}</span>
-      <span className="flex-1 text-gray-700">{op.operation}</span>
+      <span className="flex-1 text-gray-700">{op.operationName}</span>
     </div>
   )
 }
 
 interface OperationsPanelProps {
-  product: ProductRow
-  onUpdate: (type: StageType, ops: Operation[]) => void
+  productId: number
   className?: string
+  onClose?: () => void
 }
 
-export function OperationsPanel({ product, onUpdate, className }: OperationsPanelProps) {
-  const [activeTab, setActiveTab]   = React.useState<StageType>("production")
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set())
-  const [isAdding, setIsAdding]     = React.useState(false)
-  const [newOpText, setNewOpText]   = React.useState("")
+export function OperationsPanel({ productId, className, onClose }: OperationsPanelProps) {
+  const [activeTab, setActiveTab] = React.useState<OperationType>("production")
+  const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set())
+  const [isAdding, setIsAdding] = React.useState(false)
+  const [newOpText, setNewOpText] = React.useState("")
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const { data, isLoading } = useGetOperationsQuery({ productId, operationType: activeTab })
+  const [addOperation, { isLoading: isSaving }] = useAddOperationMutation()
+  const [deleteOperations] = useDeleteOperationsMutation()
+  const [reorderOperations] = useReorderOperationsMutation()
+
+  // Mirrors the fetched list but updates immediately on drag so reordering feels instant,
+  // rather than waiting for the reorder request to round-trip before the row visually moves.
+  // Reset (during render, not an effect) whenever the underlying query result changes.
+  const [prevData, setPrevData] = React.useState(data)
+  const [localOperations, setLocalOperations] = React.useState<OperationRow[]>(data ?? [])
+  if (data !== prevData) {
+    setPrevData(data)
+    setLocalOperations(data ?? [])
+  }
+  const operations = localOperations
 
   React.useEffect(() => {
     if (isAdding) inputRef.current?.focus()
   }, [isAdding])
 
-  const operations = activeTab === "production" ? product.productionStages : product.reworkStages
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
 
-  function handleDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIdx = operations.findIndex((o) => o.id === active.id)
     const newIdx = operations.findIndex((o) => o.id === over.id)
-    onUpdate(activeTab, arrayMove(operations, oldIdx, newIdx))
+    const reordered = arrayMove(operations, oldIdx, newIdx)
+    setLocalOperations(reordered)
+    try {
+      await reorderOperations({
+        productId,
+        operationType: activeTab,
+        operations: reordered.map((op, i) => ({ sequenceNo: i + 1, operationName: op.operationName })),
+      }).unwrap()
+    } catch {
+      setLocalOperations(data ?? [])
+    }
   }
 
-  function toggleSelect(id: string) {
+  function toggleSelect(id: number) {
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) { next.delete(id) } else { next.add(id) }
@@ -106,21 +136,29 @@ export function OperationsPanel({ product, onUpdate, className }: OperationsPane
     setSelectedIds(e.target.checked ? new Set(operations.map((o) => o.id)) : new Set())
   }
 
-  function handleDelete() {
-    onUpdate(activeTab, operations.filter((o) => !selectedIds.has(o.id)))
-    setSelectedIds(new Set())
+  async function handleDelete() {
+    if (!selectedIds.size) return
+    try {
+      await deleteOperations({
+        productId,
+        operationType: activeTab,
+        operationIds: [...selectedIds],
+      }).unwrap()
+    } finally {
+      setSelectedIds(new Set())
+    }
   }
 
-  function handleSave() {
+  async function handleSave() {
     const text = newOpText.trim()
     if (!text) return
-    const newOp: Operation = {
-      id: `${activeTab[0]}${product.id}-${Date.now()}`,
-      operation: text,
+    try {
+      await addOperation({ productId, operationType: activeTab, operationName: text }).unwrap()
+      setNewOpText("")
+      setIsAdding(false)
+    } catch {
+      // Toast middleware already surfaced the error; keep the input open so the user can retry.
     }
-    onUpdate(activeTab, [...operations, newOp])
-    setNewOpText("")
-    setIsAdding(false)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -133,7 +171,7 @@ export function OperationsPanel({ product, onUpdate, className }: OperationsPane
   return (
     <div className={cn("flex w-105 shrink-0 self-start max-h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm", className)}>
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex items-center border-b border-gray-200">
         {(["production", "rework"] as const).map((tab) => (
           <button
             key={tab}
@@ -152,12 +190,22 @@ export function OperationsPanel({ product, onUpdate, className }: OperationsPane
             {tab === "production" ? "Production Stage" : "Rework Stage"}
           </button>
         ))}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-8 w-8 shrink-0 items-center justify-center mr-2 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-gray-100 px-4 py-2">
         <button
-          onClick={handleDelete}
+          onClick={() => setDeleteConfirmOpen(true)}
           disabled={selectedIds.size === 0}
           className={cn(
             "flex h-8 w-8 items-center justify-center rounded-lg border transition-all",
@@ -225,24 +273,40 @@ export function OperationsPanel({ product, onUpdate, className }: OperationsPane
               onChange={(e) => setNewOpText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Enter Operation..."
+              disabled={isSaving}
               className="flex-1 rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             <button
               onClick={handleSave}
-              disabled={!newOpText.trim()}
+              disabled={!newOpText.trim() || isSaving}
               className="rounded bg-blue-500 px-3 py-1 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
             >
-              Save
+              {isSaving ? "Saving..." : "Save"}
             </button>
           </div>
         )}
 
-        {operations.length === 0 && !isAdding && (
+        {isLoading && (
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading operations…
+          </div>
+        )}
+
+        {!isLoading && operations.length === 0 && !isAdding && (
           <div className="flex items-center justify-center py-12 text-sm text-gray-400">
             No operations yet. Click ADD to create one.
           </div>
         )}
       </div>
+
+      <DeleteDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Operations"
+        description={`Are you sure you want to delete the selected operation${selectedIds.size > 1 ? "s" : ""}? This action cannot be undone.`}
+      />
     </div>
   )
 }

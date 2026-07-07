@@ -23,6 +23,15 @@ export function toIsoDate(dateStr: string): string {
   return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
 }
 
+/** ISO datetime "2026-07-06T16:31:44.823" → two-line display "06/07/2026\n04:31 PM" */
+export function formatLogDateTime(isoDateTime: string): string {
+  const date = new Date(isoDateTime)
+  if (isNaN(date.getTime())) return isoDateTime
+  const datePart = fromIsoDate(isoDateTime.slice(0, 10))
+  const timePart = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
+  return `${datePart}\n${timePart}`
+}
+
 /** Short DOB "10-Apr-94" → ISO "1994-04-10" (for HTML date inputs) */
 export function toInputDate(dob: string): string {
   const months: Record<string, string> = {

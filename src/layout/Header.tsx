@@ -1,8 +1,18 @@
+import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { Bell, ChevronDown, Menu, UserCircle2 } from "lucide-react"
+import { Bell, ChevronDown, KeyRound, LogOut, Menu, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
-import { getRole } from "@/utils/auth"
+import { getRole, getAuthUser, getRoleLabel, clearAuth } from "@/utils/auth"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { ChangePasswordDialog } from "@/layout/ChangePasswordDialog"
+import { useLogoutMutation } from "@/store/services/authApi"
 
 const EXTRA_TITLES: Record<string, string> = {
   "/notifications": "Notifications",
@@ -26,6 +36,18 @@ export function Header() {
   const navigate = useNavigate()
   const title = getPageTitle(pathname)
   const role = getRole()
+  const user = getAuthUser()
+  const [logout] = useLogoutMutation()
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap()
+    } finally {
+      clearAuth()
+      navigate("/login", { replace: true })
+    }
+  }
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6">
@@ -53,15 +75,44 @@ export function Header() {
 
         {/* Admin user — hidden for operators */}
         {role !== 'operator' && (
-          <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-            <UserCircle2 className="h-7 w-7 shrink-0 text-gray-500" />
-            <span className="hidden sm:inline-flex items-center gap-1">
-              Admin
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </span>
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                <UserCircle2 className="h-7 w-7 shrink-0 text-gray-500" />
+                <span className="hidden sm:inline-flex items-center gap-1">
+                  {user?.employeeName ?? "Admin"}
+                  {user && <span className="text-gray-400 font-normal">({getRoleLabel(user.employeeRole)})</span>}
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onSelect={() => {
+                  // Let the menu close normally first, then open the dialog on the
+                  // next tick — opening it synchronously (or preventing the menu's
+                  // close) races Radix's body pointer-events lock between the two
+                  // overlays and leaves the page unclickable.
+                  setTimeout(() => setChangePasswordOpen(true), 0)
+                }}
+              >
+                <KeyRound className="h-4 w-4" />
+                Change Password
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={handleLogout} className="text-red-600 focus:bg-red-50 focus:text-red-600">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
+
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </header>
   )
 }

@@ -2,14 +2,14 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { FormDialog } from "@/shared/FormDialog"
-import type { ProductRow } from "./Products"
+import type { ProductRecord } from "@/types/product"
 
 interface AddProductDialogProps {
   open: boolean
   onClose: () => void
-  product?: ProductRow
-  onAdd: (product: Omit<ProductRow, "id">) => void
-  onEdit?: (id: number, itemCode: string, productName: string) => void
+  product?: ProductRecord
+  onAdd: (product: { itemCode: string; productName: string }) => Promise<void>
+  onEdit?: (productId: number, itemCode: string, productName: string) => Promise<void>
 }
 
 export function AddProductDialog({
@@ -23,16 +23,24 @@ export function AddProductDialog({
 
   const [itemCode, setItemCode]       = React.useState(product?.itemCode ?? "")
   const [productName, setProductName] = React.useState(product?.productName ?? "")
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!itemCode.trim() || !productName.trim()) return
-    if (isEdit && product) {
-      onEdit?.(product.id, itemCode.trim(), productName.trim())
-    } else {
-      onAdd({ itemCode: itemCode.trim(), productName: productName.trim(), productionStages: [], reworkStages: [] })
+    setIsSubmitting(true)
+    try {
+      if (isEdit && product) {
+        await onEdit?.(product.productId, itemCode.trim(), productName.trim())
+      } else {
+        await onAdd({ itemCode: itemCode.trim(), productName: productName.trim() })
+      }
+      onClose()
+    } catch {
+      // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
+    } finally {
+      setIsSubmitting(false)
     }
-    onClose()
   }
 
   return (
@@ -41,8 +49,8 @@ export function AddProductDialog({
       onClose={onClose}
       title={isEdit ? "Edit Product" : "Add Product"}
       onSubmit={handleSubmit}
-      submitLabel={isEdit ? "Update" : "Save"}
-      submitDisabled={!itemCode.trim() || !productName.trim()}
+      submitLabel={isSubmitting ? "Saving..." : isEdit ? "Update" : "Save"}
+      submitDisabled={isSubmitting || !itemCode.trim() || !productName.trim()}
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="itemCode">Item Code</Label>

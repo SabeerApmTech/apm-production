@@ -2,14 +2,14 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { FormDialog } from "@/shared/FormDialog"
-import type { CompanyRow } from "./Company"
+import type { CompanyRecord } from "@/types/company"
 
 interface CompanyDialogProps {
   open: boolean
   onClose: () => void
-  company?: CompanyRow
-  onAdd: (company: Omit<CompanyRow, "id">) => void
-  onEdit?: (id: number, companyName: string, location: string) => void
+  company?: CompanyRecord
+  onAdd: (company: { companyName: string; companyLocation: string }) => Promise<void>
+  onEdit?: (companyId: number, companyName: string, companyLocation: string) => Promise<void>
 }
 
 export function CompanyDialog({
@@ -21,18 +21,26 @@ export function CompanyDialog({
 }: CompanyDialogProps) {
   const isEdit = Boolean(company)
 
-  const [companyName, setCompanyName] = React.useState(company?.companyName ?? "")
-  const [location, setLocation]       = React.useState(company?.location ?? "")
+  const [companyName, setCompanyName]         = React.useState(company?.companyName ?? "")
+  const [companyLocation, setCompanyLocation] = React.useState(company?.companyLocation ?? "")
+  const [isSubmitting, setIsSubmitting]       = React.useState(false)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!companyName.trim() || !location.trim()) return
-    if (isEdit && company) {
-      onEdit?.(company.id, companyName.trim(), location.trim())
-    } else {
-      onAdd({ companyName: companyName.trim(), location: location.trim() })
+    if (!companyName.trim() || !companyLocation.trim()) return
+    setIsSubmitting(true)
+    try {
+      if (isEdit && company) {
+        await onEdit?.(company.companyId, companyName.trim(), companyLocation.trim())
+      } else {
+        await onAdd({ companyName: companyName.trim(), companyLocation: companyLocation.trim() })
+      }
+      onClose()
+    } catch {
+      // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
+    } finally {
+      setIsSubmitting(false)
     }
-    onClose()
   }
 
   return (
@@ -41,8 +49,8 @@ export function CompanyDialog({
       onClose={onClose}
       title={isEdit ? "Edit Company" : "Add Company"}
       onSubmit={handleSubmit}
-      submitLabel={isEdit ? "Update" : "Save"}
-      submitDisabled={!companyName.trim() || !location.trim()}
+      submitLabel={isSubmitting ? "Saving..." : isEdit ? "Update" : "Save"}
+      submitDisabled={isSubmitting || !companyName.trim() || !companyLocation.trim()}
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="companyName">Company Name</Label>
@@ -56,12 +64,12 @@ export function CompanyDialog({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="location">Company Location</Label>
+        <Label htmlFor="companyLocation">Company Location</Label>
         <Input
-          id="location"
+          id="companyLocation"
           placeholder="Enter company location"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
+          value={companyLocation}
+          onChange={(e) => setCompanyLocation(e.target.value)}
         />
       </div>
     </FormDialog>

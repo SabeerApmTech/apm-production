@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react"
-import type { ColDef } from "ag-grid-community"
+import type { ColDef, ValueGetterParams } from "ag-grid-community"
 import { ArrowUpDown } from "lucide-react"
 import { DataTable } from "@/shared/DataTable"
 import {
@@ -13,59 +13,38 @@ import { PriorityBadge } from "@/shared/renderers/PriorityBadge"
 import { TargetDateCell } from "@/shared/renderers/TargetDateCell"
 import { EditDeleteCell } from "@/shared/renderers/EditDeleteCell"
 import { ActionButtonCell } from "@/shared/renderers/ActionButtonCell"
-import { fromIsoDate } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
+import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import type { PendingScheduleRecord } from "@/types/pendingSchedule"
+import {
+  useGetPendingSchedulesQuery,
+  useCreatePendingScheduleMutation,
+  useUpdatePendingScheduleMutation,
+  useDeletePendingScheduleMutation,
+} from "@/store/services/pendingScheduleApi"
 import type { ScheduleFormValues } from "./ScheduleFormDrawer"
-
-/* ── Types ─────────────────────────────────────────────── */
-export interface ScheduleRow {
-  id: number
-  priorityNo: number
-  priorityLevel: "High" | "Medium" | "Low"
-  scheduleDate: string
-  scheduleId: string
-  company: string
-  product: string
-  noOfOperations: number
-  targetQty: number
-  producedQty: number
-  pendingQty: number
-  handoverQty: number
-  targetDate: string
-  createdBy: string
-}
-
-/* ── Mock data ──────────────────────────────────────────── */
-const initialSchedules: ScheduleRow[] = [
-  {
-    id: 1, priorityNo: 1, priorityLevel: "High",
-    scheduleDate: "26/05/2026", scheduleId: "S001-26",
-    company: "Lakshika", product: "AIS 140",
-    noOfOperations: 19, targetQty: 3000, producedQty: 1000,
-    pendingQty: 2000, handoverQty: 1000,
-    targetDate: "31/5/2026", createdBy: "2547 : Basheer",
-  },
-  {
-    id: 2, priorityNo: 2, priorityLevel: "Medium",
-    scheduleDate: "26/05/2026", scheduleId: "S002-26",
-    company: "Kingstrack", product: "Dashcam",
-    noOfOperations: 8, targetQty: 2000, producedQty: 0,
-    pendingQty: 2000, handoverQty: 1000,
-    targetDate: "20/5/2026", createdBy: "2547 : Basheer",
-  },
-  {
-    id: 3, priorityNo: 3, priorityLevel: "Low",
-    scheduleDate: "26/05/2026", scheduleId: "S003-26",
-    company: "Kingstrack", product: "CC TV",
-    noOfOperations: 12, targetQty: 3000, producedQty: 1200,
-    pendingQty: 1800, handoverQty: 1000,
-    targetDate: "10/6/2026", createdBy: "2547 : Basheer",
-  },
-]
 
 /* ── Page ───────────────────────────────────────────────── */
 export function PendingSchedules() {
-  const [schedules, setSchedules]           = useState<ScheduleRow[]>(initialSchedules)
-  const [newOrder, setNewOrder]             = useState<ScheduleRow[] | null>(null)
+  const { data, isLoading } = useGetPendingSchedulesQuery()
+  const schedules = useMemo(() => data ?? [], [data])
+  const { data: companies } = useGetCompaniesQuery()
+
+  const [createPendingSchedule] = useCreatePendingScheduleMutation()
+  const [updatePendingSchedule] = useUpdatePendingScheduleMutation()
+  const [deletePendingSchedule] = useDeletePendingScheduleMutation()
+
+  // No reorder endpoint exists yet, so drag-to-reorder is local-only/visual — it mirrors the
+  // fetched list but diverges after a confirmed reorder, and resets whenever the underlying
+  // query result changes (create/edit/delete refetch, or a manual page refresh).
+  const [prevSchedules, setPrevSchedules] = useState(schedules)
+  const [localSchedules, setLocalSchedules] = useState<PendingScheduleRecord[]>(schedules)
+  if (schedules !== prevSchedules) {
+    setPrevSchedules(schedules)
+    setLocalSchedules(schedules)
+  }
+
+  const [newOrder, setNewOrder]             = useState<PendingScheduleRecord[] | null>(null)
   const [isDirty, setIsDirty]               = useState(false)
   const [confirmPriorityOpen, setConfirmPriorityOpen] = useState(false)
   const [drawerOpen, setDrawerOpen]         = useState(false)
@@ -73,20 +52,20 @@ export function PendingSchedules() {
   const [deleteId, setDeleteId]             = useState<number | null>(null)
   const [allocationId, setAllocationId]     = useState<number | null>(null)
 
-  const editSchedule = schedules.find((s) => s.id === editId)
+  const editSchedule = localSchedules.find((s) => s.pendingScheduleId === editId)
 
-  /* ── Drag ── */
-  const handleRowDragEnd = useCallback((reordered: ScheduleRow[]) => {
-    const changed = reordered.some((s, i) => s.id !== schedules[i]?.id)
+  /* ── Drag (local-only) ── */
+  const handleRowDragEnd = useCallback((reordered: PendingScheduleRecord[]) => {
+    const changed = reordered.some((s, i) => s.pendingScheduleId !== localSchedules[i]?.pendingScheduleId)
     if (changed) {
       setNewOrder(reordered)
       setIsDirty(true)
     }
-  }, [schedules])
+  }, [localSchedules])
 
   const handleConfirmPriority = useCallback(() => {
     if (newOrder) {
-      setSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
+      setLocalSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
       setNewOrder(null)
       setIsDirty(false)
     }
@@ -94,89 +73,94 @@ export function PendingSchedules() {
   }, [newOrder])
 
   /* ── CRUD ── */
-  const handleAdd = useCallback((data: ScheduleFormValues) => {
-    const next = Math.max(0, ...schedules.map((s) => s.id)) + 1
-    setSchedules((prev) => [
-      ...prev,
-      {
-        id: next,
-        priorityNo: prev.length + 1,
-        priorityLevel: data.priorityLevel,
-        scheduleDate: fromIsoDate(data.scheduleDate),
-        scheduleId: `S${String(next).padStart(3, "0")}-26`,
-        company: data.company,
-        product: data.product,
-        noOfOperations: data.noOfOperations,
-        targetQty: data.targetQty,
-        producedQty: 0,
-        pendingQty: data.targetQty,
-        handoverQty: 0,
-        targetDate: fromIsoDate(data.targetDate),
-        createdBy: "2547 : Basheer",
-      },
-    ])
-  }, [schedules])
+  const handleAdd = useCallback(async (values: ScheduleFormValues) => {
+    const user = getAuthUser()
+    if (!user) return
+    const companyLocation = companies?.find((c) => c.companyName === values.companyName)?.companyLocation ?? ""
+    await createPendingSchedule({
+      scheduleDate: values.scheduleDate,
+      companyName: values.companyName,
+      companyLocation,
+      productName: values.productName,
+      targetQty: values.targetQty,
+      targetDate: values.targetDate,
+      priorityLevel: values.priorityLevel,
+      createdByEmpId: user.employeeId,
+    }).unwrap()
+  }, [companies, createPendingSchedule])
 
-  const handleEdit = useCallback((data: ScheduleFormValues) => {
-    if (editId === null) return
-    setSchedules((prev) =>
-      prev.map((s) =>
-        s.id === editId
-          ? {
-              ...s,
-              priorityLevel: data.priorityLevel,
-              scheduleDate: fromIsoDate(data.scheduleDate),
-              company: data.company,
-              product: data.product,
-              noOfOperations: data.noOfOperations,
-              targetQty: data.targetQty,
-              targetDate: fromIsoDate(data.targetDate),
-            }
-          : s
-      )
-    )
-  }, [editId])
+  const handleEdit = useCallback(async (values: ScheduleFormValues) => {
+    if (!editSchedule) return
+    await updatePendingSchedule({
+      scheduleId: editSchedule.scheduleId,
+      scheduleDate: values.scheduleDate,
+      targetQty: values.targetQty,
+      targetDate: values.targetDate,
+      priorityLevel: values.priorityLevel,
+    }).unwrap()
+  }, [editSchedule, updatePendingSchedule])
 
-  const handleDelete = useCallback(() => {
+  const closeDelete = useCallback(() => setDeleteId(null), [])
+
+  const handleDelete = useCallback(async () => {
     if (deleteId === null) return
-    setSchedules((prev) => prev.filter((s) => s.id !== deleteId))
-    setDeleteId(null)
-  }, [deleteId])
+    try {
+      await deletePendingSchedule(deleteId).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteId, deletePendingSchedule])
 
   /* ── Columns ── */
   const openEdit   = useCallback((id: number) => { setEditId(id);   setDrawerOpen(true) }, [])
   const openDelete = useCallback((id: number) => setDeleteId(id), [])
   const openAlloc  = useCallback((id: number) => setAllocationId(id), [])
 
-  const columnDefs = useMemo<ColDef<ScheduleRow>[]>(
+  // Only Supervisors can allocate staff — Super Admin and Manager see the action disabled.
+  const canAllocate = getAuthUser()?.employeeRole === "SUPERVISOR"
+  // Only Managers can add/edit/delete schedules — Super Admin and Supervisor are read-only here.
+  const canManageSchedule = getAuthUser()?.employeeRole === "MANAGER"
+
+  const columnDefs = useMemo<ColDef<PendingScheduleRecord>[]>(
     () => [
       { field: "priorityNo",     headerName: "Priority No",      maxWidth: 100, sortable: false },
       { field: "priorityLevel",  headerName: "Priority Level",   cellRenderer: PriorityBadge, sortable: false, minWidth: 120 },
       { field: "scheduleDate",   headerName: "Schedule Date",    minWidth: 120 },
       { field: "scheduleId",     headerName: "Schedule ID",      minWidth: 100 },
-      { field: "company",        headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "product",        headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 100 },
+      { field: "companyName",    headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      { field: "productName",    headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 100 },
       { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
       { field: "targetQty",      headerName: "Target Qty",       minWidth: 100 },
-      { field: "producedQty",    headerName: "Produced Qty",     minWidth: 110 },
-      { field: "pendingQty",     headerName: "Pending Qty",      minWidth: 100 },
-      { field: "handoverQty",    headerName: "Handover Qty",     minWidth: 110 },
       { field: "targetDate",     headerName: "Target Date",      cellRenderer: TargetDateCell, minWidth: 110 },
-      { field: "createdBy",      headerName: "Created By",       minWidth: 130 },
+      {
+        headerName: "Created By",
+        valueGetter: (p: ValueGetterParams<PendingScheduleRecord>) =>
+          p.data ? `${p.data.createdByEmpId} : ${p.data.createdByEmpName}` : "",
+        minWidth: 150,
+      },
       {
         headerName: "Staff Allocated",
         cellRenderer: ActionButtonCell,
-        cellRendererParams: { onAction: (data: ScheduleRow) => openAlloc(data.id), label: "Allocate" },
+        cellRendererParams: {
+          onAction: (data: PendingScheduleRecord) => openAlloc(data.pendingScheduleId),
+          label: "Allocate",
+          disabled: !canAllocate,
+        },
         sortable: false, minWidth: 120,
       },
-      {
-        headerName: "Actions",
-        cellRenderer: EditDeleteCell,
-        cellRendererParams: { onEdit: openEdit, onDelete: openDelete },
-        sortable: false, maxWidth: 90,
-      },
+      ...(canManageSchedule
+        ? [
+            {
+              headerName: "Actions",
+              cellRenderer: EditDeleteCell,
+              cellRendererParams: { onEdit: openEdit, onDelete: openDelete },
+              sortable: false,
+              maxWidth: 90,
+            } satisfies ColDef<PendingScheduleRecord>,
+          ]
+        : []),
     ],
-    [openEdit, openDelete, openAlloc]
+    [openEdit, openDelete, openAlloc, canAllocate, canManageSchedule]
   )
 
   const updatePriorityButton = isDirty ? (
@@ -191,13 +175,14 @@ export function PendingSchedules() {
 
   return (
     <>
-      <DataTable<ScheduleRow>
+      <DataTable<PendingScheduleRecord>
         title="Schedule"
-        rowData={schedules}
+        rowData={localSchedules}
         columnDefs={columnDefs}
+        loading={isLoading}
         rowDrag
         hideSno
-        onAdd={() => { setEditId(null); setDrawerOpen(true) }}
+        onAdd={canManageSchedule ? () => { setEditId(null); setDrawerOpen(true) } : undefined}
         onRowDragEnd={handleRowDragEnd}
         toolbarExtra={updatePriorityButton}
       />
@@ -229,13 +214,14 @@ export function PendingSchedules() {
 
       <DeleteDialog
         open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={closeDelete}
         onConfirm={handleDelete}
         title="Delete Schedule"
         description="Are you sure you want to delete this schedule? This action cannot be undone."
       />
 
       <AllocationDialog
+        key={allocationId ?? "none"}
         open={allocationId !== null}
         onClose={() => setAllocationId(null)}
         scheduleId={allocationId}

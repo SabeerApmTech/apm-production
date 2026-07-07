@@ -1,59 +1,69 @@
-import { useState, useCallback } from "react"
-import type { ColDef } from "ag-grid-community"
+import { useState, useCallback, useMemo } from "react"
+import type { ColDef, ValueFormatterParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-
-interface TransactionRow {
-  id: number
-  dateTime: string
-  employeeId: string
-  employeeName: string
-  scheduleId: string
-  company: string
-  product: string
-  operation: string
-  status: "Running" | "Stopped"
-  successfulQty: number
-  rejectedQty: number
-  reason: string
-  remarks: string
-}
-
-const MOCK_TRANSACTIONS: TransactionRow[] = [
-  { id: 1, dateTime: "26/05/2026\n10:00 AM", employeeId: "1216", employeeName: "Ashwin", scheduleId: "S001-26", company: "Lakshitha", product: "CCDV",     operation: "Preprocessing",    status: "Running", successfulQty: 500,  rejectedQty: 0,   reason: "-",                remarks: "-"             },
-  { id: 2, dateTime: "26/05/2026\n10:00 AM", employeeId: "0987", employeeName: "Naveen", scheduleId: "S002-26", company: "Kingstrack", product: "AIS - 140", operation: "Preprocessing",    status: "Stopped", successfulQty: 1500, rejectedQty: 500, reason: "Component Failure", remarks: "-"             },
-  { id: 3, dateTime: "27/05/2026\n09:30 AM", employeeId: "1045", employeeName: "Ravi",   scheduleId: "S003-26", company: "Lakshitha", product: "AIS 140",   operation: "Firmware Flashing", status: "Running", successfulQty: 800,  rejectedQty: 0,   reason: "-",                remarks: "-"             },
-  { id: 4, dateTime: "27/05/2026\n11:00 AM", employeeId: "1102", employeeName: "Suresh", scheduleId: "S003-26", company: "Lakshitha", product: "AIS 140",   operation: "Battery Fixing",    status: "Stopped", successfulQty: 300,  rejectedQty: 200, reason: "Battery Defect",   remarks: "Replaced batch" },
-]
-
+import { formatLogDateTime } from "@/utils/date"
+import type { TransactionLogRecord } from "@/types/transactionLog"
+import {
+  useGetTransactionLogsQuery,
+  useDeleteTransactionLogMutation,
+} from "@/store/services/transactionLogApi"
 
 export function TransactionLog() {
-  const [rows,     setRows]     = useState<TransactionRow[]>(MOCK_TRANSACTIONS)
+  const { data, isLoading } = useGetTransactionLogsQuery()
+  const rows = useMemo(() => data ?? [], [data])
+
+  const [deleteTransactionLog] = useDeleteTransactionLogMutation()
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [dateRange, setDateRange] = useState({ from: "", to: "" })
 
-  const handleDelete = useCallback(() => {
+  // No date-range query param exists on the endpoint, so the toolbar's from/to filter is applied client-side.
+  const filteredRows = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) return rows
+    return rows.filter((r) => {
+      const logDate = r.logTime.slice(0, 10)
+      if (dateRange.from && logDate < dateRange.from) return false
+      if (dateRange.to && logDate > dateRange.to) return false
+      return true
+    })
+  }, [rows, dateRange])
+
+  const closeDelete = useCallback(() => setDeleteId(null), [])
+  const openDelete  = useCallback((id: number) => setDeleteId(id), [])
+
+  const handleDelete = useCallback(async () => {
     if (deleteId === null) return
-    setRows((prev) => prev.filter((r) => r.id !== deleteId))
-    setDeleteId(null)
-  }, [deleteId])
+    try {
+      await deleteTransactionLog(deleteId).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteId, deleteTransactionLog])
 
-  const openDelete = useCallback((id: number) => setDeleteId(id), [])
-
-  const columnDefs: ColDef<TransactionRow>[] = [
-    { field: "dateTime",      headerName: "Date & Time",    minWidth: 130, cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" } },
+  const columnDefs: ColDef<TransactionLogRecord>[] = [
+    {
+      field: "logTime",
+      headerName: "Date & Time",
+      minWidth: 130,
+      cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" },
+      valueFormatter: (p: ValueFormatterParams<TransactionLogRecord>) =>
+        p.value ? formatLogDateTime(p.value) : "",
+    },
     { field: "employeeId",    headerName: "Employee Id",    minWidth: 110 },
     { field: "employeeName",  headerName: "Employee Name",  minWidth: 130 },
     { field: "scheduleId",    headerName: "Schedule ID",    minWidth: 110 },
-    { field: "company",       headerName: "Company",        cellStyle: { fontWeight: 600 }, minWidth: 120 },
-    { field: "product",       headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
-    { field: "operation",     headerName: "Operation",      minWidth: 140 },
+    { field: "companyName",   headerName: "Company",        cellStyle: { fontWeight: 600 }, minWidth: 120 },
+    { field: "productName",   headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
+    { field: "sequenceNo",    headerName: "Seq No",         maxWidth: 90 },
+    { field: "operationName", headerName: "Operation",      minWidth: 140 },
     { field: "status",        headerName: "Status",         cellRenderer: StatusCell, minWidth: 110 },
+    { field: "logEvent",      headerName: "Event",          minWidth: 100 },
     { field: "successfulQty", headerName: "Successful Qty", minWidth: 130 },
     { field: "rejectedQty",   headerName: "Rejected Qty",   minWidth: 120 },
-    { field: "reason",        headerName: "Reason",         minWidth: 140 },
-    { field: "remarks",       headerName: "Remarks",        minWidth: 110 },
+    { field: "reason",        headerName: "Reason",         minWidth: 140, valueFormatter: (p) => p.value ?? "-" },
+    { field: "remarks",       headerName: "Remarks",        minWidth: 110, valueFormatter: (p) => p.value ?? "-" },
     {
       headerName: "Action",
       cellRenderer: DeleteCell,
@@ -64,15 +74,17 @@ export function TransactionLog() {
 
   return (
     <>
-      <DataTable<TransactionRow>
+      <DataTable<TransactionLogRecord>
         title="Transaction Log"
-        rowData={rows}
+        rowData={filteredRows}
         columnDefs={columnDefs}
+        loading={isLoading}
         showDateFilter
+        onDateFilter={(from, to) => setDateRange({ from, to })}
       />
       <DeleteDialog
         open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={closeDelete}
         onConfirm={handleDelete}
         title="Delete Transaction"
         description="Are you sure you want to delete this transaction? This action cannot be undone."

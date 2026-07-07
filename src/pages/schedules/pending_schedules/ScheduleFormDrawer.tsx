@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -16,15 +17,16 @@ import {
 import { Drawer } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { toIsoDate } from "@/utils/date"
-import { COMPANIES, PRODUCTS, PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
-import type { ScheduleRow } from "./PendingSchedules"
+import { PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
+import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import { useGetProductsQuery } from "@/store/services/productApi"
+import type { PendingScheduleRecord } from "@/types/pendingSchedule"
 
 /* ── Schema ─────────────────────────────────────────────── */
 const schema = z.object({
   scheduleDate:   z.string().min(1, "Schedule date is required"),
-  company:        z.string().min(1, "Company is required"),
-  product:        z.string().min(1, "Product is required"),
-  noOfOperations: z.coerce.number({ error: "Required" }).min(1, "Min 1"),
+  companyName:    z.string().min(1, "Company is required"),
+  productName:    z.string().min(1, "Product is required"),
   targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:     z.string().min(1, "Target date is required"),
   priorityLevel:  z.enum(["High", "Medium", "Low"], { error: "Select a priority" }),
@@ -36,7 +38,7 @@ export type ScheduleFormValues = z.infer<typeof schema>
 interface ScheduleFormDrawerProps {
   open: boolean
   onClose: () => void
-  schedule?: ScheduleRow
+  schedule?: PendingScheduleRecord
   onSubmit: (data: ScheduleFormValues) => Promise<void> | void
 }
 
@@ -48,27 +50,31 @@ export function ScheduleFormDrawer({
 }: ScheduleFormDrawerProps) {
   const isEdit = Boolean(schedule)
 
+  const { data: companies } = useGetCompaniesQuery()
+  const { data: products } = useGetProductsQuery()
+
   const form = useForm<ScheduleFormValues>({
     resolver: zodResolver(schema) as Resolver<ScheduleFormValues>,
     defaultValues: schedule
       ? {
-          scheduleDate:   toIsoDate(schedule.scheduleDate),
-          company:        schedule.company,
-          product:        schedule.product,
-          noOfOperations: schedule.noOfOperations,
-          targetQty:      schedule.targetQty,
-          targetDate:     toIsoDate(schedule.targetDate),
-          priorityLevel:  schedule.priorityLevel,
+          scheduleDate:  toIsoDate(schedule.scheduleDate),
+          companyName:   schedule.companyName,
+          productName:   schedule.productName,
+          targetQty:     schedule.targetQty,
+          targetDate:    toIsoDate(schedule.targetDate),
+          priorityLevel: schedule.priorityLevel,
         }
       : {
-          scheduleDate: "", company: "", product: "",
-          noOfOperations: undefined as unknown as number,
+          scheduleDate: "", companyName: "", productName: "",
           targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
         },
   })
 
   const { isSubmitting } = form.formState
+  const [selectedProductName, setSelectedProductName] = useState(schedule?.productName ?? "")
+  const selectedProduct = (products ?? []).find((p) => p.productName === selectedProductName)
+  const noOfOperations = isEdit ? schedule?.noOfOperations : selectedProduct?.productionOperationCount
 
   async function handleSubmit(data: ScheduleFormValues) {
     await onExternalSubmit(data)
@@ -97,7 +103,7 @@ export function ScheduleFormDrawer({
 
           {/* Company + Product */}
           <div className="grid grid-cols-2 gap-4">
-            <FormField control={form.control} name="company" render={({ field }) => (
+            <FormField control={form.control} name="companyName" render={({ field }) => (
               <FormItem>
                 <FormLabel>Company</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
@@ -105,22 +111,30 @@ export function ScheduleFormDrawer({
                     <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {COMPANIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {(companies ?? []).map((c) => (
+                      <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="product" render={({ field }) => (
+            <FormField control={form.control} name="productName" render={({ field }) => (
               <FormItem>
                 <FormLabel>Product</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => { field.onChange(v); setSelectedProductName(v) }}
+                  disabled={isEdit}
+                >
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {(products ?? []).map((p) => (
+                      <SelectItem key={p.productId} value={p.productName}>{p.productName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -130,15 +144,10 @@ export function ScheduleFormDrawer({
 
           {/* No of Operations + Target Qty */}
           <div className="grid grid-cols-2 gap-4">
-            <FormField control={form.control} name="noOfOperations" render={({ field }) => (
-              <FormItem>
-                <FormLabel>No of Operations</FormLabel>
-                <FormControl>
-                  <Input type="number" min={1} placeholder="e.g. 10" {...field} disabled />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <div className="flex flex-col gap-1.5">
+              <Label>No of Operations</Label>
+              <Input type="number" value={noOfOperations ?? ""} disabled />
+            </div>
 
             <FormField control={form.control} name="targetQty" render={({ field }) => (
               <FormItem>
@@ -171,12 +180,15 @@ export function ScheduleFormDrawer({
                   className="flex gap-6 pt-1"
                 >
                   {PRIORITY_LEVELS.map((opt) => (
-                    <label key={opt} className="flex cursor-pointer items-center gap-2">
-                      <RadioGroupItem value={opt} />
-                      <Label className={cn("cursor-pointer font-semibold text-sm", PRIORITY_TEXT_STYLES[opt])}>
+                    <div key={opt} className="flex items-center gap-2">
+                      <RadioGroupItem value={opt} id={`priorityLevel-${opt}`} />
+                      <Label
+                        htmlFor={`priorityLevel-${opt}`}
+                        className={cn("cursor-pointer font-semibold text-sm", PRIORITY_TEXT_STYLES[opt])}
+                      >
                         {opt}
                       </Label>
-                    </label>
+                    </div>
                   ))}
                 </RadioGroup>
               </FormControl>

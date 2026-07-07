@@ -21,6 +21,8 @@ export interface DataTableProps<T> {
   title: string
   rowData: T[]
   columnDefs: ColDef<T>[]
+  /** Shows AG Grid's built-in loading overlay instead of the "no rows" state while the initial fetch is in flight. */
+  loading?: boolean
   onAdd?: () => void
   onDelete?: (rows: T[]) => void
   checkbox?: boolean
@@ -48,6 +50,7 @@ export function DataTable<T>({
   title,
   rowData,
   columnDefs,
+  loading = false,
   onAdd,
   onDelete,
   checkbox = false,
@@ -102,7 +105,19 @@ export function DataTable<T>({
   }, [])
 
   const defaultColDef = useMemo<ColDef>(
-    () => ({ sortable: true, resizable: true, filter: false, flex: 1, minWidth: 100 }),
+    () => ({
+      sortable: true,
+      resizable: true,
+      filter: false,
+      flex: 1,
+      minWidth: 100,
+      // Vertically centers cell content by default — most importantly custom icon-button
+      // renderers (edit/delete/reset-password/etc.), which otherwise render top-aligned since
+      // their own wrapper divs can't reliably resolve a percentage height against the cell.
+      // Columns that set their own cellStyle (e.g. colored text) override this, which is fine —
+      // plain single-line text doesn't need it.
+      cellStyle: { display: "flex", alignItems: "center" },
+    }),
     []
   )
 
@@ -304,6 +319,7 @@ export function DataTable<T>({
           <AgGridReact<T>
             rowData={rowData}
             columnDefs={allColumnDefs}
+            loading={loading}
             defaultColDef={defaultColDef}
             rowSelection={rowSelection}
             selectionColumnDef={selectionColumnDef}
@@ -317,6 +333,8 @@ export function DataTable<T>({
             onRowDragEnd={rowDrag ? handleRowDragEnd : undefined}
             suppressMovableColumns
             suppressCellFocus
+            enableCellTextSelection
+            ensureDomOrder
             animateRows
             masterDetail={masterDetail}
             detailCellRendererParams={detailCellRendererParams}

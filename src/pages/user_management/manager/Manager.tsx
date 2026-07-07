@@ -1,5 +1,5 @@
 import { EmployeePage } from "../shared/EmployeePage"
 
 export function Manager() {
-  return <EmployeePage title="Manager" />
+  return <EmployeePage title="Manager" role="MANAGER" />
 }

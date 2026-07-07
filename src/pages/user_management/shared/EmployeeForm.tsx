@@ -15,17 +15,21 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { toInputDate } from "@/utils/date"
-import type { EmployeeRow } from "./EmployeePage"
+import type { UserRecord } from "@/types/userManagement"
+
+const EMPLOYMENT_TYPES = [
+  { value: "FullTime", label: "Full Time" },
+  { value: "PartTime", label: "Part Time" },
+] as const
 
 const schema = z.object({
   employeeId: z.string().min(1, "Employee ID is required"),
-  name: z.string().min(1, "Employee name is required"),
-  dob: z.string().min(1, "Date of birth is required"),
-  phone: z
+  employeeName: z.string().min(1, "Employee name is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  phoneNumber: z
     .string()
     .regex(/^\d{10}$/, "Enter a valid 10-digit mobile number"),
-  employmentType: z.enum(["Full Time", "Part Time"], {
+  employmentType: z.enum(["FullTime", "PartTime"], {
     error: "Please select employment type",
   }),
 })
@@ -33,23 +37,24 @@ const schema = z.object({
 export type EmployeeFormValues = z.infer<typeof schema>
 
 interface EmployeeFormProps {
-  row?: EmployeeRow
+  row?: UserRecord
+  apiError?: string | null
   onCancel: () => void
   onSubmit: (data: EmployeeFormValues) => Promise<void> | void
 }
 
-export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
+export function EmployeeForm({ row, apiError, onCancel, onSubmit }: EmployeeFormProps) {
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(schema),
     defaultValues: row
       ? {
           employeeId: row.employeeId,
-          name: row.name,
-          dob: toInputDate(row.dob),
-          phone: row.phone,
+          employeeName: row.employeeName,
+          dateOfBirth: row.dateOfBirth,
+          phoneNumber: row.phoneNumber,
           employmentType: row.employmentType,
         }
-      : { employeeId: "", name: "", dob: "", phone: "", employmentType: undefined },
+      : { employeeId: "", employeeName: "", dateOfBirth: "", phoneNumber: "", employmentType: undefined },
   })
 
   const { isSubmitting } = form.formState
@@ -57,6 +62,10 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+
+        {apiError && (
+          <p className="text-sm text-red-600" role="alert">{apiError}</p>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
@@ -66,7 +75,7 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
               <FormItem>
                 <FormLabel>Employee ID</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. APM0001" {...field} />
+                  <Input placeholder="e.g. APM0001" {...field} disabled={!!row} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -75,7 +84,7 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
 
           <FormField
             control={form.control}
-            name="name"
+            name="employeeName"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Employee Name</FormLabel>
@@ -90,7 +99,7 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
 
         <FormField
           control={form.control}
-          name="dob"
+          name="dateOfBirth"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Date of Birth</FormLabel>
@@ -106,7 +115,7 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
 
         <FormField
           control={form.control}
-          name="phone"
+          name="phoneNumber"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mobile Number</FormLabel>
@@ -142,11 +151,13 @@ export function EmployeeForm({ row, onCancel, onSubmit }: EmployeeFormProps) {
                   onValueChange={field.onChange}
                   className="flex gap-6 pt-0.5"
                 >
-                  {(["Full Time", "Part Time"] as const).map((opt) => (
-                    <label key={opt} className="flex cursor-pointer items-center gap-2">
-                      <RadioGroupItem value={opt} />
-                      <Label className="cursor-pointer font-normal">{opt}</Label>
-                    </label>
+                  {EMPLOYMENT_TYPES.map((opt) => (
+                    <div key={opt.value} className="flex items-center gap-2">
+                      <RadioGroupItem value={opt.value} id={`employmentType-${opt.value}`} />
+                      <Label htmlFor={`employmentType-${opt.value}`} className="cursor-pointer font-normal">
+                        {opt.label}
+                      </Label>
+                    </div>
                   ))}
                 </RadioGroup>
               </FormControl>

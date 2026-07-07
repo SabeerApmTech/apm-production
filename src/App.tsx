@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Toaster } from "sonner";
 import { DashboardLayout } from "@/layout/DashboardLayout";
 import { PageSkeleton } from "@/components/PageSkeleton";
-// import { getRole } from "@/utils/auth";
+import { getRole, getAuthUser } from "@/utils/auth";
 
 const Login                  = lazy(() => import("./pages/auth/Login").then(m => ({ default: m.Login })));
 const Manager                = lazy(() => import("./pages/user_management/manager/Manager").then(m => ({ default: m.Manager })));
@@ -29,28 +30,29 @@ const ProductionMonitoring   = lazy(() => import("./pages/production_monitoring/
 
 /** Redirects unauthenticated users to /login */
 function ProtectedLayout() {
-  // const role = getRole();
-  // if (!role) return <Navigate to="/login" replace />;
+  const isAuthenticated = !!getAuthUser() || getRole() === 'operator';
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <DashboardLayout />;
 }
 
 /** Redirects operators away from admin-only routes */
 function AdminRoute() {
-  // const role = getRole();
-  // if (role === 'operator') return <Navigate to="/production-monitoring" replace />;
+  const role = getRole();
+  if (role === 'operator') return <Navigate to="/production-monitoring" replace />;
   return <Outlet />;
 }
 
 /** Sends users to their role's home on root visit */
 function RoleRedirect() {
-  // const role = getRole();
-  // if (role === 'operator') return <Navigate to="/production-monitoring" replace />;
+  const role = getRole();
+  if (role === 'operator') return <Navigate to="/production-monitoring" replace />;
   return <Navigate to="/dashboard/employee-wise-tracking" replace />;
 }
 
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors closeButton />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />

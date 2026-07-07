@@ -30,6 +30,16 @@ function DialogContent({
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  // Radix can leave `pointer-events: none` stuck on <body> when this dialog is
+  // opened from inside another overlay that closes at the same time (e.g. a
+  // DropdownMenu item) — the two overlays' body locks race and the page ends up
+  // permanently unclickable. Force it back whenever this dialog unmounts.
+  React.useLayoutEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = ""
+    }
+  }, [])
+
   return (
     <DialogPortal>
       <DialogOverlay />
