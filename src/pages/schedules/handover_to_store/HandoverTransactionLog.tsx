@@ -39,38 +39,40 @@ export function HandoverTransactionLog() {
   }, [deleteId, deleteHandover])
 
   const columnDefs = useMemo<ColDef<HandoverTransactionRecord>[]>(
-    () => [
-      {
-        field: "handoverDate", headerName: "Handover Date", minWidth: 130,
-        cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" },
-        valueFormatter: (p: ValueFormatterParams<HandoverTransactionRecord>) =>
-          p.value ? formatLogDateTime(p.value) : "",
-      },
-      { field: "scheduleId",  headerName: "Schedule ID",  minWidth: 110 },
-      { field: "companyName", headerName: "Company",      cellStyle: { fontWeight: 600 }, minWidth: 120 },
-      { field: "productName", headerName: "Product",      cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "handoverQty", headerName: "Handover Qty", minWidth: 120 },
-      { field: "storeName",   headerName: "Store Name",   minWidth: 140 },
-      { field: "receivedBy",  headerName: "Received By",  minWidth: 130 },
-      { field: "remarks",     headerName: "Remarks",      minWidth: 130, valueFormatter: (p) => p.value ?? "-" },
-      {
-        headerName: "Created By",
-        valueGetter: (p: ValueGetterParams<HandoverTransactionRecord>) =>
-          p.data ? `${p.data.createdByEmpId} : ${p.data.createdByEmpName}` : "",
-        minWidth: 150,
-      },
-      ...(canDelete
-        ? [
-            {
-              headerName: "Action",
-              cellRenderer: DeleteCell,
-              cellRendererParams: { onDelete: openDelete },
-              sortable: false,
-              maxWidth: 80,
-            } satisfies ColDef<HandoverTransactionRecord>,
-          ]
-        : []),
-    ],
+    () => {
+      const baseColumns: ColDef<HandoverTransactionRecord>[] = [
+        {
+          field: "handoverDate", headerName: "Handover Date", minWidth: 130,
+          cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" },
+          valueFormatter: (p: ValueFormatterParams<HandoverTransactionRecord>) =>
+            p.value ? formatLogDateTime(p.value) : "",
+        },
+        { field: "scheduleId",  headerName: "Schedule ID",  minWidth: 110 },
+        { field: "companyName", headerName: "Company",      cellStyle: { fontWeight: 600 }, minWidth: 120 },
+        { field: "productName", headerName: "Product",      cellStyle: { fontWeight: 600 }, minWidth: 110 },
+        { field: "handoverQty", headerName: "Handover Qty", minWidth: 120 },
+        { field: "storeName",   headerName: "Store Name",   minWidth: 140 },
+        { field: "receivedBy",  headerName: "Received By",  minWidth: 130 },
+        { field: "remarks",     headerName: "Remarks",      minWidth: 130, valueFormatter: (p) => p.value ?? "-" },
+        {
+          headerName: "Created By",
+          valueGetter: (p: ValueGetterParams<HandoverTransactionRecord>) =>
+            p.data ? `${p.data.createdByEmpId} : ${p.data.createdByEmpName}` : "",
+          minWidth: 150,
+        },
+      ]
+      if (!canDelete) return baseColumns
+      return [
+        ...baseColumns,
+        {
+          headerName: "Action",
+          cellRenderer: DeleteCell,
+          cellRendererParams: { onDelete: openDelete },
+          sortable: false,
+          maxWidth: 80,
+        },
+      ]
+    },
     [canDelete, openDelete]
   )
 
