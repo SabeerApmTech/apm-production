@@ -125,54 +125,54 @@ export function ScheduleWiseLiveTracking() {
         </div>
       </div>
 
-      {/* Step table — scrolls both axes */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-          <div className="min-w-150">
-            {/* Header */}
-            <div className="grid grid-cols-[80px_1fr_100px_110px_100px_1fr] items-center gap-3 border-b border-gray-200 bg-[#27375D] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white">
-              <span>Step</span>
-              <span>Operation</span>
-              <span className="text-center">Staff Assigned</span>
-              <span className="text-center">Successful Qty</span>
-              <span className="text-center">Rejected Qty</span>
-              <span>Progress Bar</span>
-            </div>
-            {operations.map((row, i) => {
-              const { bar, rowBg } = STEP_COLORS[i % STEP_COLORS.length]
-              return (
-                <div
-                  key={row.sequenceNo}
-                  className={cn(
-                    "grid grid-cols-[80px_1fr_100px_110px_100px_1fr] items-center gap-3 px-4 py-3.5 text-sm",
-                    rowBg,
-                    i < operations.length - 1 && "border-b border-gray-100",
-                  )}
-                >
-                  <span
-                    className="w-fit rounded-full px-2.5 py-1 text-xs font-bold text-white"
-                    style={{ backgroundColor: bar }}
-                  >
-                    Step {row.sequenceNo}
-                  </span>
-                  <span className="font-medium text-gray-800">{row.operationName}</span>
-                  <span className="text-center font-semibold text-gray-700">{row.staffAssigned}</span>
-                  <span className="text-center font-semibold text-gray-700">{row.successfulQty.toLocaleString()}</span>
-                  <span className="text-center font-semibold text-gray-700">{row.rejectedQty.toLocaleString()}</span>
-                  <ProgressBar value={row.progressPercentage} color={bar} />
-                </div>
-              )
-            })}
-            {isLoading && (
-              <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-400">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading operations…
-              </div>
-            )}
-            {!isLoading && operations.length === 0 && (
-              <p className="py-12 text-center text-sm text-gray-400">No operations found for this schedule</p>
-            )}
+      {/* Step table — a single scroller for both axes, so the sticky header has one real
+          scrolling ancestor to pin against instead of a nested overflow-x-auto div that would
+          otherwise become its own (never-actually-scrolling) sticky container. */}
+      <div className="flex-1 min-h-0 overflow-auto rounded-2xl border border-gray-200 shadow-sm">
+        <div className="min-w-150">
+          {/* Header — sticky within the scroller so only the rows below it scroll */}
+          <div className="sticky top-0 z-10 grid grid-cols-[80px_1fr_100px_110px_100px_1fr] items-center gap-3 border-b border-gray-200 bg-[#27375D] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white">
+            <span>Step</span>
+            <span>Operation</span>
+            <span className="text-center">Staff Assigned</span>
+            <span className="text-center">Successful Qty</span>
+            <span className="text-center">Rejected Qty</span>
+            <span>Progress Bar</span>
           </div>
+          {operations.map((row, i) => {
+            const { bar, rowBg } = STEP_COLORS[i % STEP_COLORS.length]
+            return (
+              <div
+                key={row.sequenceNo}
+                className={cn(
+                  "grid grid-cols-[80px_1fr_100px_110px_100px_1fr] items-center gap-3 px-4 py-3.5 text-sm",
+                  rowBg,
+                  i < operations.length - 1 && "border-b border-gray-100",
+                )}
+              >
+                <span
+                  className="w-fit rounded-full px-2.5 py-1 text-xs font-bold text-white"
+                  style={{ backgroundColor: bar }}
+                >
+                  Step {row.sequenceNo}
+                </span>
+                <span className="font-medium text-gray-800">{row.operationName}</span>
+                <span className="text-center font-semibold text-gray-700">{row.staffAssigned}</span>
+                <span className="text-center font-semibold text-gray-700">{row.successfulQty.toLocaleString()}</span>
+                <span className="text-center font-semibold text-gray-700">{row.rejectedQty.toLocaleString()}</span>
+                <ProgressBar value={row.progressPercentage} color={bar} />
+              </div>
+            )
+          })}
+          {isLoading && (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading operations…
+            </div>
+          )}
+          {!isLoading && operations.length === 0 && (
+            <p className="py-12 text-center text-sm text-gray-400">No operations found for this schedule</p>
+          )}
         </div>
       </div>
 

@@ -3,10 +3,10 @@ import type { Schedule } from "./types"
 export function ScheduleSummary({ schedule }: { schedule: Schedule }) {
   const cols: [string, string | number][] = [
     ["Priority No",   schedule.priorityNo],
-    ["Schedule ID",   schedule.id],
+    ["Schedule ID",   schedule.scheduleId],
     ["Schedule Date", schedule.scheduleDate],
-    ["Company",       schedule.company],
-    ["Product",       schedule.product],
+    ["Company",       schedule.companyName],
+    ["Product",       schedule.productName],
     ["Target Date",   schedule.targetDate],
     ["Target Qty",    schedule.targetQty],
   ]

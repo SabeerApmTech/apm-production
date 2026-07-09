@@ -22,22 +22,23 @@ import {
   useCreatePendingScheduleMutation,
   useUpdatePendingScheduleMutation,
   useDeletePendingScheduleMutation,
+  useUpdatePendingSchedulePriorityMutation,
 } from "@/store/services/pendingScheduleApi"
 import type { ScheduleFormValues } from "./ScheduleFormDrawer"
 
 /* ── Page ───────────────────────────────────────────────── */
 export function PendingSchedules() {
-  const { data, isLoading } = useGetPendingSchedulesQuery()
+  const { data, isLoading, refetch: refetchSchedules } = useGetPendingSchedulesQuery()
   const schedules = useMemo(() => data ?? [], [data])
   const { data: companies } = useGetCompaniesQuery()
 
   const [createPendingSchedule] = useCreatePendingScheduleMutation()
   const [updatePendingSchedule] = useUpdatePendingScheduleMutation()
   const [deletePendingSchedule] = useDeletePendingScheduleMutation()
+  const [updatePendingSchedulePriority] = useUpdatePendingSchedulePriorityMutation()
 
-  // No reorder endpoint exists yet, so drag-to-reorder is local-only/visual — it mirrors the
-  // fetched list but diverges after a confirmed reorder, and resets whenever the underlying
-  // query result changes (create/edit/delete refetch, or a manual page refresh).
+  // Drag-to-reorder is staged locally until confirmed, then persisted via update-priority and
+  // resynced from the refetched list — this mirrors the fetched list until a drag is in progress.
   const [prevSchedules, setPrevSchedules] = useState(schedules)
   const [localSchedules, setLocalSchedules] = useState<PendingScheduleRecord[]>(schedules)
   if (schedules !== prevSchedules) {
@@ -55,7 +56,7 @@ export function PendingSchedules() {
 
   const editSchedule = localSchedules.find((s) => s.pendingScheduleId === editId)
 
-  /* ── Drag (local-only) ── */
+  /* ── Drag ── */
   const handleRowDragEnd = useCallback((reordered: PendingScheduleRecord[]) => {
     const changed = reordered.some((s, i) => s.pendingScheduleId !== localSchedules[i]?.pendingScheduleId)
     if (changed) {
@@ -64,14 +65,21 @@ export function PendingSchedules() {
     }
   }, [localSchedules])
 
-  const handleConfirmPriority = useCallback(() => {
+  const handleConfirmPriority = useCallback(async () => {
     if (newOrder) {
-      setLocalSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
-      setNewOrder(null)
-      setIsDirty(false)
+      try {
+        await updatePendingSchedulePriority(
+          newOrder.map((s, i) => ({ pendingScheduleId: s.pendingScheduleId, priorityNo: i + 1 }))
+        ).unwrap()
+        setLocalSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
+        setNewOrder(null)
+        setIsDirty(false)
+      } catch {
+        // Toast middleware already surfaced the error; keep the pending order so the user can retry.
+      }
     }
     setConfirmPriorityOpen(false)
-  }, [newOrder])
+  }, [newOrder, updatePendingSchedulePriority])
 
   /* ── CRUD ── */
   const handleAdd = useCallback(async (values: ScheduleFormValues) => {
@@ -227,7 +235,7 @@ export function PendingSchedules() {
       <AllocationDialog
         key={allocationId ?? "none"}
         open={allocationId !== null}
-        onClose={() => setAllocationId(null)}
+        onClose={() => { setAllocationId(null); refetchSchedules() }}
         scheduleId={allocationId}
       />
     </>

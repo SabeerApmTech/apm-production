@@ -5,6 +5,7 @@ import type {
   PendingScheduleRecord,
   RawPendingScheduleRecord,
   UpdatePendingScheduleRequest,
+  UpdatePriorityRequest,
 } from "@/types/pendingSchedule"
 import { fromIsoDate } from "@/utils/date"
 
@@ -37,6 +38,10 @@ export const pendingScheduleApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: "PendingSchedule", id: "LIST" }],
     }),
+    updatePendingSchedulePriority: builder.mutation<ApiResponse<null>, UpdatePriorityRequest[]>({
+      query: (body) => ({ url: "/PendingSchedule/update-priority", method: "PUT", body }),
+      invalidatesTags: [{ type: "PendingSchedule", id: "LIST" }],
+    }),
   }),
 })
 
@@ -45,4 +50,5 @@ export const {
   useCreatePendingScheduleMutation,
   useUpdatePendingScheduleMutation,
   useDeletePendingScheduleMutation,
+  useUpdatePendingSchedulePriorityMutation,
 } = pendingScheduleApi

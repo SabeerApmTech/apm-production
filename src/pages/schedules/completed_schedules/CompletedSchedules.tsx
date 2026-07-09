@@ -1,27 +1,8 @@
 import { useState, useMemo } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
-
-interface CompletedScheduleRow {
-  id: number
-  scheduleDate: string
-  scheduleId: string
-  company: string
-  product: string
-  noOfOperations: number
-  targetQty: number
-  targetDate: string
-  completedDate: string
-  createdBy: string
-}
-
-const ALL_SCHEDULES: CompletedScheduleRow[] = [
-  { id: 1, scheduleDate: "2026-05-26", scheduleId: "S001-26", company: "Lakshika",  product: "AIS 140", noOfOperations: 19, targetQty: 3000, targetDate: "2026-06-17", completedDate: "2026-06-17", createdBy: "2547 : Basheer" },
-  { id: 2, scheduleDate: "2026-05-26", scheduleId: "S002-26", company: "Kingstrack", product: "Dashcam", noOfOperations: 8,  targetQty: 2000, targetDate: "2026-06-17", completedDate: "2026-06-17", createdBy: "2547 : Basheer" },
-  { id: 3, scheduleDate: "2026-05-26", scheduleId: "S003-26", company: "Kingstrack", product: "CC TV",   noOfOperations: 12, targetQty: 3000, targetDate: "2026-06-17", completedDate: "2026-06-17", createdBy: "2547 : Basheer" },
-  { id: 4, scheduleDate: "2026-05-10", scheduleId: "S004-26", company: "Lakshika",  product: "AIS 140", noOfOperations: 15, targetQty: 1500, targetDate: "2026-05-25", completedDate: "2026-05-24", createdBy: "2547 : Basheer" },
-  { id: 5, scheduleDate: "2026-04-15", scheduleId: "S005-26", company: "ABC",       product: "Dashcam", noOfOperations: 10, targetQty: 2500, targetDate: "2026-04-30", completedDate: "2026-04-29", createdBy: "2547 : Basheer" },
-]
+import { useGetCompletedSchedulesQuery } from "@/store/services/completedScheduleApi"
+import type { CompletedScheduleRecord } from "@/types/completedSchedule"
 
 function formatDisplay(iso: string): string {
   if (!iso) return ""
@@ -37,32 +18,36 @@ function inRange(isoDate: string, from: string, to: string): boolean {
   return true
 }
 
-const columnDefs: ColDef<CompletedScheduleRow>[] = [
-  { field: "scheduleDate",   headerName: "Schedule Date",    valueFormatter: (p) => formatDisplay(p.value), minWidth: 130 },
-  { field: "scheduleId",     headerName: "Schedule ID",      minWidth: 110 },
-  { field: "company",        headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 120 },
-  { field: "product",        headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
-  { field: "noOfOperations", headerName: "No of Operations", minWidth: 140 },
-  { field: "targetQty",      headerName: "Target Qty",       minWidth: 110 },
-  { field: "targetDate",     headerName: "Target Date",      valueFormatter: (p) => formatDisplay(p.value), minWidth: 120 },
-  { field: "completedDate",  headerName: "Completed Date",   valueFormatter: (p) => formatDisplay(p.value), minWidth: 130 },
-  { field: "createdBy",      headerName: "Created By",       minWidth: 140 },
+const columnDefs: ColDef<CompletedScheduleRecord>[] = [
+  { field: "scheduleDate",     headerName: "Schedule Date",    valueFormatter: (p) => formatDisplay(p.value), minWidth: 130 },
+  { field: "scheduleId",       headerName: "Schedule ID",      minWidth: 110 },
+  { field: "companyName",      headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 120 },
+  { field: "productName",      headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
+  { field: "noOfOperations",   headerName: "No of Operations", minWidth: 140 },
+  { field: "targetQty",        headerName: "Target Qty",       minWidth: 110 },
+  { field: "targetDate",       headerName: "Target Date",      valueFormatter: (p) => formatDisplay(p.value), minWidth: 120 },
+  { field: "completedAt",      headerName: "Completed Date",   valueFormatter: (p) => formatDisplay(p.value), minWidth: 130 },
+  { field: "createdByEmpName", headerName: "Created By",       minWidth: 140 },
 ]
 
 export function CompletedSchedules() {
+  const { data, isLoading } = useGetCompletedSchedulesQuery()
+  const schedules = useMemo(() => data ?? [], [data])
+
   const [fromDate, setFromDate] = useState("")
   const [toDate,   setToDate]   = useState("")
 
   const filtered = useMemo(
-    () => ALL_SCHEDULES.filter((s) => inRange(s.completedDate, fromDate, toDate)),
-    [fromDate, toDate]
+    () => schedules.filter((s) => inRange(s.completedAt, fromDate, toDate)),
+    [schedules, fromDate, toDate]
   )
 
   return (
-    <DataTable<CompletedScheduleRow>
+    <DataTable<CompletedScheduleRecord>
       title="Completed Schedules"
       rowData={filtered}
       columnDefs={columnDefs}
+      loading={isLoading}
       showDateFilter
       onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
     />

@@ -10,16 +10,20 @@ export interface RawPendingScheduleRecord {
   scheduleNumber: number
   scheduleYear: number
   companyName: string
+  companyLocation: string
   productName: string
   noOfOperations: number
   targetQty: number
   producedQty: number
+  pendingQty: number | null
   targetDate: string
   createdByEmpId: string
   createdByEmpName: string
   staffAllocationStatus: string
   createdAt: string
   updatedAt: string
+  averageOutputPerDay: number
+  projectedDate: string | null
 }
 
 export interface PendingScheduleRecord {
@@ -34,10 +38,12 @@ export interface PendingScheduleRecord {
   scheduleNumber: number
   scheduleYear: number
   companyName: string
+  companyLocation: string
   productName: string
   noOfOperations: number
   targetQty: number
   producedQty: number
+  pendingQty: number | null
   /** Display format (DD/MM/YYYY) — converted from the API's ISO date on fetch. */
   targetDate: string
   createdByEmpId: string
@@ -45,6 +51,8 @@ export interface PendingScheduleRecord {
   staffAllocationStatus: string
   createdAt: string
   updatedAt: string
+  averageOutputPerDay: number
+  projectedDate: string | null
 }
 
 export interface CreatePendingScheduleRequest {
@@ -64,4 +72,9 @@ export interface UpdatePendingScheduleRequest {
   targetQty: number
   targetDate: string
   priorityLevel: PriorityLevel
+}
+
+export interface UpdatePriorityRequest {
+  pendingScheduleId: number
+  priorityNo: number
 }

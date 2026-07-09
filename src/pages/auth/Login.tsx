@@ -37,6 +37,15 @@ export const Login = () => {
         {/* Left — Form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-8 sm:py-12 sm:px-12 relative">
 
+          {/* Operator Login — top-right corner of card */}
+          <button
+            type="button"
+            onClick={() => navigate('/operator-login')}
+            className="absolute top-4 right-4 text-xs rounded-lg px-3 py-1.5 border font-medium transition text-[#1a2a4a] border-[#1a2a4a] hover:bg-[#1a2a4a] hover:text-white"
+          >
+            Operator Login
+          </button>
+
           <img
             src={companyLogo}
             alt="APM Logo"

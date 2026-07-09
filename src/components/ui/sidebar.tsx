@@ -140,7 +140,7 @@ function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div"
 
 function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
   return (
-    <ul data-slot="sidebar-menu" className={cn("flex flex-col gap-0.5", className)} {...props} />
+    <ul data-slot="sidebar-menu" className={cn("flex flex-col gap-1.5", className)} {...props} />
   )
 }
 

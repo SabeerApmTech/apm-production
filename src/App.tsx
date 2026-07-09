@@ -6,12 +6,14 @@ import { PageSkeleton } from "@/components/PageSkeleton";
 import { getRole, getAuthUser } from "@/utils/auth";
 
 const Login                  = lazy(() => import("./pages/auth/Login").then(m => ({ default: m.Login })));
+const OperatorLogin           = lazy(() => import("./pages/auth/OperatorLogin").then(m => ({ default: m.OperatorLogin })));
 const Manager                = lazy(() => import("./pages/user_management/manager/Manager").then(m => ({ default: m.Manager })));
 const Supervisor             = lazy(() => import("./pages/user_management/supervisor/Supervisor").then(m => ({ default: m.Supervisor })));
 const Operator               = lazy(() => import("./pages/user_management/operator/Operator").then(m => ({ default: m.Operator })));
 const Department             = lazy(() => import("./pages/department/Department").then(m => ({ default: m.Department })));
 const Products               = lazy(() => import("./pages/master_data/products/Products").then(m => ({ default: m.Products })));
 const Company                = lazy(() => import("./pages/master_data/company/Company").then(m => ({ default: m.Company })));
+const Store                  = lazy(() => import("./pages/master_data/store/Store").then(m => ({ default: m.Store })));
 const PendingSchedules       = lazy(() => import("./pages/schedules/pending_schedules/PendingSchedules").then(m => ({ default: m.PendingSchedules })));
 const CompletedSchedules     = lazy(() => import("./pages/schedules/completed_schedules/CompletedSchedules").then(m => ({ default: m.CompletedSchedules })));
 const HandoverToStore        = lazy(() => import("./pages/schedules/handover_to_store/HandoverToStore").then(m => ({ default: m.HandoverToStore })));
@@ -56,6 +58,7 @@ function App() {
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/operator-login" element={<OperatorLogin />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<RoleRedirect />} />
 
@@ -71,6 +74,7 @@ function App() {
               <Route path="/department" element={<Department />} />
               <Route path="/master-data/products" element={<Products />} />
               <Route path="/master-data/company" element={<Company />} />
+              <Route path="/master-data/store" element={<Store />} />
               <Route path="/pending-schedules" element={<PendingSchedules />} />
               <Route path="/completed-schedules" element={<CompletedSchedules />} />
               <Route path="/handover-to-store" element={<HandoverToStore />} />

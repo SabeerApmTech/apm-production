@@ -31,16 +31,16 @@ export function StopDialog({ open, onOpenChange, operation, onSave }: Props) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader className="mb-0">
           <DialogTitle className="text-center text-sm font-semibold text-violet-600">
-            Step {pad2(operation?.step ?? 0)} — {operation?.name}
+            Step {pad2(operation?.sequenceNo ?? 0)} — {operation?.operationName}
           </DialogTitle>
         </DialogHeader>
         <p className="text-center text-xs font-semibold text-red-500 mb-4">Stopped</p>
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs text-gray-600">Successful Qty</Label>
+            <Label className="text-xs text-gray-600">Successful Qty <span className="text-red-500">*</span></Label>
             <Input
-              type="number" min={0}
+              type="number" min={0} required
               value={form.successQty}
               onChange={e => setForm(f => ({ ...f, successQty: e.target.value }))}
               className="h-8 text-sm"
@@ -67,7 +67,11 @@ export function StopDialog({ open, onOpenChange, operation, onSave }: Props) {
         </div>
 
         <div className="flex gap-2 mt-4">
-          <Button onClick={handleSave} className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white">
+          <Button
+            onClick={handleSave}
+            disabled={form.successQty === ""}
+            className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white"
+          >
             Save
           </Button>
           <Button onClick={() => onOpenChange(false)} variant="destructive" className="flex-1 h-8 text-xs">

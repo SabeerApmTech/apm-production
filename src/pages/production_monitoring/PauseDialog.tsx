@@ -40,7 +40,7 @@ export function PauseDialog({ open, onOpenChange, onSubmit }: Props) {
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs text-gray-600">Reason</Label>
+            <Label className="text-xs text-gray-600">Reason <span className="text-red-500">*</span></Label>
             <Select value={form.reason} onValueChange={v => setForm(f => ({ ...f, reason: v }))}>
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder="Select reason..." />
@@ -70,8 +70,7 @@ export function PauseDialog({ open, onOpenChange, onSubmit }: Props) {
           <Button
             onClick={handleSubmit}
             disabled={!form.reason}
-            variant="destructive"
-            className="flex-1 h-8 text-xs"
+            className="flex-1 h-8 text-xs bg-amber-400 hover:bg-amber-500 text-white"
           >
             Submit
           </Button>

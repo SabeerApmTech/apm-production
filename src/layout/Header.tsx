@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { Bell, ChevronDown, KeyRound, LogOut, Menu, UserCircle2 } from "lucide-react"
+import { Bell, ChevronDown, KeyRound, Loader2, LogOut, Menu, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
 import { getRole, getAuthUser, getRoleLabel, clearAuth } from "@/utils/auth"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -37,7 +37,7 @@ export function Header() {
   const title = getPageTitle(pathname)
   const role = getRole()
   const user = getAuthUser()
-  const [logout] = useLogoutMutation()
+  const [logout, { isLoading: loggingOut }] = useLogoutMutation()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
 
   const handleLogout = async () => {
@@ -47,6 +47,13 @@ export function Header() {
       clearAuth()
       navigate("/login", { replace: true })
     }
+  }
+
+  // Operators never authenticated against /Authentication/login, so there's no session to
+  // revoke server-side — just drop the locally-stored operator identity and role.
+  const handleOperatorLogout = () => {
+    clearAuth()
+    navigate("/login", { replace: true })
   }
 
   return (
@@ -61,17 +68,30 @@ export function Header() {
 
       {/* Right — notifications + user */}
       <div className="flex items-center gap-3">
-        {/* Bell */}
-        <button
-          aria-label="Notifications"
-          onClick={() => navigate("/notifications")}
-          className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
-            2
-          </span>
-        </button>
+        {/* Bell — operators don't get notifications */}
+        {role !== 'operator' && (
+          <button
+            aria-label="Notifications"
+            onClick={() => navigate("/notifications")}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
+              2
+            </span>
+          </button>
+        )}
+
+        {/* Operators — plain logout icon instead of the admin name dropdown */}
+        {role === 'operator' && (
+          <button
+            aria-label="Logout"
+            onClick={handleOperatorLogout}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        )}
 
         {/* Admin user — hidden for operators */}
         {role !== 'operator' && (
@@ -113,6 +133,15 @@ export function Header() {
         open={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
       />
+
+      {loggingOut && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 text-white">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="text-sm font-medium">Logging out...</span>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

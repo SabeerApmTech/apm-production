@@ -38,7 +38,7 @@ export const navItems: NavItem[] = [
     icon: CalendarRange,
     children: [
       { label: "Pending Schedules", path: "/pending-schedules" },
-      { label: "Completed Schedule", path: "/completed-schedules" },
+      { label: "Completed Schedules", path: "/completed-schedules" },
       { label: "Handover To Store", path: "/handover-to-store" },
     ],
   },
@@ -73,6 +73,7 @@ export const navItems: NavItem[] = [
     children: [
       { label: "Products", path: "/master-data/products" },
       { label: "Company", path: "/master-data/company" },
+      { label: "Store", path: "/master-data/store" },
     ],
   },
   {

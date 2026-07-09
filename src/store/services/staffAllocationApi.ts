@@ -40,6 +40,7 @@ export const staffAllocationApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, arg) => [
         { type: "ScheduleOperations", id: arg.pendingScheduleId },
         { type: "ScheduleOperations", id: `staff-${arg.scheduleOperationId}` },
+        { type: "PendingSchedule", id: "LIST" },
       ],
     }),
   }),
