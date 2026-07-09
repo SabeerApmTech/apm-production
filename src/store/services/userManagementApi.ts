@@ -48,11 +48,14 @@ export const userManagementApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, arg) => [{ type: "UserList", id: arg.role }],
     }),
-    deleteUsers: builder.mutation<ApiResponse<null>, { userIds: number[]; role: ManagedRole }>({
-      query: ({ userIds }) => ({
+    deleteUsers: builder.mutation<
+      ApiResponse<null>,
+      { userIds: number[]; role: ManagedRole; deletedByEmployeeId: string }
+    >({
+      query: ({ userIds, deletedByEmployeeId }) => ({
         url: "/UserManagement",
         method: "DELETE",
-        body: { userIds },
+        body: { userIds, deletedByEmployeeId },
       }),
       invalidatesTags: (_result, _error, arg) => [{ type: "UserList", id: arg.role }],
     }),

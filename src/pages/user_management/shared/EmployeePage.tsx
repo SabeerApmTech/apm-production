@@ -112,8 +112,14 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
 
   const handleDelete = useCallback(async () => {
     if (!deleteRows?.length) return
+    const currentUser = getAuthUser()
+    if (!currentUser) return
     try {
-      await deleteUsers({ userIds: deleteRows.map((r) => r.usersId), role }).unwrap()
+      await deleteUsers({
+        userIds: deleteRows.map((r) => r.usersId),
+        role,
+        deletedByEmployeeId: currentUser.employeeId,
+      }).unwrap()
     } catch {
       // The row list will simply reflect whatever the server actually deleted on refetch.
     }

@@ -30,10 +30,20 @@ export function AppSidebar() {
   const isChildActive = (children?: { path: string }[]) =>
     children?.some((c) => location.pathname.startsWith(c.path)) ?? false
 
-  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
+  // Accordion — only one parent section open at a time. The section containing the active
+  // route always wins; a manual toggle only applies within that same active section, so
+  // navigating elsewhere (which changes activeLabel) naturally resets any manual override.
+  const activeLabel = items.find((item) => isChildActive(item.children))?.label ?? null
+  const [manualLabel, setManualLabel] = useState<string | null>(null)
+  const [trackedActiveLabel, setTrackedActiveLabel] = useState(activeLabel)
+  if (activeLabel !== trackedActiveLabel) {
+    setTrackedActiveLabel(activeLabel)
+    setManualLabel(null)
+  }
+  const openLabel = manualLabel ?? activeLabel
 
   const toggleItem = (label: string) =>
-    setOpenItems((prev) => ({ ...prev, [label]: !prev[label] }))
+    setManualLabel(openLabel === label ? null : label)
 
   return (
     <Sidebar className="bg-[#27375D]">
@@ -70,7 +80,7 @@ export function AppSidebar() {
             }
 
             /* Collapsible parent item */
-            const isOpen = openItems[item.label] ?? isChildActive(item.children)
+            const isOpen = openLabel === item.label
             const hasActiveChild = isChildActive(item.children)
 
             return (

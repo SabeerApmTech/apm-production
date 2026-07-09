@@ -8,53 +8,49 @@ import { Label } from "@/components/ui/label"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-
-export interface HandoverPendingRow {
-  id: number
-  scheduleId: string
-  company: string
-  product: string
-  targetQty: number
-  deliveredQty: number
-  pendingQty: number
-  readyToMove: number
-}
-
-interface HandoverDialogProps {
-  open: boolean
-  onClose: () => void
-  row: HandoverPendingRow | null
-  onConfirm: (rowId: number, data: HandoverFormData) => void
-}
+import { MOCK_STORES } from "@/pages/master_data/store/data"
+import type { HandoverPendingRecord } from "@/types/handoverToStore"
 
 export interface HandoverFormData {
-  storeLocation: string
+  storeName: string
   receivedBy: string
   handoverQty: number
   remarks: string
 }
 
-const STORE_LOCATIONS = ["Main Store", "Sub Store A", "Sub Store B", "Warehouse 1"]
+interface HandoverDialogProps {
+  open: boolean
+  onClose: () => void
+  row: HandoverPendingRecord | null
+  onConfirm: (data: HandoverFormData) => Promise<void>
+}
 
 export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialogProps) {
-  const [storeLocation, setStoreLocation] = useState("Main Store")
-  const [receivedBy,    setReceivedBy]    = useState("")
-  const [handoverQty,   setHandoverQty]   = useState("")
-  const [remarks,       setRemarks]       = useState("")
+  const [storeName, setStoreName]     = useState(MOCK_STORES[0]?.storeName ?? "")
+  const [receivedBy, setReceivedBy]   = useState("")
+  const [handoverQty, setHandoverQty] = useState("")
+  const [remarks, setRemarks]         = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleConfirm() {
-    if (!row) return
-    onConfirm(row.id, {
-      storeLocation,
-      receivedBy,
-      handoverQty: Number(handoverQty),
-      remarks,
-    })
-    setStoreLocation("Main Store")
-    setReceivedBy("")
-    setHandoverQty("")
-    setRemarks("")
-    onClose()
+  const qty = Number(handoverQty)
+  const qtyExceedsReady = handoverQty !== "" && row !== null && qty > row.readyToMove
+  const isValid = storeName.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
+
+  async function handleConfirm() {
+    if (!row || !isValid) return
+    setIsSubmitting(true)
+    try {
+      await onConfirm({ storeName, receivedBy, handoverQty: Number(handoverQty), remarks })
+      setStoreName(MOCK_STORES[0]?.storeName ?? "")
+      setReceivedBy("")
+      setHandoverQty("")
+      setRemarks("")
+      onClose()
+    } catch {
+      // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!row) return null
@@ -74,7 +70,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Product</p>
-            <p className="font-semibold text-gray-800">{row.product}</p>
+            <p className="font-semibold text-gray-800">{row.productName}</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Ready To Move Qty</p>
@@ -85,16 +81,18 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
         {/* Form fields */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Store Location</Label>
-            <Select value={storeLocation} onValueChange={setStoreLocation}>
+            <Label className="text-sm font-semibold text-gray-700">Store Name <span className="text-red-500">*</span></Label>
+            <Select value={storeName} onValueChange={setStoreName}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {STORE_LOCATIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {MOCK_STORES.map((s) => (
+                  <SelectItem key={s.storeId} value={s.storeName}>{s.storeName}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Received By</Label>
+            <Label className="text-sm font-semibold text-gray-700">Received By <span className="text-red-500">*</span></Label>
             <Input
               placeholder="Enter Received By"
               value={receivedBy}
@@ -102,13 +100,20 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Handover Qty</Label>
+            <Label className="text-sm font-semibold text-gray-700">Handover Qty <span className="text-red-500">*</span></Label>
             <Input
               type="number"
+              min={1}
+              max={row.readyToMove}
               placeholder="Enter Handover Qty"
               value={handoverQty}
               onChange={(e) => setHandoverQty(e.target.value)}
+              aria-invalid={qtyExceedsReady}
+              className={qtyExceedsReady ? "border-red-400 focus-visible:ring-red-200" : undefined}
             />
+            {qtyExceedsReady && (
+              <p className="text-xs text-red-500">Cannot exceed Ready To Move Qty ({row.readyToMove}).</p>
+            )}
           </div>
         </div>
 
@@ -127,10 +132,10 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
           <Button
             onClick={handleConfirm}
-            disabled={!receivedBy || !handoverQty}
+            disabled={isSubmitting || !isValid}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Confirm Handover
+            {isSubmitting ? "Saving..." : "Confirm Handover"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -11,6 +11,16 @@ button {
   cursor: pointer;
 }
 
+/* Sonner toast descriptions: preserve the \n-separated list format (e.g. multiple blocked
+   operators) as actual line breaks, and de-emphasize them relative to the bold title text —
+   otherwise a multi-item list reads as one dense, equally-bold run-on paragraph. */
+[data-sonner-toast] [data-description] {
+  white-space: pre-line;
+  font-weight: 400;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
 /* Hide AG Grid horizontal scrollbar */
 .ag-theme-quartz .ag-body-horizontal-scroll,
 .ag-theme-quartz .ag-horizontal-left-spacer,

@@ -4,7 +4,7 @@ import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-import { formatLogDateTime } from "@/utils/date"
+import { formatLogDateTime, getTodayIso } from "@/utils/date"
 import type { TransactionLogRecord } from "@/types/transactionLog"
 import {
   useGetTransactionLogsQuery,
@@ -12,23 +12,12 @@ import {
 } from "@/store/services/transactionLogApi"
 
 export function TransactionLog() {
-  const { data, isLoading } = useGetTransactionLogsQuery()
+  const [dateRange, setDateRange] = useState({ from: getTodayIso(), to: getTodayIso() })
+  const { data, isLoading } = useGetTransactionLogsQuery({ fromDate: dateRange.from, toDate: dateRange.to })
   const rows = useMemo(() => data ?? [], [data])
 
   const [deleteTransactionLog] = useDeleteTransactionLogMutation()
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [dateRange, setDateRange] = useState({ from: "", to: "" })
-
-  // No date-range query param exists on the endpoint, so the toolbar's from/to filter is applied client-side.
-  const filteredRows = useMemo(() => {
-    if (!dateRange.from && !dateRange.to) return rows
-    return rows.filter((r) => {
-      const logDate = r.logTime.slice(0, 10)
-      if (dateRange.from && logDate < dateRange.from) return false
-      if (dateRange.to && logDate > dateRange.to) return false
-      return true
-    })
-  }, [rows, dateRange])
 
   const closeDelete = useCallback(() => setDeleteId(null), [])
   const openDelete  = useCallback((id: number) => setDeleteId(id), [])
@@ -76,10 +65,11 @@ export function TransactionLog() {
     <>
       <DataTable<TransactionLogRecord>
         title="Transaction Log"
-        rowData={filteredRows}
+        rowData={rows}
         columnDefs={columnDefs}
         loading={isLoading}
         showDateFilter
+        defaultToToday
         onDateFilter={(from, to) => setDateRange({ from, to })}
       />
       <DeleteDialog

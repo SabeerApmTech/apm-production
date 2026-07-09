@@ -1,7 +1,7 @@
 import { isFulfilled, isRejectedWithValue } from "@reduxjs/toolkit"
 import type { Middleware, UnknownAction } from "@reduxjs/toolkit"
 import { toast } from "sonner"
-import { getApiErrorMessage } from "@/utils/apiError"
+import { getApiErrorDetails, getApiErrorMessage } from "@/utils/apiError"
 
 interface RtkQueryMeta {
   arg?: { type?: "query" | "mutation" }
@@ -25,7 +25,9 @@ export const toastMiddleware: Middleware = () => (next) => (action) => {
     const message = (typedAction.payload as { message?: string } | undefined)?.message
     if (message) toast.success(message)
   } else if (isRejectedWithValue(typedAction)) {
-    toast.error(getApiErrorMessage(typedAction.payload, "Something went wrong. Please try again."))
+    const message = getApiErrorMessage(typedAction.payload, "Something went wrong. Please try again.")
+    const details = getApiErrorDetails(typedAction.payload)
+    toast.error(message, details ? { description: details } : undefined)
   }
 
   return next(action)

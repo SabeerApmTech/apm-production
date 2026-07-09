@@ -30,6 +30,8 @@ interface DatePickerProps {
   onChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
+  /** Dates after this are shown greyed-out and cannot be selected. */
+  maxDate?: Date
   className?: string
 }
 
@@ -38,6 +40,7 @@ export function DatePicker({
   onChange,
   placeholder = "Pick a date",
   disabled,
+  maxDate,
   className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
@@ -70,9 +73,10 @@ export function DatePicker({
             onChange(day ? toIso(day) : "")
             setOpen(false)
           }}
+          disabled={maxDate ? { after: maxDate } : undefined}
           captionLayout="dropdown-buttons"
           fromYear={1950}
-          toYear={new Date().getFullYear() + 10}
+          toYear={(maxDate ?? new Date()).getFullYear() + (maxDate ? 0 : 10)}
           classNames={{ caption_label: "hidden" }}
           initialFocus
         />

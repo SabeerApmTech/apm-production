@@ -4,14 +4,8 @@ import { Pencil } from "lucide-react"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StoreDialog } from "./StoreDialog"
+import { MOCK_STORES } from "./data"
 import type { StoreRecord } from "@/types/store"
-
-// No backend endpoint yet — mock data held in local state until /Store is available.
-const MOCK_STORES: StoreRecord[] = [
-  { storeId: 1, storeName: "Main Store" },
-  { storeId: 2, storeName: "Raw Material Store" },
-  { storeId: 3, storeName: "Finished Goods Store" },
-]
 
 /* ── Action cell ────────────────────────────────────────── */
 interface ActionCellParams extends ICellRendererParams<StoreRecord> {

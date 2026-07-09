@@ -1,81 +1,96 @@
-import { useState, useMemo } from "react"
-import type { ColDef } from "ag-grid-community"
+import { useCallback, useMemo, useState } from "react"
+import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
-import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-
-export interface TransactionRow {
-  id: number
-  dateTime: string
-  employeeId: string
-  employeeName: string
-  scheduleId: string
-  company: string
-  product: string
-  operation: string
-  status: "Running" | "Stopped"
-  successfulQty: number
-  rejectedQty: number
-  reason: string
-  remarks: string
-}
-
-const MOCK_TRANSACTIONS: TransactionRow[] = [
-  { id: 1, dateTime: "26/05/2026\n10:00 AM", employeeId: "1216", employeeName: "Ashwin",  scheduleId: "S001-26", company: "Lakshitha", product: "CCDV",     operation: "Preprocessing",    status: "Running", successfulQty: 500,  rejectedQty: 0,   reason: "-",                remarks: "-" },
-  { id: 2, dateTime: "26/05/2026\n10:00 AM", employeeId: "0987", employeeName: "Naveen",  scheduleId: "S002-26", company: "Kingstrack", product: "AIS - 140", operation: "Preprocessing",    status: "Stopped", successfulQty: 1500, rejectedQty: 500, reason: "Component Failure", remarks: "-" },
-  { id: 3, dateTime: "26/05/2026\n11:00 AM", employeeId: "1045", employeeName: "Ravi",    scheduleId: "S001-26", company: "Lakshitha", product: "AIS 140",   operation: "Firmware Flashing", status: "Running", successfulQty: 800,  rejectedQty: 0,   reason: "-",                remarks: "-" },
-]
-
+import { formatLogDateTime, getTodayIso } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
+import type { HandoverTransactionRecord } from "@/types/handoverToStore"
+import {
+  useGetHandoverTransactionLogQuery,
+  useDeleteHandoverMutation,
+} from "@/store/services/handoverToStoreApi"
 
 export function HandoverTransactionLog() {
-  const [rows,     setRows]     = useState<TransactionRow[]>(MOCK_TRANSACTIONS)
+  const [fromDate, setFromDate] = useState(getTodayIso())
+  const [toDate,   setToDate]   = useState(getTodayIso())
+
+  const { data, isLoading } = useGetHandoverTransactionLogQuery({ fromDate, toDate })
+  const rows = useMemo(() => data ?? [], [data])
+
+  const [deleteHandover] = useDeleteHandoverMutation()
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  function handleDelete() {
-    if (deleteId === null) return
-    setRows((prev) => prev.filter((r) => r.id !== deleteId))
-    setDeleteId(null)
-  }
+  // Only Supervisors can delete a handover transaction.
+  const canDelete = getAuthUser()?.employeeRole === "SUPERVISOR"
 
-  const columnDefs = useMemo<ColDef<TransactionRow>[]>(
+  const closeDelete = useCallback(() => setDeleteId(null), [])
+  const openDelete   = useCallback((id: number) => setDeleteId(id), [])
+
+  const handleDelete = useCallback(async () => {
+    if (deleteId === null) return
+    const user = getAuthUser()
+    if (!user) return
+    try {
+      await deleteHandover({ handoverId: deleteId, employeeId: user.employeeId }).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteId, deleteHandover])
+
+  const columnDefs = useMemo<ColDef<HandoverTransactionRecord>[]>(
     () => [
-      { field: "dateTime",      headerName: "Date & Time",    minWidth: 130, cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" } as Record<string, string | number> },
-      { field: "employeeId",    headerName: "Employee Id",    minWidth: 110 },
-      { field: "employeeName",  headerName: "Employee Name",  minWidth: 130 },
-      { field: "scheduleId",    headerName: "Schedule ID",    minWidth: 110 },
-      { field: "company",       headerName: "Company",        cellStyle: { fontWeight: 600 }, minWidth: 120 },
-      { field: "product",       headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "operation",     headerName: "Operation",      minWidth: 140 },
-      { field: "status",        headerName: "Status",         cellRenderer: StatusCell, minWidth: 110 },
-      { field: "successfulQty", headerName: "Successful Qty", minWidth: 130 },
-      { field: "rejectedQty",   headerName: "Rejected Qty",   minWidth: 120 },
-      { field: "reason",        headerName: "Reason",         minWidth: 140 },
-      { field: "remarks",       headerName: "Remarks",        minWidth: 110 },
       {
-        headerName: "Action",
-        cellRenderer: DeleteCell,
-        cellRendererParams: { onDelete: (id: number) => setDeleteId(id) },
-        sortable: false, maxWidth: 80,
+        field: "handoverDate", headerName: "Handover Date", minWidth: 130,
+        cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" },
+        valueFormatter: (p: ValueFormatterParams<HandoverTransactionRecord>) =>
+          p.value ? formatLogDateTime(p.value) : "",
       },
+      { field: "scheduleId",  headerName: "Schedule ID",  minWidth: 110 },
+      { field: "companyName", headerName: "Company",      cellStyle: { fontWeight: 600 }, minWidth: 120 },
+      { field: "productName", headerName: "Product",      cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      { field: "handoverQty", headerName: "Handover Qty", minWidth: 120 },
+      { field: "storeName",   headerName: "Store Name",   minWidth: 140 },
+      { field: "receivedBy",  headerName: "Received By",  minWidth: 130 },
+      { field: "remarks",     headerName: "Remarks",      minWidth: 130, valueFormatter: (p) => p.value ?? "-" },
+      {
+        headerName: "Created By",
+        valueGetter: (p: ValueGetterParams<HandoverTransactionRecord>) =>
+          p.data ? `${p.data.createdByEmpId} : ${p.data.createdByEmpName}` : "",
+        minWidth: 150,
+      },
+      ...(canDelete
+        ? [
+            {
+              headerName: "Action",
+              cellRenderer: DeleteCell,
+              cellRendererParams: { onDelete: openDelete },
+              sortable: false,
+              maxWidth: 80,
+            } satisfies ColDef<HandoverTransactionRecord>,
+          ]
+        : []),
     ],
-    []
+    [canDelete, openDelete]
   )
 
   return (
     <>
-      <DataTable<TransactionRow>
-        title="Transaction Log"
+      <DataTable<HandoverTransactionRecord>
+        title="Handover Transaction Log"
         rowData={rows}
         columnDefs={columnDefs}
+        loading={isLoading}
         showDateFilter
+        defaultToToday
+        onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
       />
       <DeleteDialog
         open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={closeDelete}
         onConfirm={handleDelete}
         title="Delete Transaction"
-        description="Are you sure you want to delete this transaction? This action cannot be undone."
+        description="Are you sure you want to delete this handover transaction? This action cannot be undone."
       />
     </>
   )

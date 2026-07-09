@@ -7,6 +7,15 @@ export function isDatePast(dateStr: string): boolean {
   return new Date(Number(y), Number(m) - 1, Number(d)) < new Date()
 }
 
+/** Today's date as an ISO "YYYY-MM-DD" string, for date-picker/query-param defaults. */
+export function getTodayIso(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  const d = String(now.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
 /** ISO "2026-05-26" → display "26/05/2026" */
 export function fromIsoDate(isoStr: string): string {
   const parts = isoStr.split("-")

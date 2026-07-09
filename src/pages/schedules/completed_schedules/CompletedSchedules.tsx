@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
+import { getTodayIso } from "@/utils/date"
 import { useGetCompletedSchedulesQuery } from "@/store/services/completedScheduleApi"
 import type { CompletedScheduleRecord } from "@/types/completedSchedule"
 
@@ -8,14 +9,6 @@ function formatDisplay(iso: string): string {
   if (!iso) return ""
   const [y, m, d] = iso.split("-")
   return `${d}/${m}/${y}`
-}
-
-function inRange(isoDate: string, from: string, to: string): boolean {
-  if (!from && !to) return true
-  const d = new Date(isoDate).getTime()
-  if (from && d < new Date(from).getTime()) return false
-  if (to   && d > new Date(to).getTime())   return false
-  return true
 }
 
 const columnDefs: ColDef<CompletedScheduleRecord>[] = [
@@ -31,24 +24,20 @@ const columnDefs: ColDef<CompletedScheduleRecord>[] = [
 ]
 
 export function CompletedSchedules() {
-  const { data, isLoading } = useGetCompletedSchedulesQuery()
+  const [fromDate, setFromDate] = useState(getTodayIso())
+  const [toDate,   setToDate]   = useState(getTodayIso())
+
+  const { data, isLoading } = useGetCompletedSchedulesQuery({ fromDate, toDate })
   const schedules = useMemo(() => data ?? [], [data])
-
-  const [fromDate, setFromDate] = useState("")
-  const [toDate,   setToDate]   = useState("")
-
-  const filtered = useMemo(
-    () => schedules.filter((s) => inRange(s.completedAt, fromDate, toDate)),
-    [schedules, fromDate, toDate]
-  )
 
   return (
     <DataTable<CompletedScheduleRecord>
       title="Completed Schedules"
-      rowData={filtered}
+      rowData={schedules}
       columnDefs={columnDefs}
       loading={isLoading}
       showDateFilter
+      defaultToToday
       onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
     />
   )

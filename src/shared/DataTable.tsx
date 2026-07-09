@@ -10,6 +10,7 @@ import * as XLSX from "xlsx"
 import { Search, Trash2, Plus, FileSpreadsheet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DatePicker } from "@/components/ui/date-picker"
+import { getTodayIso } from "@/utils/date"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -34,6 +35,8 @@ export interface DataTableProps<T> {
   toolbarExtra?: React.ReactNode
   showDateFilter?: boolean
   onDateFilter?: (from: string, to: string) => void
+  /** Pre-fills both date pickers with today's date instead of blank — still user-editable. */
+  defaultToToday?: boolean
   masterDetail?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   detailCellRendererParams?: Partial<IDetailCellRendererParams<T, any>>
@@ -62,6 +65,7 @@ export function DataTable<T>({
   toolbarExtra,
   showDateFilter = false,
   onDateFilter,
+  defaultToToday = false,
   masterDetail = false,
   detailCellRendererParams,
   isRowMaster,
@@ -75,8 +79,8 @@ export function DataTable<T>({
   const [search, setSearch]               = useState("")
   const [selectedCount, setSelectedCount] = useState(0)
   const [gridHeight, setGridHeight]       = useState(400)
-  const [fromDate, setFromDate]           = useState("")
-  const [toDate,   setToDate]             = useState("")
+  const [fromDate, setFromDate]           = useState(defaultToToday ? getTodayIso() : "")
+  const [toDate,   setToDate]             = useState(defaultToToday ? getTodayIso() : "")
 
   const handleFromDate = useCallback((val: string) => {
     setFromDate(val); onDateFilter?.(val, toDate)
@@ -238,7 +242,7 @@ export function DataTable<T>({
             </div>
             <div className="flex flex-col gap-1 w-36 sm:w-44">
               <span className="text-xs font-medium text-gray-500">To Date</span>
-              <DatePicker value={toDate} onChange={handleToDate} placeholder="To date" />
+              <DatePicker value={toDate} onChange={handleToDate} placeholder="To date" maxDate={new Date()} />
             </div>
             {(fromDate || toDate) && (
               <button
