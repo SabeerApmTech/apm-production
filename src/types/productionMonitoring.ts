@@ -45,6 +45,9 @@ export interface LogReportResponse {
   logs: LogReportEntry[]
 }
 
+/** The backend returns a bare `[]` (not the {activeHours, idleHours, logs} shape) when there are no logs yet. */
+export type RawLogReportResponse = LogReportResponse | []
+
 export interface OperatorActionRequest {
   action: "start" | "PAUSE" | "RESUME" | "STOP"
   employeeId: string

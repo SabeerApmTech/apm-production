@@ -43,9 +43,9 @@ export const ProductionMonitoring = () => {
 
   const loadLogReport = async (scheduleId: string, sequenceNo: number) => {
     const report = await fetchLogReport({ employeeId, scheduleId, sequenceNo }, false).unwrap()
-    setLogs(report.logs)
-    setActiveHours(report.activeHours)
-    setIdleHours(report.idleHours)
+    setLogs(report.logs ?? [])
+    setActiveHours(report.activeHours ?? "0.00")
+    setIdleHours(report.idleHours ?? "0.00")
   }
 
   // Runs exactly once per mount, and every step explicitly awaits the network response instead

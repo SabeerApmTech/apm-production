@@ -5,6 +5,7 @@ import type {
   OperationRecord,
   OperatorActionRequest,
   OperatorSchedule,
+  RawLogReportResponse,
 } from "@/types/productionMonitoring"
 
 export const productionMonitoringApi = api.injectEndpoints({
@@ -19,7 +20,10 @@ export const productionMonitoringApi = api.injectEndpoints({
     }),
     getOperatorLogReport: builder.query<LogReportResponse, { employeeId: string; scheduleId: string; sequenceNo: number }>({
       query: (params) => ({ url: "/ProductionMonitoring/operator-log-report", params }),
-      transformResponse: (res: ApiResponse<LogReportResponse>) => res.data,
+      // The backend returns a bare `[]` instead of the {activeHours, idleHours, logs} shape
+      // when there are no logs yet — normalize that here so callers only ever see one shape.
+      transformResponse: (res: ApiResponse<RawLogReportResponse>) =>
+        Array.isArray(res.data) ? { activeHours: "0.00", idleHours: "0.00", logs: [] } : res.data,
       providesTags: (_result, _error, { scheduleId, sequenceNo }) => [
         { type: "ProductionMonitoringLog", id: `${scheduleId}:${sequenceNo}` },
       ],
