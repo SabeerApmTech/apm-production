@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { formatLogDateTime } from "@/utils/date"
 import { ScheduleSummary } from "./ScheduleSummary"
-import { StatusBadge, LOG_EVENT_LABELS } from "./StatusBadge"
+import { StatusBadge } from "./StatusBadge"
 import type { Operation, Schedule } from "./types"
 import type { LogReportEntry } from "@/types/productionMonitoring"
 
@@ -151,7 +151,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                         "text-amber-600": entry.logEvent === "PAUSE",
                         "text-red-500":   entry.logEvent === "STOP",
                       })}>
-                        {LOG_EVENT_LABELS[entry.logEvent]}
+                        {entry.logEvent}
                       </td>
                       <td className="px-3 py-2 text-gray-600">{entry.successfulQty}</td>
                       <td className="px-3 py-2 text-gray-600">{entry.rejectedQty}</td>
