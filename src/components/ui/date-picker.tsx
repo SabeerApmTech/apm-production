@@ -54,14 +54,14 @@ export function DatePicker({
           disabled={disabled}
           className={cn(
             "flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-4 py-2 text-sm transition-[color,box-shadow] outline-none",
-            "focus-visible:border-blue-500 focus-visible:ring-[3px] focus-visible:ring-blue-200",
+            "focus-visible:border-blue-500 focus-visible:ring-[3px] focus-visible:ring-blue-200 dark:focus-visible:ring-blue-900/40",
             "disabled:cursor-not-allowed disabled:opacity-50",
             !selected && "text-muted-foreground",
             className
           )}
         >
           {selected ? formatDisplay(selected) : placeholder}
-          <CalendarIcon className="h-4 w-4 shrink-0 text-gray-400" />
+          <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
 

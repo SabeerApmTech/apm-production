@@ -1,10 +1,21 @@
 @import "tailwindcss";
 
+/* Dark mode is class-driven (toggled via useTheme), never OS-driven — without this, Tailwind
+   v4's dark: utilities default to @media (prefers-color-scheme: dark). */
+/* :not(.force-light, .force-light *) lets a subtree opt out of dark mode entirely (Login,
+   OperatorLogin) even though shared components like Input carry dark: utilities that would
+   otherwise react to the global .dark class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *):not(.force-light, .force-light *));
+
 html,
 body,
 #root {
   height: 100%;
   overflow: hidden;
+}
+
+body {
+  @apply bg-background text-foreground;
 }
 
 button {
@@ -21,15 +32,38 @@ button {
   line-height: 1.5;
 }
 
-/* Hide AG Grid horizontal scrollbar */
-.ag-theme-quartz .ag-body-horizontal-scroll,
-.ag-theme-quartz .ag-horizontal-left-spacer,
-.ag-theme-quartz .ag-horizontal-right-spacer {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* Thin the AG Grid horizontal scrollbar instead of hiding it — a full-height native scrollbar
+   (~15-17px) can eat into the last row's clearance on tables with many columns; a slim styled
+   one stays visible (so users know they can scroll) while taking far less vertical space. */
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport {
+  scrollbar-width: thin;
 }
-.ag-theme-quartz .ag-body-horizontal-scroll::-webkit-scrollbar {
-  display: none;
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport::-webkit-scrollbar {
+  height: 8px;
+}
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark .ag-theme-quartz .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* AG Grid cells: baseline vertical centering + text-overflow safety that applies regardless of
+   any column's own cellStyle — a column's cellStyle fully REPLACES (not merges with)
+   defaultColDef's cellStyle, so relying on that JS-level default alone silently drops overflow
+   clipping for any column with a custom style (e.g. bold Company/Product text overflowing into
+   the next column instead of showing an ellipsis). A column can still override any of these
+   per-property via its own cellStyle — inline styles win over this class regardless. */
+.ag-theme-quartz .ag-cell {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Remove all borders and outlines from the AG Grid selection column */
@@ -108,9 +142,11 @@ button {
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  /* Lighter than --background so card/popover surfaces read as elevated panels instead of
+     blending into the page — before this, card === background and every panel looked flat. */
+  --card: 240 8% 9%;
   --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
+  --popover: 240 8% 9%;
   --popover-foreground: 0 0% 98%;
   --primary: 0 0% 98%;
   --primary-foreground: 240 5.9% 10%;

@@ -13,7 +13,7 @@ function SelectTrigger({ className, children, ...props }: React.ComponentProps<t
       className={cn(
         "flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm",
         "ring-offset-background placeholder:text-muted-foreground outline-none",
-        "focus:ring-2 focus:ring-blue-200 focus:border-blue-500",
+        "focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900/40 focus:border-blue-500",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "data-disabled:cursor-not-allowed data-disabled:opacity-50 [&>span]:line-clamp-1",
         className
@@ -60,7 +60,7 @@ function SelectContent({
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          "relative z-50 max-h-96 min-w-32 overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg",
+          "relative z-50 max-h-96 min-w-32 overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -102,7 +102,7 @@ function SelectItem({ className, children, ...props }: React.ComponentProps<type
     <SelectPrimitive.Item
       className={cn(
         "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none",
-        "focus:bg-blue-50 focus:text-blue-900",
+        "focus:bg-blue-50 focus:text-blue-900 dark:focus:bg-blue-950/40 dark:focus:text-blue-200",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         className
       )}
@@ -121,7 +121,7 @@ function SelectItem({ className, children, ...props }: React.ComponentProps<type
 function SelectSeparator({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Separator>) {
   return (
     <SelectPrimitive.Separator
-      className={cn("-mx-1 my-1 h-px bg-gray-100", className)}
+      className={cn("-mx-1 my-1 h-px bg-border", className)}
       {...props}
     />
   )

@@ -10,10 +10,11 @@ export const transactionLogApi = api.injectEndpoints({
         res.data.map((t) => ({ ...t, id: t.transactionLogId })),
       providesTags: [{ type: "TransactionLog", id: "LIST" }],
     }),
-    deleteTransactionLog: builder.mutation<ApiResponse<null>, number>({
-      query: (transactionId) => ({
+    deleteTransactionLog: builder.mutation<ApiResponse<null>, { transactionId: number; deletedByEmpId: string }>({
+      query: ({ transactionId, deletedByEmpId }) => ({
         url: `/TransactionLog/${transactionId}`,
         method: "DELETE",
+        params: { deletedByEmpId },
       }),
       invalidatesTags: [{ type: "TransactionLog", id: "LIST" }],
     }),

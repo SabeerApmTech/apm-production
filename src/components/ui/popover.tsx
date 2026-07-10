@@ -18,7 +18,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-100 rounded-xl border border-gray-200 bg-white p-0 shadow-lg outline-none",
+          "z-100 rounded-xl border border-border bg-popover text-popover-foreground p-0 shadow-lg outline-none",
           className
         )}
         {...props}

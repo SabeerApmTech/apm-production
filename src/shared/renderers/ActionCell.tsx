@@ -12,7 +12,7 @@ export function ActionCell({ data, onEdit, onResetPassword }: ActionCellParams) 
       {onEdit && (
         <button
           onClick={() => onEdit(data)}
-          className="flex items-center justify-center rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-blue-500"
+          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition hover:bg-accent hover:text-blue-500 dark:hover:text-blue-400"
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -21,7 +21,7 @@ export function ActionCell({ data, onEdit, onResetPassword }: ActionCellParams) 
         <button
           onClick={() => onResetPassword(data)}
           title="Reset Password"
-          className="flex items-center justify-center rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-blue-500"
+          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition hover:bg-accent hover:text-blue-500 dark:hover:text-blue-400"
         >
           <KeyRound className="h-4 w-4" />
         </button>

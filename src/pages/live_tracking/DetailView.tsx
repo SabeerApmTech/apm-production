@@ -34,7 +34,7 @@ export function DetailView({ employee, onBack }: Props) {
       {/* Back + employee — fixed height */}
       <button
         onClick={onBack}
-        className="shrink-0 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+        className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors"
       >
         <ChevronLeft className="h-3.5 w-3.5" /> Back
       </button>
@@ -44,19 +44,19 @@ export function DetailView({ employee, onBack }: Props) {
       </p>
 
       {/* Schedule summary — fixed height */}
-      <div className="shrink-0 rounded-xl border border-gray-200 overflow-x-auto mb-4">
+      <div className="shrink-0 rounded-xl border border-border overflow-x-auto mb-4">
         <table className="min-w-full text-xs">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
+            <tr className="bg-muted/50 border-b border-border">
               {scheduleCols.map(([k]) => (
-                <th key={k} className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">{k}</th>
+                <th key={k} className="px-3 py-2 text-left text-muted-foreground font-medium whitespace-nowrap">{k}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             <tr>
               {scheduleCols.map(([k, v]) => (
-                <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{v}</td>
+                <td key={k} className="px-3 py-2.5 text-foreground whitespace-nowrap">{v}</td>
               ))}
             </tr>
           </tbody>
@@ -64,24 +64,24 @@ export function DetailView({ employee, onBack }: Props) {
       </div>
 
       {/* Stage / operations table — fixed height */}
-      <div className="shrink-0 rounded-xl border border-gray-200 overflow-x-auto mb-4">
+      <div className="shrink-0 rounded-xl border border-border overflow-x-auto mb-4">
         <table className="min-w-full text-xs">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
+            <tr className="bg-muted/50 border-b border-border">
               {["Stage", "Operation", "Target Qty", "Produced Qty", "Pending Qty", "Status", "Actions"].map(h => (
-                <th key={h} className="px-3 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                <th key={h} className="px-3 py-2.5 text-left text-muted-foreground font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr className="text-gray-700">
+            <tr className="text-foreground">
               <td className="px-3 py-2.5">{stage.stage}</td>
               <td className="px-3 py-2.5 whitespace-nowrap">{stage.operation}</td>
               <td className="px-3 py-2.5">{stage.targetQty}</td>
               <td className="px-3 py-2.5">{stage.producedQty}</td>
               <td className="px-3 py-2.5">{stage.pendingQty}</td>
               <td className="px-3 py-2.5">
-                <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", STATUS_BADGE[stage.status] ?? "bg-gray-100 text-gray-600")}>
+                <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold", STATUS_BADGE[stage.status] ?? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300")}>
                   {stage.status}
                 </span>
               </td>
@@ -101,13 +101,13 @@ export function DetailView({ employee, onBack }: Props) {
       </div>
 
       {/* Log Report heading — fixed height */}
-      <p className="shrink-0 text-sm font-semibold text-gray-800 mb-2">Log Report</p>
+      <p className="shrink-0 text-sm font-semibold text-foreground mb-2">Log Report</p>
 
       {/* Log Report card — fills remaining viewport space */}
-      <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-gray-200">
-        <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
-          <span className="text-xs font-medium text-green-500">Active Hours: 2.30 Hrs</span>
-          <span className="text-xs font-medium text-red-500">Idle Hours: 1 Hrs</span>
+      <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-border">
+        <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-border">
+          <span className="text-xs font-medium text-green-600 dark:text-green-400">Active Hours: 2.30 Hrs</span>
+          <span className="text-xs font-medium text-red-500 dark:text-red-400">Idle Hours: 1 Hrs</span>
         </div>
         {/* Table body scrolls; header stays pinned via sticky */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
@@ -121,21 +121,21 @@ export function DetailView({ employee, onBack }: Props) {
             </thead>
             <tbody>
               {MOCK_LOG_ENTRIES.map((entry, i) => (
-                <tr key={i} className={cn("border-t border-gray-100", i % 2 === 1 && "bg-gray-50/60")}>
-                  <td className="px-3 py-2 whitespace-nowrap text-gray-600">{entry.dateTime}</td>
+                <tr key={i} className={cn("border-t border-border", i % 2 === 1 && "bg-muted/40")}>
+                  <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{entry.dateTime}</td>
                   <td className={cn("px-3 py-2 font-medium whitespace-nowrap", {
-                    "text-green-600": entry.status === "Started",
-                    "text-amber-600": entry.status === "Paused",
-                    "text-red-500":   entry.status === "Stopped",
+                    "text-green-600 dark:text-green-400": entry.status === "Started",
+                    "text-amber-600 dark:text-amber-400": entry.status === "Paused",
+                    "text-red-500 dark:text-red-400":     entry.status === "Stopped",
                   })}>
                     {entry.status}
                   </td>
-                  <td className="px-3 py-2 text-gray-600">{entry.successQty  ?? "—"}</td>
-                  <td className={cn("px-3 py-2", entry.rejectedQty ? "text-red-500 font-semibold" : "text-gray-600")}>
+                  <td className="px-3 py-2 text-muted-foreground">{entry.successQty  ?? "—"}</td>
+                  <td className={cn("px-3 py-2", entry.rejectedQty ? "text-red-500 dark:text-red-400 font-semibold" : "text-muted-foreground")}>
                     {entry.rejectedQty ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{entry.reason   ?? "—"}</td>
-                  <td className="px-3 py-2 text-gray-600">{entry.remarks     ?? "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{entry.reason   ?? "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{entry.remarks     ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

@@ -38,8 +38,8 @@ export function ResetPasswordDialog({ open, onClose, userId, employeeName }: Res
       <DialogContent className="max-w-sm w-[calc(100%-2rem)]">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100">
-              <KeyRound className="h-5 w-5 text-blue-600" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/40">
+              <KeyRound className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <DialogTitle>Reset Password</DialogTitle>
           </div>
@@ -47,7 +47,7 @@ export function ResetPasswordDialog({ open, onClose, userId, employeeName }: Res
 
         {result ? (
           <>
-            <p className={`mt-1 text-sm ${result.ok ? "text-gray-700" : "text-red-600"}`} role={result.ok ? undefined : "alert"}>
+            <p className={`mt-1 text-sm ${result.ok ? "text-foreground" : "text-red-600 dark:text-red-400"}`} role={result.ok ? undefined : "alert"}>
               {result.message}
             </p>
             <DialogFooter className="mt-4">
@@ -56,7 +56,7 @@ export function ResetPasswordDialog({ open, onClose, userId, employeeName }: Res
           </>
         ) : (
           <>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-muted-foreground">
               {employeeName
                 ? `Reset the password for ${employeeName}? A new temporary password will be generated.`
                 : "Reset this user's password? A new temporary password will be generated."}

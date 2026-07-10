@@ -11,12 +11,42 @@ import { Search, Trash2, Plus, FileSpreadsheet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DatePicker } from "@/components/ui/date-picker"
 import { getTodayIso } from "@/utils/date"
+import { useTheme } from "@/hooks/useTheme"
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const AG_HEADER_HEIGHT = 44
 const AG_ROW_HEIGHT    = 52
 const TOOLBAR_GAP      = 16
+
+// AG Grid's --ag-* custom properties are a separate namespace from the shadcn --color-* tokens
+// and are set inline below (inline styles always win over any CSS-level dark: override), so the
+// light/dark swap has to happen in JS.
+const AG_VARS_LIGHT: Record<string, string> = {
+  "--ag-background-color": "#ffffff",
+  "--ag-foreground-color": "#111827",
+  "--ag-header-background-color": "#f8fafc",
+  "--ag-header-foreground-color": "#374151",
+  "--ag-border-color": "#e5e7eb",
+  "--ag-row-border-color": "#f1f5f9",
+  "--ag-odd-row-background-color": "#fafbfc",
+  "--ag-selected-row-background-color": "#eff6ff",
+  "--ag-row-hover-color": "#f5f8ff",
+  "--ag-checkbox-checked-color": "#3b82f6",
+}
+
+const AG_VARS_DARK: Record<string, string> = {
+  "--ag-background-color": "#18181b",
+  "--ag-foreground-color": "#e4e4e7",
+  "--ag-header-background-color": "#27272a",
+  "--ag-header-foreground-color": "#e4e4e7",
+  "--ag-border-color": "#3f3f46",
+  "--ag-row-border-color": "#27272a",
+  "--ag-odd-row-background-color": "#1f1f23",
+  "--ag-selected-row-background-color": "#1e3a5f",
+  "--ag-row-hover-color": "#26262b",
+  "--ag-checkbox-checked-color": "#3b82f6",
+}
 
 export interface DataTableProps<T> {
   title: string
@@ -73,6 +103,7 @@ export function DataTable<T>({
   fullWidthCellRenderer,
   getRowHeight,
 }: DataTableProps<T>) {
+  const { theme } = useTheme()
   const gridApiRef   = useRef<GridApi<T> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const toolbarRef   = useRef<HTMLDivElement>(null)
@@ -115,12 +146,12 @@ export function DataTable<T>({
       filter: false,
       flex: 1,
       minWidth: 100,
-      // Vertically centers cell content by default — most importantly custom icon-button
-      // renderers (edit/delete/reset-password/etc.), which otherwise render top-aligned since
-      // their own wrapper divs can't reliably resolve a percentage height against the cell.
-      // Columns that set their own cellStyle (e.g. colored text) override this, which is fine —
-      // plain single-line text doesn't need it.
-      cellStyle: { display: "flex", alignItems: "center" },
+      // Vertical centering + text-overflow clipping live in the global `.ag-theme-quartz .ag-cell`
+      // CSS rule (index.css), not here — a column's own cellStyle fully replaces (rather than
+      // merges with) whatever's set here, so a JS-level default silently disappears for any
+      // column with custom styling (e.g. bold Company/Product text). The CSS class applies to
+      // every cell regardless, and a column's cellStyle can still override individual properties
+      // via inline style if it ever needs to (e.g. `whiteSpace: "pre-line"` for multi-line cells).
     }),
     []
   )
@@ -221,13 +252,13 @@ export function DataTable<T>({
                 "flex h-9 w-9 items-center justify-center rounded-lg border transition-all",
                 selectedCount > 0
                   ? "border-red-400 bg-red-500 text-white shadow-sm hover:bg-red-600 active:bg-red-700"
-                  : "border-red-200 bg-red-50 text-red-400 cursor-default"
+                  : "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-400 dark:text-red-700 cursor-default"
               )}
             >
               <Trash2 className="h-4 w-4" />
             </button>
             {selectedCount > 0 && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 px-1.5 text-xs font-bold text-red-600">
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 text-xs font-bold text-red-600 dark:text-red-300">
                 {selectedCount}
               </span>
             )}
@@ -237,17 +268,17 @@ export function DataTable<T>({
         {showDateFilter && (
           <div className="flex flex-row items-end gap-3">
             <div className="flex flex-col gap-1 w-36 sm:w-44">
-              <span className="text-xs font-medium text-gray-500">From Date</span>
+              <span className="text-xs font-medium text-muted-foreground">From Date</span>
               <DatePicker value={fromDate} onChange={handleFromDate} placeholder="From date" />
             </div>
             <div className="flex flex-col gap-1 w-36 sm:w-44">
-              <span className="text-xs font-medium text-gray-500">To Date</span>
+              <span className="text-xs font-medium text-muted-foreground">To Date</span>
               <DatePicker value={toDate} onChange={handleToDate} placeholder="To date" maxDate={new Date()} />
             </div>
             {(fromDate || toDate) && (
               <button
                 onClick={handleClearDates}
-                className="h-10 rounded-lg border border-gray-200 px-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                className="h-10 rounded-lg border border-border px-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
               >
                 Clear
               </button>
@@ -260,13 +291,13 @@ export function DataTable<T>({
         <div className="flex-1" />
 
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 w-56 rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 sm:w-72"
+            className="h-9 w-56 rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-foreground outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 sm:w-72"
           />
         </div>
 
@@ -278,7 +309,7 @@ export function DataTable<T>({
             "flex h-9 w-9 items-center justify-center rounded-lg border transition-all",
             rowData.length > 0
               ? "border-green-400 bg-green-500 text-white shadow-sm hover:bg-green-600 active:bg-green-700"
-              : "border-green-200 bg-green-50 text-green-400 cursor-default"
+              : "border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/40 text-green-400 dark:text-green-700 cursor-default"
           )}
         >
           <FileSpreadsheet className="h-4 w-4" />
@@ -298,7 +329,7 @@ export function DataTable<T>({
       {/* Grid */}
       <div
         style={{ height: gridHeight }}
-        className="flex flex-col overflow-hidden rounded-xl border border-gray-200 shadow-sm shrink-0"
+        className="flex flex-col overflow-hidden rounded-xl border border-border shadow-sm shrink-0"
       >
         <div
           className="ag-theme-quartz flex-1 w-full min-h-0"
@@ -306,17 +337,10 @@ export function DataTable<T>({
             {
               "--ag-font-family": "inherit",
               "--ag-font-size": "13.5px",
-              "--ag-header-background-color": "#f8fafc",
-              "--ag-header-foreground-color": "#374151",
               "--ag-header-height": `${AG_HEADER_HEIGHT}px`,
               "--ag-row-height": `${AG_ROW_HEIGHT}px`,
-              "--ag-border-color": "#e5e7eb",
-              "--ag-row-border-color": "#f1f5f9",
-              "--ag-odd-row-background-color": "#fafbfc",
-              "--ag-selected-row-background-color": "#eff6ff",
-              "--ag-row-hover-color": "#f5f8ff",
-              "--ag-checkbox-checked-color": "#3b82f6",
               "--ag-wrapper-border-radius": "0.75rem",
+              ...(theme === "dark" ? AG_VARS_DARK : AG_VARS_LIGHT),
             } as React.CSSProperties
           }
         >
@@ -348,8 +372,8 @@ export function DataTable<T>({
             getRowHeight={getRowHeight}
           />
         </div>
-        <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-2">
-          <span className="text-sm font-semibold text-gray-500">Count: {rowData.length}</span>
+        <div className="shrink-0 border-t border-border bg-card px-4 py-2">
+          <span className="text-sm font-semibold text-muted-foreground">Count: {rowData.length}</span>
         </div>
       </div>
     </div>

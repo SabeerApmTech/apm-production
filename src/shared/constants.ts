@@ -9,9 +9,9 @@ export const PRIORITY_STYLES: Record<PriorityLevel, string> = {
 }
 
 export const PRIORITY_TEXT_STYLES: Record<PriorityLevel, string> = {
-  High:   "text-red-600",
-  Medium: "text-yellow-600",
-  Low:    "text-green-600",
+  High:   "text-red-600 dark:text-red-400",
+  Medium: "text-yellow-600 dark:text-yellow-400",
+  Low:    "text-green-600 dark:text-green-400",
 }
 
 export const COMPANIES = ["Lakshika", "Kingstrack", "ABC"]

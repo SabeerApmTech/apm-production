@@ -13,16 +13,6 @@ import {
   useCreateHandoverMutation,
 } from "@/store/services/handoverToStoreApi"
 
-// A column's own cellStyle fully replaces (rather than merges with) DataTable's defaultColDef
-// cellStyle, so bold text columns need their own explicit clip — otherwise long values like
-// "MICROPROCESSOR" spill into the next column instead of ellipsizing.
-const BOLD_CLIPPED_CELL = {
-  fontWeight: 600,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-} as const
-
 export function HandoverPendingList() {
   const { data, isLoading } = useGetHandoverPendingListQuery()
   const rows = useMemo(() => data ?? [], [data])
@@ -51,9 +41,9 @@ export function HandoverPendingList() {
     () => [
       { field: "scheduleDate",       headerName: "Schedule Date", valueFormatter: (p) => fromIsoDate(p.value), minWidth: 130 },
       { field: "scheduleId",         headerName: "Schedule Id",   minWidth: 120 },
-      { field: "companyName",        headerName: "Company",       cellStyle: BOLD_CLIPPED_CELL, minWidth: 130 },
+      { field: "companyName",        headerName: "Company",       cellStyle: { fontWeight: 600 }, minWidth: 130 },
       { field: "companyLocation",    headerName: "Location",      minWidth: 110 },
-      { field: "productName",        headerName: "Product",       cellStyle: BOLD_CLIPPED_CELL, minWidth: 150 },
+      { field: "productName",        headerName: "Product",       cellStyle: { fontWeight: 600 }, minWidth: 150 },
       { field: "targetQty",          headerName: "Target Qty",    minWidth: 110 },
       { field: "producedQty",        headerName: "Produced Qty",  minWidth: 120 },
       { field: "deliveredQty",       headerName: "Delivered Qty", minWidth: 120 },

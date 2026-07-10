@@ -113,17 +113,17 @@ const NOTIFICATIONS: NotifItem[] = [
 
 /* ── Icon / color config ────────────────────────────────────────── */
 const TYPE_CFG: Record<NotifType, { bg: string; icon: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  ticket:   { bg: "bg-rose-100",   icon: "text-rose-500",   Icon: TicketIcon    },
-  schedule: { bg: "bg-amber-100",  icon: "text-amber-500",  Icon: CalendarClock },
-  target:   { bg: "bg-green-100",  icon: "text-green-500",  Icon: CheckCircle2  },
-  rework:   { bg: "bg-purple-100", icon: "text-purple-500", Icon: UserCheck     },
-  system:   { bg: "bg-blue-100",   icon: "text-blue-500",   Icon: Bell          },
+  ticket:   { bg: "bg-rose-100 dark:bg-rose-950/40",     icon: "text-rose-500 dark:text-rose-400",     Icon: TicketIcon    },
+  schedule: { bg: "bg-amber-100 dark:bg-amber-950/40",   icon: "text-amber-500 dark:text-amber-400",   Icon: CalendarClock },
+  target:   { bg: "bg-green-100 dark:bg-green-950/40",   icon: "text-green-500 dark:text-green-400",   Icon: CheckCircle2  },
+  rework:   { bg: "bg-purple-100 dark:bg-purple-950/40", icon: "text-purple-500 dark:text-purple-400", Icon: UserCheck     },
+  system:   { bg: "bg-blue-100 dark:bg-blue-950/40",     icon: "text-blue-500 dark:text-blue-400",     Icon: Bell          },
 }
 
 const PRIORITY_STYLE: Record<NotifPriority, string> = {
-  High:   "bg-amber-100 text-amber-700",
-  Medium: "bg-blue-100 text-blue-700",
-  Low:    "bg-green-100 text-green-700",
+  High:   "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
+  Medium: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
+  Low:    "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
 }
 
 /* ── Notification list item ─────────────────────────────────────── */
@@ -135,10 +135,8 @@ function NotifCard({ notif, selected, onClick }: { notif: NotifItem; selected: b
       className={cn(
         "w-full text-left rounded-xl border transition-all",
         selected
-          ? "border-blue-300 bg-blue-50 shadow-sm border-l-4 border-l-blue-500"
-          : notif.isRead
-            ? "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-            : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+          ? "border-blue-300 bg-blue-50 shadow-sm border-l-4 border-l-blue-500 dark:border-blue-800 dark:bg-blue-950/30"
+          : "border-border bg-card hover:border-muted-foreground/40 hover:shadow-sm"
       )}
     >
       <div className="flex gap-3 px-3.5 py-3">
@@ -147,14 +145,14 @@ function NotifCard({ notif, selected, onClick }: { notif: NotifItem; selected: b
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-bold text-gray-800 leading-snug truncate">{notif.title}</p>
+            <p className="text-sm font-bold text-foreground leading-snug truncate">{notif.title}</p>
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs text-gray-400 whitespace-nowrap">{notif.timeAgo}</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{notif.timeAgo}</span>
               {!notif.isRead && <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />}
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{notif.meta}</p>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{notif.subtext}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.meta}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.subtext}</p>
         </div>
       </div>
     </button>
@@ -165,12 +163,12 @@ function NotifCard({ notif, selected, onClick }: { notif: NotifItem; selected: b
 function NotifDetail({ notif, onBack }: { notif: NotifItem; onBack: () => void }) {
   const cfg = TYPE_CFG[notif.type]
   return (
-    <div className="flex flex-1 flex-col min-h-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="flex flex-1 flex-col min-h-0 bg-card rounded-xl border border-border shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 flex items-start gap-3 px-4 py-4 border-b border-gray-100">
+      <div className="shrink-0 flex items-start gap-3 px-4 py-4 border-b border-border">
         <button
           onClick={onBack}
-          className="md:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors mt-0.5"
+          className="md:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent transition-colors mt-0.5"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -179,8 +177,8 @@ function NotifDetail({ notif, onBack }: { notif: NotifItem; onBack: () => void }
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-base font-bold text-gray-800 leading-snug">{notif.title}</h2>
-            <button className="flex items-center gap-1.5 rounded-lg border border-blue-300 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors shrink-0">
+            <h2 className="text-base font-bold text-foreground leading-snug">{notif.title}</h2>
+            <button className="flex items-center gap-1.5 rounded-lg border border-blue-300 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors shrink-0 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30">
               <CheckCircle className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Mark as Resolved</span>
             </button>
@@ -190,7 +188,7 @@ function NotifDetail({ notif, onBack }: { notif: NotifItem; onBack: () => void }
               {notif.priority} Priority
             </span>
           )}
-          <p className="text-xs text-gray-400 mt-1.5">{notif.shortDesc}</p>
+          <p className="text-xs text-muted-foreground mt-1.5">{notif.shortDesc}</p>
         </div>
       </div>
 
@@ -198,14 +196,14 @@ function NotifDetail({ notif, onBack }: { notif: NotifItem; onBack: () => void }
       <div className="flex-1 overflow-y-auto">
         {/* Info table */}
         <div className="px-4 pt-3 pb-2">
-          <table className="w-full text-sm border-collapse border border-gray-100 rounded-lg overflow-hidden">
+          <table className="w-full text-sm border-collapse border border-border rounded-lg overflow-hidden">
             <tbody>
               {notif.details.map(({ label, value }) => (
-                <tr key={label} className="border-b border-gray-100 last:border-0">
-                  <td className="py-2.5 px-3 text-xs font-semibold text-gray-500 bg-gray-50 w-36 border-r border-gray-100">
+                <tr key={label} className="border-b border-border last:border-0">
+                  <td className="py-2.5 px-3 text-xs font-semibold text-muted-foreground bg-muted/50 w-36 border-r border-border">
                     {label}
                   </td>
-                  <td className="py-2.5 px-3 text-sm text-gray-800">{value}</td>
+                  <td className="py-2.5 px-3 text-sm text-foreground">{value}</td>
                 </tr>
               ))}
             </tbody>
@@ -213,16 +211,16 @@ function NotifDetail({ notif, onBack }: { notif: NotifItem; onBack: () => void }
         </div>
 
         {/* Description */}
-        <div className="px-4 py-3 border-t border-gray-50">
-          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Description</h4>
-          <p className="text-sm text-gray-700 leading-relaxed">{notif.description}</p>
+        <div className="px-4 py-3 border-t border-border">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</h4>
+          <p className="text-sm text-foreground leading-relaxed">{notif.description}</p>
         </div>
       </div>
 
       {/* Footer timestamp */}
-      <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50/60">
-        <Clock className="h-3.5 w-3.5 text-gray-400" />
-        <span className="text-xs text-gray-400">{notif.fullDateTime} ({notif.timeAgo})</span>
+      <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-t border-border bg-muted/30">
+        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">{notif.fullDateTime} ({notif.timeAgo})</span>
       </div>
     </div>
   )
@@ -293,12 +291,12 @@ export function Notifications() {
                 className={cn(
                   "pb-2.5 px-3 text-sm font-medium transition-colors whitespace-nowrap shrink-0",
                   activeTab === key
-                    ? "text-blue-600 border-b-2 border-blue-500 -mb-px"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-500 -mb-px"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {label}
-                <span className={cn("ml-1 text-xs", activeTab === key ? "text-blue-400" : "text-gray-400")}>
+                <span className={cn("ml-1 text-xs", activeTab === key ? "text-blue-400" : "text-muted-foreground")}>
                   ({count})
                 </span>
               </button>
@@ -308,16 +306,16 @@ export function Notifications() {
           {/* Search + Filter */}
           <div className="flex gap-2 shrink-0">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search Notification"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                className="h-9 w-full rounded-lg border border-border bg-card text-foreground pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
               />
             </div>
-            <button className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shrink-0">
+            <button className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-muted-foreground hover:bg-accent transition-colors shrink-0">
               <SlidersHorizontal className="h-4 w-4" />
               Filter
             </button>
@@ -327,13 +325,13 @@ export function Notifications() {
           <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-0.5">
             {groups.size === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
-                <Bell className="h-8 w-8 text-gray-300" />
-                <p className="text-sm text-gray-400">No notifications found</p>
+                <Bell className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">No notifications found</p>
               </div>
             ) : (
               Array.from(groups.entries()).map(([group, items]) => (
                 <div key={group} className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">{group}</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">{group}</p>
                   {items.map((notif) => (
                     <NotifCard
                       key={notif.id}
@@ -352,9 +350,9 @@ export function Notifications() {
         {selected ? (
           <NotifDetail notif={selected} onBack={() => setSelectedId(null)} />
         ) : (
-          <div className="hidden md:flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/60 gap-3">
-            <Bell className="h-10 w-10 text-gray-300" />
-            <p className="text-sm font-medium text-gray-400">Select a notification to view details</p>
+          <div className="hidden md:flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 gap-3">
+            <Bell className="h-10 w-10 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">Select a notification to view details</p>
           </div>
         )}
       </div>

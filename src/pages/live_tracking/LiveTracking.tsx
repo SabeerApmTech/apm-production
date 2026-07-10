@@ -20,13 +20,13 @@ interface StatCardProps {
 
 function StatCard({ label, count, icon, iconBg, borderColor, textColor }: StatCardProps) {
   return (
-    <div className={cn("flex min-w-36 shrink-0 items-center gap-3 rounded-xl border-2 bg-white p-3.5 shadow-sm sm:min-w-0 sm:shrink", borderColor)}>
+    <div className={cn("flex min-w-36 shrink-0 items-center gap-3 rounded-xl border-2 bg-card p-3.5 shadow-sm sm:min-w-0 sm:shrink", borderColor)}>
       <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", iconBg)}>
         {icon}
       </div>
       <div className="min-w-0">
         <p className={cn("text-xl font-bold leading-none", textColor)}>{count}</p>
-        <p className="mt-1 text-[11px] font-medium text-gray-500 leading-tight">{label}</p>
+        <p className="mt-1 text-[11px] font-medium text-muted-foreground leading-tight">{label}</p>
       </div>
     </div>
   )
@@ -56,34 +56,34 @@ export const LiveTracking = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-5">
           <StatCard
             label="Total Employees" count={counts.total}
-            icon={<Users className="h-5 w-5 text-blue-600" />}
-            iconBg="bg-blue-100" borderColor="border-blue-200" textColor="text-blue-700"
+            icon={<Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+            iconBg="bg-blue-100 dark:bg-blue-950/40" borderColor="border-blue-200 dark:border-blue-900" textColor="text-blue-700 dark:text-blue-400"
           />
           <StatCard
             label="Not Started" count={counts.notStarted}
-            icon={<XCircle className="h-5 w-5 text-purple-600" />}
-            iconBg="bg-purple-100" borderColor="border-purple-200" textColor="text-purple-700"
+            icon={<XCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+            iconBg="bg-purple-100 dark:bg-purple-950/40" borderColor="border-purple-200 dark:border-purple-900" textColor="text-purple-700 dark:text-purple-400"
           />
           <StatCard
             label="Running" count={counts.running}
-            icon={<PlayCircle className="h-5 w-5 text-green-600" />}
-            iconBg="bg-green-100" borderColor="border-green-200" textColor="text-green-700"
+            icon={<PlayCircle className="h-5 w-5 text-green-600 dark:text-green-400" />}
+            iconBg="bg-green-100 dark:bg-green-950/40" borderColor="border-green-200 dark:border-green-900" textColor="text-green-700 dark:text-green-400"
           />
           <StatCard
             label="Paused" count={counts.paused}
-            icon={<PauseCircle className="h-5 w-5 text-amber-600" />}
-            iconBg="bg-amber-100" borderColor="border-amber-200" textColor="text-amber-700"
+            icon={<PauseCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
+            iconBg="bg-amber-100 dark:bg-amber-950/40" borderColor="border-amber-200 dark:border-amber-900" textColor="text-amber-700 dark:text-amber-400"
           />
           <StatCard
             label="Stopped" count={counts.stopped}
-            icon={<StopCircle className="h-5 w-5 text-red-600" />}
-            iconBg="bg-red-100" borderColor="border-red-200" textColor="text-red-700"
+            icon={<StopCircle className="h-5 w-5 text-red-600 dark:text-red-400" />}
+            iconBg="bg-red-100 dark:bg-red-950/40" borderColor="border-red-200 dark:border-red-900" textColor="text-red-700 dark:text-red-400"
           />
         </div>
       </div>
 
       {/* Heading */}
-      <h2 className="mb-3 text-sm font-bold text-gray-800">Live Tracking</h2>
+      <h2 className="mb-3 text-sm font-bold text-foreground">Live Tracking</h2>
 
       {/* Employee cards — scrollable */}
       <div className="overflow-y-auto max-h-[calc(100vh-17rem)] pr-0.5">

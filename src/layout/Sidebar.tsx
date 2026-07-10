@@ -46,7 +46,7 @@ export function AppSidebar() {
     setManualLabel(openLabel === label ? null : label)
 
   return (
-    <Sidebar className="bg-[#27375D]">
+    <Sidebar className="bg-[#27375D] dark:bg-[#0f1729]">
       {/* Logo */}
       <SidebarHeader className="flex items-center px-5 py-5">
         <img src={companyLogo} alt="APM" className="h-9 w-auto object-contain" />

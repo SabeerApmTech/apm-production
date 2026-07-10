@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { Bell, ChevronDown, KeyRound, Loader2, LogOut, Menu, UserCircle2 } from "lucide-react"
+import { Bell, ChevronDown, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
 import { getRole, getAuthUser, getRoleLabel, clearAuth } from "@/utils/auth"
+import { useTheme } from "@/hooks/useTheme"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ export function Header() {
   const user = getAuthUser()
   const [logout, { isLoading: loggingOut }] = useLogoutMutation()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
 
   const handleLogout = async () => {
     try {
@@ -53,27 +55,35 @@ export function Header() {
   // revoke server-side — just drop the locally-stored operator identity and role.
   const handleOperatorLogout = () => {
     clearAuth()
-    navigate("/login", { replace: true })
+    navigate("/operator-login", { replace: true })
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-card px-4 md:px-6">
       {/* Left — burger (mobile only) + page title */}
       <div className="flex items-center gap-3">
-        <SidebarTrigger className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 lg:hidden">
+        <SidebarTrigger className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent lg:hidden">
           <Menu className="h-5 w-5" />
         </SidebarTrigger>
-        <h1 className="text-base font-bold text-[#0d1b2e] md:text-lg">{title}</h1>
+        <h1 className="text-base font-bold text-foreground md:text-lg">{title}</h1>
       </div>
 
-      {/* Right — notifications + user */}
+      {/* Right — theme toggle + notifications + user */}
       <div className="flex items-center gap-3">
+        <button
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          onClick={toggleTheme}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+        >
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+
         {/* Bell — operators don't get notifications */}
         {role !== 'operator' && (
           <button
             aria-label="Notifications"
             onClick={() => navigate("/notifications")}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+            className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
           >
             <Bell className="h-5 w-5" />
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
@@ -87,7 +97,7 @@ export function Header() {
           <button
             aria-label="Logout"
             onClick={handleOperatorLogout}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
           >
             <LogOut className="h-5 w-5" />
           </button>
@@ -97,12 +107,12 @@ export function Header() {
         {role !== 'operator' && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-                <UserCircle2 className="h-7 w-7 shrink-0 text-gray-500" />
+              <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-foreground hover:bg-accent transition-colors">
+                <UserCircle2 className="h-7 w-7 shrink-0 text-muted-foreground" />
                 <span className="hidden sm:inline-flex items-center gap-1">
                   {user?.employeeName ?? "Admin"}
-                  {user && <span className="text-gray-400 font-normal">({getRoleLabel(user.employeeRole)})</span>}
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  {user && <span className="text-muted-foreground font-normal">({getRoleLabel(user.employeeRole)})</span>}
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </span>
               </button>
             </DropdownMenuTrigger>
@@ -120,7 +130,10 @@ export function Header() {
                 Change Password
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout} className="text-red-600 focus:bg-red-50 focus:text-red-600">
+              <DropdownMenuItem
+                onSelect={handleLogout}
+                className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:text-red-400 dark:focus:bg-red-950/40 dark:focus:text-red-400"
+              >
                 <LogOut className="h-4 w-4" />
                 Logout
               </DropdownMenuItem>

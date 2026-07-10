@@ -4,10 +4,10 @@ import type { LogReportEntry } from "@/types/productionMonitoring"
 type LogEvent = LogReportEntry["logEvent"]
 
 const CONFIG: Record<LogEvent, { dot: string; text: string; label: string }> = {
-  START:  { dot: "bg-green-500", text: "text-green-600", label: "Running" },
-  RESUME: { dot: "bg-green-500", text: "text-green-600", label: "Running" },
-  PAUSE:  { dot: "bg-amber-500", text: "text-amber-600", label: "Paused"  },
-  STOP:   { dot: "bg-red-500",   text: "text-red-500",   label: "Stopped" },
+  START:  { dot: "bg-green-500", text: "text-green-600 dark:text-green-400", label: "Running" },
+  RESUME: { dot: "bg-green-500", text: "text-green-600 dark:text-green-400", label: "Running" },
+  PAUSE:  { dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", label: "Paused"  },
+  STOP:   { dot: "bg-red-500",   text: "text-red-500 dark:text-red-400",     label: "Stopped" },
 }
 
 export const LOG_EVENT_LABELS: Record<LogEvent, string> = {
@@ -18,7 +18,7 @@ export const LOG_EVENT_LABELS: Record<LogEvent, string> = {
 }
 
 export function StatusBadge({ logEvent }: { logEvent: LogEvent | null }) {
-  if (logEvent === null) return <span className="text-gray-400 text-xs">—</span>
+  if (logEvent === null) return <span className="text-muted-foreground text-xs">—</span>
   const c = CONFIG[logEvent]
   return (
     <span className={cn("flex items-center gap-1.5 text-xs font-medium", c.text)}>

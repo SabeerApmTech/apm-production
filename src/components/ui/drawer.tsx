@@ -65,24 +65,24 @@ export function Drawer({
       {/* Panel */}
       <div
         className={cn(
-          "relative flex h-full flex-col bg-white shadow-2xl",
+          "relative flex h-full flex-col bg-card shadow-2xl",
           "transition-transform duration-300 ease-in-out",
           visible ? "translate-x-0" : "translate-x-full"
         )}
         style={{ width: `min(${width}, 100vw)` }}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+            <h2 className="text-base font-semibold text-foreground">{title}</h2>
             {description && (
-              <p className="mt-0.5 text-sm text-gray-500">{description}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
             )}
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </button>

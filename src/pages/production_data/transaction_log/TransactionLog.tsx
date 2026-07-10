@@ -5,6 +5,7 @@ import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
 import { formatLogDateTime, getTodayIso } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
 import type { TransactionLogRecord } from "@/types/transactionLog"
 import {
   useGetTransactionLogsQuery,
@@ -24,8 +25,10 @@ export function TransactionLog() {
 
   const handleDelete = useCallback(async () => {
     if (deleteId === null) return
+    const user = getAuthUser()
+    if (!user) return
     try {
-      await deleteTransactionLog(deleteId).unwrap()
+      await deleteTransactionLog({ transactionId: deleteId, deletedByEmpId: user.employeeId }).unwrap()
     } catch {
       // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
     }

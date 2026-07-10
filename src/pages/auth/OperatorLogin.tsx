@@ -28,7 +28,7 @@ export const OperatorLogin = () => {
   }
 
   return (
-    <div className="h-dvh overflow-hidden flex items-center justify-center bg-gray-100 px-4">
+    <div className="force-light h-dvh overflow-hidden flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-lg flex flex-col rounded-2xl overflow-hidden shadow-2xl bg-white max-h-[90vh]">
         <div className="flex items-center gap-3 px-6 pt-6 pb-4 shrink-0">
           <button
