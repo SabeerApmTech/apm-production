@@ -15,6 +15,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import type { UserRecord } from "@/types/userManagement"
 
 const EMPLOYMENT_TYPES = [
@@ -32,6 +33,7 @@ const schema = z.object({
   employmentType: z.enum(["FullTime", "PartTime"], {
     error: "Please select employment type",
   }),
+  department: z.string().optional(),
 })
 
 export type EmployeeFormValues = z.infer<typeof schema>
@@ -54,7 +56,7 @@ export function EmployeeForm({ row, apiError, onCancel, onSubmit }: EmployeeForm
           phoneNumber: row.phoneNumber,
           employmentType: row.employmentType,
         }
-      : { employeeId: "", employeeName: "", dateOfBirth: "", phoneNumber: "", employmentType: undefined },
+      : { employeeId: "", employeeName: "", dateOfBirth: "", phoneNumber: "", employmentType: undefined, department: "production" },
   })
 
   const { isSubmitting } = form.formState
@@ -96,6 +98,29 @@ export function EmployeeForm({ row, apiError, onCancel, onSubmit }: EmployeeForm
             )}
           />
         </div>
+
+        {!row && (
+          <FormField
+            control={form.control}
+            name="department"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Department</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange} disabled>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="production">Production</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

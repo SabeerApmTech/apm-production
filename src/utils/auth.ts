@@ -66,7 +66,7 @@ export const getOperatorUser = (): OperatorUser | null => {
 /**
  * Add/edit/toggle-active/delete/reset-password permissions per managed entity type:
  * - Managers:   SUPERADMIN only.
- * - Supervisors: SUPERADMIN and MANAGER.
+ * - Supervisors: MANAGER only.
  * - Operators:  SUPERVISOR only.
  */
 export const canManageRole = (targetRole: ManagedRole): boolean => {
@@ -76,7 +76,7 @@ export const canManageRole = (targetRole: ManagedRole): boolean => {
     case 'MANAGER':
       return user.employeeRole === 'SUPERADMIN'
     case 'SUPERVISOR':
-      return user.employeeRole === 'SUPERADMIN' || user.employeeRole === 'MANAGER'
+      return user.employeeRole === 'MANAGER'
     case 'OPERATOR':
       return user.employeeRole === 'SUPERVISOR'
   }

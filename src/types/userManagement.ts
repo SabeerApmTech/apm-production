@@ -33,6 +33,7 @@ export interface CreateUserRequest {
   dateOfBirth: string
   employmentType: EmploymentType
   employeeRole: ManagedRole
+  department?: string
 }
 
 export interface UpdateUserStatusRequest {

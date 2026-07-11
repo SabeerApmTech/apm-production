@@ -102,6 +102,7 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
           dateOfBirth: values.dateOfBirth,
           employmentType: values.employmentType,
           employeeRole: role,
+          department: values.department,
         }).unwrap()
       }
       setDrawerOpen(false)
