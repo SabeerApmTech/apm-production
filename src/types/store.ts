@@ -8,6 +8,7 @@ export interface StoreRecord {
 
 export interface StoreRequest {
   storeName: string
+  employeeId: string
 }
 
 export interface StoreUpdateRequest {

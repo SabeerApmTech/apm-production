@@ -1,4 +1,5 @@
 import { api } from "../api"
+import { getAuthUser } from "@/utils/auth"
 import type { ApiResponse } from "@/types/auth"
 import type { StoreRecord, StoreRequest, StoreUpdateRequest } from "@/types/store"
 
@@ -38,7 +39,7 @@ export const storeApi = api.injectEndpoints({
         const result = await baseQuery({
           url: "/store",
           method: "DELETE",
-          body: { storeIds: stores.map((s) => s.storeId) },
+          body: { storeIds: stores.map((s) => s.storeId), employeeId: getAuthUser()?.employeeId ?? "" },
         })
         return result.error ? { error: result.error } : { data: result.data as ApiResponse<null> }
       },

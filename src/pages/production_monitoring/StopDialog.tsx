@@ -22,24 +22,21 @@ interface Props {
 
 export function StopDialog({ open, onOpenChange, operation, targetReached, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "" })
-  const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (open) {
       setForm({ successQty: targetReached ? "0" : "", rejectedQty: "", remarks: "" })
-      setError(null)
     }
   }, [open, targetReached])
 
   const handleSave = async () => {
-    setError(null)
     setSubmitting(true)
     try {
       await onSave(form)
       setForm({ successQty: "", rejectedQty: "", remarks: "" })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to stop. Please try again.")
+    } catch {
+      // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
     } finally {
       setSubmitting(false)
     }
@@ -90,12 +87,6 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
             />
           </div>
         </div>
-
-        {error && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-2 py-1.5 mt-3">
-            {error}
-          </p>
-        )}
 
         <div className="flex gap-2 mt-4">
           <Button

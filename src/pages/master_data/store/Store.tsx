@@ -98,7 +98,8 @@ export function Store() {
   }, [deleteRows, deleteStores])
 
   const handleAdd = useCallback(async (storeName: string) => {
-    await createStore({ storeName }).unwrap()
+    const employeeId = getAuthUser()?.employeeId ?? ""
+    await createStore({ storeName, employeeId }).unwrap()
   }, [createStore])
 
   const handleEdit = useCallback(async (storeId: number, storeName: string) => {
