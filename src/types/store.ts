@@ -13,4 +13,5 @@ export interface StoreRequest {
 export interface StoreUpdateRequest {
   storeName: string
   isActive: boolean
+  employeeId: string
 }

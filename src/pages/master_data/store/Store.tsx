@@ -6,6 +6,7 @@ import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { Switch } from "@/components/ui/switch"
 import { StoreDialog } from "./StoreDialog"
+import { getAuthUser } from "@/utils/auth"
 import type { StoreRecord } from "@/types/store"
 import {
   useGetStoresQuery,
@@ -44,7 +45,7 @@ function ActiveCell({ data, onToggle, pendingId }: ActiveCellParams) {
   return (
     <Switch
       checked={data.isActive}
-      disabled={pending}
+      disabled={pending || !onToggle}
       onCheckedChange={(next) => onToggle?.(data, next)}
     />
   )
@@ -54,6 +55,9 @@ function ActiveCell({ data, onToggle, pendingId }: ActiveCellParams) {
 export function Store() {
   const { data, isLoading } = useGetStoresQuery()
   const stores = useMemo(() => data ?? [], [data])
+
+  // Add/edit/toggle-active/delete are Supervisor-only.
+  const canManage = getAuthUser()?.employeeRole === "SUPERVISOR"
 
   const [createStore] = useCreateStoreMutation()
   const [updateStore] = useUpdateStoreMutation()
@@ -99,13 +103,15 @@ export function Store() {
 
   const handleEdit = useCallback(async (storeId: number, storeName: string) => {
     const current = stores.find((s) => s.storeId === storeId)
-    await updateStore({ storeId, body: { storeName, isActive: current?.isActive ?? true } }).unwrap()
+    const employeeId = getAuthUser()?.employeeId ?? ""
+    await updateStore({ storeId, body: { storeName, isActive: current?.isActive ?? true, employeeId } }).unwrap()
   }, [stores, updateStore])
 
   const handleToggle = useCallback(async (row: StoreRecord, next: boolean) => {
+    const employeeId = getAuthUser()?.employeeId ?? ""
     setTogglingId(row.storeId)
     try {
-      await updateStore({ storeId: row.storeId, body: { storeName: row.storeName, isActive: next } }).unwrap()
+      await updateStore({ storeId: row.storeId, body: { storeName: row.storeName, isActive: next, employeeId } }).unwrap()
     } finally {
       setTogglingId(null)
     }
@@ -118,12 +124,22 @@ export function Store() {
         field: "isActive",
         headerName: "Active",
         cellRenderer: ActiveCell,
-        cellRendererParams: { onToggle: handleToggle, pendingId: togglingId },
+        cellRendererParams: { onToggle: canManage ? handleToggle : undefined, pendingId: togglingId },
         sortable: false,
       },
-      { headerName: "Action", cellRenderer: ActionCell, cellRendererParams: { onEdit: openEditDialog }, sortable: false, maxWidth: 80 },
+      ...(canManage
+        ? [
+            {
+              headerName: "Action",
+              cellRenderer: ActionCell,
+              cellRendererParams: { onEdit: openEditDialog },
+              sortable: false,
+              maxWidth: 80,
+            } satisfies ColDef<StoreRecord>,
+          ]
+        : []),
     ],
-    [openEditDialog, handleToggle, togglingId]
+    [openEditDialog, handleToggle, togglingId, canManage]
   )
 
   return (
@@ -133,9 +149,9 @@ export function Store() {
         rowData={stores}
         columnDefs={columnDefs}
         loading={isLoading}
-        onAdd={() => setDialogOpen(true)}
-        onDelete={requestDelete}
-        checkbox
+        onAdd={canManage ? () => setDialogOpen(true) : undefined}
+        onDelete={canManage ? requestDelete : undefined}
+        checkbox={canManage}
       />
 
       <StoreDialog
