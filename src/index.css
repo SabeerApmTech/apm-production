@@ -22,6 +22,13 @@ button {
   cursor: pointer;
 }
 
+/* Password fields already have a custom show/hide eye toggle — without this, Edge/IE overlay
+   their own native reveal button on top of it, showing two eye icons in the same input. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* Sonner toast descriptions: preserve the \n-separated list format (e.g. multiple blocked
    operators) as actual line breaks, and de-emphasize them relative to the bold title text —
    otherwise a multi-item list reads as one dense, equally-bold run-on paragraph. */
