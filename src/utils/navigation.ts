@@ -9,6 +9,7 @@ import {
   Building2,
   Monitor,
   Navigation,
+  FileBarChart,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -65,6 +66,14 @@ export const navItems: NavItem[] = [
     children: [
       { label: "Rework Transaction Log", path: "/rework-data/log" },
       { label: "Rework Production History", path: "/rework-data/history" },
+    ],
+  },
+  {
+    label: "Report",
+    icon: FileBarChart,
+    children: [
+      { label: "Employee Performance Report", path: "/reports/employee-performance" },
+      { label: "Product Wise Report", path: "/reports/product-wise" },
     ],
   },
   {

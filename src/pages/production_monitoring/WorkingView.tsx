@@ -22,6 +22,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
   const lastEvent = logs.length ? logs[logs.length - 1].logEvent : null
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
+  const isComplete = operation.producedQty >= operation.targetQty
 
   // Touch tablet browsers largely ignore ::-webkit-scrollbar styling and only flash a native
   // overlay indicator during an active drag — draw a persistent thumb ourselves instead, so
@@ -86,7 +87,11 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
               <td className="px-3 py-2.5">
                 <div className="flex flex-col gap-1 items-start">
                   {isIdle && (
-                    <Button onClick={onStart} className="h-7 px-4 text-xs bg-green-500 hover:bg-green-600 text-white min-w-16">
+                    <Button
+                      onClick={onStart}
+                      disabled={isComplete}
+                      className="h-7 px-4 text-xs bg-green-500 hover:bg-green-600 text-white min-w-16 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       Start
                     </Button>
                   )}

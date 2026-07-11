@@ -16,6 +16,14 @@ export function getTodayIso(): string {
   return `${y}-${m}-${d}`
 }
 
+/** First day of the current month as an ISO "YYYY-MM-DD" string, for date-picker/query-param defaults. */
+export function getMonthStartIso(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  return `${y}-${m}-01`
+}
+
 /** ISO "2026-05-26" → display "26/05/2026" */
 export function fromIsoDate(isoStr: string): string {
   const parts = isoStr.split("-")

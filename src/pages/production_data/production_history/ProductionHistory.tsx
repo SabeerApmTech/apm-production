@@ -1,106 +1,62 @@
-import { useState, useMemo, useCallback } from "react"
-import type { ColDef, ICellRendererParams } from "ag-grid-community"
-import { Trash2 } from "lucide-react"
+import { useCallback, useMemo, useRef, useState } from "react"
+import type { ColDef, ICellRendererParams, RowHeightParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
-import { DeleteDialog } from "@/shared/DeleteDialog"
+import { useGetProductionHistoryQuery } from "@/store/services/productionHistoryApi"
+import type { ProductionHistoryScheduleRecord } from "@/types/productionHistory"
+import { fromIsoDate } from "@/utils/date"
 import {
-  DetailCellRenderer, ExpandCell, isFullWidthRow, getRowHeight,
-  type StepDetail, type DetailRow,
-} from "@/shared/ExpandableDetail"
+  ExpandCell, isFullWidthRow, MIN_DETAIL_HEIGHT,
+  type ScheduleDetailRow,
+} from "./ScheduleExpandable"
+import { ScheduleOperationsDetail } from "./ScheduleOperationsDetail"
 
-interface ProductionRow {
-  id: number
-  scheduleDateAndTime: string
-  scheduleId: string
-  product: string
-  company: string
-  targetQty: number
-  producedQty: number
-  pendingQty: number
-  steps: StepDetail[]
-}
-
-type AnyRow = ProductionRow | DetailRow
-
-const MOCK_ROWS: ProductionRow[] = [
-  {
-    id: 1,
-    scheduleDateAndTime: "26/05/2026 11:15 AM", scheduleId: "S001-26",
-    product: "AIS 140", company: "Lakshika",
-    targetQty: 3000, producedQty: 2500, pendingQty: 500,
-    steps: [
-      { step: "Step - 01", operation: "Preprocess",        successfulQty: 1000, rejectedQty: 1000 },
-      { step: "Step - 02", operation: "Firmware Flashing", successfulQty: 2200, rejectedQty: 500  },
-      { step: "Step - 03", operation: "Battery Fixing",    successfulQty: 1000, rejectedQty: 1000 },
-      { step: "Step - 04", operation: "Final QC",          successfulQty: 2900, rejectedQty: 100  },
-    ],
-  },
-  {
-    id: 2,
-    scheduleDateAndTime: "26/05/2026 11:15 AM", scheduleId: "S002-26",
-    product: "AIS 140", company: "Lakshika",
-    targetQty: 3000, producedQty: 2500, pendingQty: 500,
-    steps: [
-      { step: "Step - 01", operation: "Preprocess",        successfulQty: 800,  rejectedQty: 200 },
-      { step: "Step - 02", operation: "Firmware Flashing", successfulQty: 1500, rejectedQty: 300 },
-    ],
-  },
-  {
-    id: 3,
-    scheduleDateAndTime: "27/05/2026 09:00 AM", scheduleId: "S003-26",
-    product: "Dashcam", company: "Kingstrack",
-    targetQty: 2000, producedQty: 1800, pendingQty: 200,
-    steps: [
-      { step: "Step - 01", operation: "Preprocess",     successfulQty: 600,  rejectedQty: 400 },
-      { step: "Step - 02", operation: "Battery Fixing", successfulQty: 1200, rejectedQty: 600 },
-      { step: "Step - 03", operation: "Final QC",       successfulQty: 1800, rejectedQty: 200 },
-    ],
-  },
-]
-
-interface DeleteCellParams extends ICellRendererParams<AnyRow> {
-  onDelete?: (id: number) => void
-}
-
-function DeleteCell({ data, onDelete }: DeleteCellParams) {
-  if (!data || (data as DetailRow).__isDetail) return null
-  const row = data as ProductionRow
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete?.(row.id) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
+type AnyRow = ProductionHistoryScheduleRecord | ScheduleDetailRow
 
 export function ProductionHistory() {
-  const [rows,       setRows]       = useState<ProductionRow[]>(MOCK_ROWS)
-  const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [deleteId,   setDeleteId]   = useState<number | null>(null)
+  const [dateRange, setDateRange] = useState({ from: "", to: "" })
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const toggleExpand = useCallback((id: number) => {
-    setExpandedId((prev) => (prev === id ? null : id))
+  // Operations/logs load lazily inside the detail panel, so its natural height isn't known up
+  // front — ScheduleOperationsDetail measures itself and reports back here; resetRowHeights() then
+  // makes the grid re-query getRowHeight so the row grows/shrinks to fit instead of leaving gaps.
+  const heightMapRef = useRef(new Map<string, number>())
+
+  const getRowHeight = useCallback((params: RowHeightParams<AnyRow>) => {
+    const row = params.data as ScheduleDetailRow | undefined
+    return row?.__isDetail ? heightMapRef.current.get(row.parentScheduleId) ?? MIN_DETAIL_HEIGHT : undefined
   }, [])
 
-  const handleDelete = useCallback(() => {
-    if (deleteId === null) return
-    setRows((prev) => prev.filter((r) => r.id !== deleteId))
-    setExpandedId((prev) => (prev === deleteId ? null : prev))
-    setDeleteId(null)
-  }, [deleteId])
+  const renderDetail = useCallback((params: ICellRendererParams<AnyRow>) => {
+    const row = params.data as ScheduleDetailRow
+    return (
+      <ScheduleOperationsDetail
+        scheduleId={row.parentScheduleId}
+        onHeightChange={(height) => {
+          if (heightMapRef.current.get(row.parentScheduleId) === height) return
+          heightMapRef.current.set(row.parentScheduleId, height)
+          params.api.resetRowHeights()
+        }}
+      />
+    )
+  }, [])
 
-  const openDelete = useCallback((id: number) => setDeleteId(id), [])
+  const { data, isLoading } = useGetProductionHistoryQuery({
+    fromDate: dateRange.from || undefined,
+    toDate: dateRange.to || undefined,
+  })
+
+  const rows = useMemo(() => data ?? [], [data])
+
+  const toggleExpand = useCallback((scheduleId: string) => {
+    setExpandedId((prev) => (prev === scheduleId ? null : scheduleId))
+  }, [])
 
   const displayRows = useMemo<AnyRow[]>(() => {
     const result: AnyRow[] = []
     for (const row of rows) {
       result.push(row)
-      if (expandedId === row.id) {
-        result.push({ __isDetail: true, parentId: row.id, steps: row.steps })
+      if (expandedId === row.scheduleId) {
+        result.push({ __isDetail: true, parentScheduleId: row.scheduleId })
       }
     }
     return result
@@ -113,42 +69,34 @@ export function ProductionHistory() {
         cellRenderer: ExpandCell,
         cellRendererParams: { expandedId, onToggle: toggleExpand },
       },
-      { field: "scheduleDateAndTime" as keyof ProductionRow, headerName: "Schedule Date & Time", minWidth: 170 },
-      { field: "scheduleId"          as keyof ProductionRow, headerName: "Schedule Id",          minWidth: 120 },
-      { field: "product"             as keyof ProductionRow, headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "company"             as keyof ProductionRow, headerName: "Company",              cellStyle: { fontWeight: 600 }, minWidth: 120 },
-      { field: "targetQty"           as keyof ProductionRow, headerName: "Target Qty",           minWidth: 110 },
-      { field: "producedQty"         as keyof ProductionRow, headerName: "Produced Qty",         minWidth: 120 },
-      { field: "pendingQty"          as keyof ProductionRow, headerName: "Pending Qty",          minWidth: 110 },
+      { field: "scheduleId" as keyof ProductionHistoryScheduleRecord, headerName: "Schedule Id", minWidth: 120 },
       {
-        headerName: "Action",
-        cellRenderer: DeleteCell,
-        cellRendererParams: { onDelete: openDelete },
-        sortable: false, maxWidth: 80,
+        headerName: "Schedule Date",
+        minWidth: 150,
+        valueGetter: (p) => {
+          const row = p.data as ProductionHistoryScheduleRecord | undefined
+          return row ? fromIsoDate(row.scheduleDate.slice(0, 10)) : ""
+        },
       },
+      { field: "productName" as keyof ProductionHistoryScheduleRecord, headerName: "Product", cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      { field: "companyName" as keyof ProductionHistoryScheduleRecord, headerName: "Company", cellStyle: { fontWeight: 600 }, minWidth: 120 },
+      { field: "targetQty" as keyof ProductionHistoryScheduleRecord, headerName: "Target Qty", minWidth: 110 },
     ],
-    [expandedId, toggleExpand, openDelete]
+    [expandedId, toggleExpand]
   )
 
   return (
-    <>
-      <DataTable<AnyRow>
-        title="Production History"
-        rowData={displayRows}
-        columnDefs={columnDefs}
-        hideSno
-        showDateFilter
-        isFullWidthRow={isFullWidthRow}
-        fullWidthCellRenderer={DetailCellRenderer}
-        getRowHeight={getRowHeight}
-      />
-      <DeleteDialog
-        open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
-        onConfirm={handleDelete}
-        title="Delete Record"
-        description="Are you sure you want to delete this production record? This action cannot be undone."
-      />
-    </>
+    <DataTable<AnyRow>
+      title="Production History"
+      rowData={displayRows}
+      columnDefs={columnDefs}
+      loading={isLoading}
+      hideSno
+      showDateFilter
+      onDateFilter={(from, to) => setDateRange({ from, to })}
+      isFullWidthRow={isFullWidthRow}
+      fullWidthCellRenderer={renderDetail}
+      getRowHeight={getRowHeight}
+    />
   )
 }

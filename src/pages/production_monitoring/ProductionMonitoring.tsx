@@ -163,14 +163,31 @@ export const ProductionMonitoring = () => {
     setPauseOpen(false)
   }
 
-  const handleStopSave = ({ successQty, rejectedQty, remarks }: { successQty: string; rejectedQty: string; remarks: string }) => {
-    runAction({
+  // Stop is the only action that changes produced/pending quantities, so it's the only one that
+  // needs the operations table refreshed afterwards.
+  const refreshScheduleOperations = async () => {
+    if (!selectedSchedule) return
+    try {
+      const ops = await fetchOperations({ employeeId, scheduleId: selectedSchedule.scheduleId }, false).unwrap()
+      setOperations(ops)
+      if (selectedOperation) {
+        const match = ops.find(o => o.sequenceNo === selectedOperation.sequenceNo)
+        if (match) setSelectedOperation(match)
+      }
+    } catch {
+      // Toast middleware already surfaced the error.
+    }
+  }
+
+  const handleStopSave = async ({ successQty, rejectedQty, remarks }: { successQty: string; rejectedQty: string; remarks: string }) => {
+    await runAction({
       ...buildActionBase(),
       action: "STOP",
       successfulQty: successQty ? Number(successQty) : 0,
       rejectedQty: rejectedQty ? Number(rejectedQty) : 0,
       reason: "", remarks,
     })
+    await refreshScheduleOperations()
     setStopOpen(false)
   }
 
