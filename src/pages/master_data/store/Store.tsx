@@ -1,11 +1,18 @@
 import { useState, useCallback, useMemo } from "react"
 import type { ColDef, ICellRendererParams } from "ag-grid-community"
 import { Pencil } from "lucide-react"
+import { toast } from "sonner"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
+import { Switch } from "@/components/ui/switch"
 import { StoreDialog } from "./StoreDialog"
-import { MOCK_STORES } from "./data"
 import type { StoreRecord } from "@/types/store"
+import {
+  useGetStoresQuery,
+  useCreateStoreMutation,
+  useUpdateStoreMutation,
+  useDeleteStoresMutation,
+} from "@/store/services/storeApi"
 
 /* ── Action cell ────────────────────────────────────────── */
 interface ActionCellParams extends ICellRendererParams<StoreRecord> {
@@ -25,13 +32,37 @@ function ActionCell({ data, onEdit }: ActionCellParams) {
   )
 }
 
+/* ── Active toggle cell ─────────────────────────────────── */
+interface ActiveCellParams extends ICellRendererParams<StoreRecord> {
+  onToggle?: (row: StoreRecord, next: boolean) => void
+  pendingId?: number | null
+}
+
+function ActiveCell({ data, onToggle, pendingId }: ActiveCellParams) {
+  if (!data) return null
+  const pending = pendingId === data.storeId
+  return (
+    <Switch
+      checked={data.isActive}
+      disabled={pending}
+      onCheckedChange={(next) => onToggle?.(data, next)}
+    />
+  )
+}
+
 /* ── Page ───────────────────────────────────────────────── */
 export function Store() {
-  const [stores, setStores] = useState<StoreRecord[]>(MOCK_STORES)
+  const { data, isLoading } = useGetStoresQuery()
+  const stores = useMemo(() => data ?? [], [data])
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editStore, setEditStore]   = useState<StoreRecord | undefined>()
-  const [deleteRows, setDeleteRows] = useState<StoreRecord[] | null>(null)
+  const [createStore] = useCreateStoreMutation()
+  const [updateStore] = useUpdateStoreMutation()
+  const [deleteStores] = useDeleteStoresMutation()
+
+  const [dialogOpen, setDialogOpen]   = useState(false)
+  const [editStore, setEditStore]     = useState<StoreRecord | undefined>()
+  const [deleteRows, setDeleteRows]   = useState<StoreRecord[] | null>(null)
+  const [togglingId, setTogglingId]   = useState<number | null>(null)
 
   const openEditDialog = useCallback((id: number) => {
     setEditStore(stores.find((s) => s.storeId === id))
@@ -39,26 +70,60 @@ export function Store() {
 
   const closeDelete = useCallback(() => setDeleteRows(null), [])
 
-  const handleDelete = useCallback(() => {
+  const requestDelete = useCallback((rows: StoreRecord[]) => {
+    const activeStores = rows.filter((r) => r.isActive)
+    if (activeStores.length) {
+      const names = activeStores.map((s) => `"${s.storeName}"`).join(", ")
+      toast.error(
+        activeStores.length > 1
+          ? `${names} are active and cannot be deleted.`
+          : `${names} is active and cannot be deleted.`
+      )
+      return
+    }
+    setDeleteRows(rows)
+  }, [])
+
+  const handleDelete = useCallback(async () => {
     if (!deleteRows?.length) return
-    const ids = new Set(deleteRows.map((r) => r.storeId))
-    setStores((prev) => prev.filter((s) => !ids.has(s.storeId)))
-  }, [deleteRows])
+    try {
+      await deleteStores(deleteRows).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteRows, deleteStores])
 
   const handleAdd = useCallback(async (storeName: string) => {
-    setStores((prev) => [...prev, { storeId: Math.max(0, ...prev.map((s) => s.storeId)) + 1, storeName }])
-  }, [])
+    await createStore({ storeName }).unwrap()
+  }, [createStore])
 
   const handleEdit = useCallback(async (storeId: number, storeName: string) => {
-    setStores((prev) => prev.map((s) => (s.storeId === storeId ? { ...s, storeName } : s)))
-  }, [])
+    const current = stores.find((s) => s.storeId === storeId)
+    await updateStore({ storeId, body: { storeName, isActive: current?.isActive ?? true } }).unwrap()
+  }, [stores, updateStore])
+
+  const handleToggle = useCallback(async (row: StoreRecord, next: boolean) => {
+    setTogglingId(row.storeId)
+    try {
+      await updateStore({ storeId: row.storeId, body: { storeName: row.storeName, isActive: next } }).unwrap()
+    } finally {
+      setTogglingId(null)
+    }
+  }, [updateStore])
 
   const columnDefs = useMemo<ColDef<StoreRecord>[]>(
     () => [
       { field: "storeName", headerName: "Store Name", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
+      {
+        field: "isActive",
+        headerName: "Active",
+        cellRenderer: ActiveCell,
+        cellRendererParams: { onToggle: handleToggle, pendingId: togglingId },
+        sortable: false,
+      },
       { headerName: "Action", cellRenderer: ActionCell, cellRendererParams: { onEdit: openEditDialog }, sortable: false, maxWidth: 80 },
     ],
-    [openEditDialog]
+    [openEditDialog, handleToggle, togglingId]
   )
 
   return (
@@ -67,8 +132,9 @@ export function Store() {
         title="Store"
         rowData={stores}
         columnDefs={columnDefs}
+        loading={isLoading}
         onAdd={() => setDialogOpen(true)}
-        onDelete={setDeleteRows}
+        onDelete={requestDelete}
         checkbox
       />
 

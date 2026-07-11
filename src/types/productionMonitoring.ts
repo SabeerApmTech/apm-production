@@ -12,8 +12,10 @@ export interface OperatorSchedule {
   productName: string
   targetDate: string
   targetQty: number
+  producedQty?: number
   scheduleType?: "PRODUCTION" | "REWORK"
   isWorking?: boolean
+  isTargetReached?: boolean
   sequenceNo?: number
 }
 

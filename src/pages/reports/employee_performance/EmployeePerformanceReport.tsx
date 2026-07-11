@@ -21,8 +21,12 @@ const VIEW_TABS: TabItem<ViewTab>[] = [
   { key: "table", label: "Table View" },
 ]
 
+function getDefaultDateRange() {
+  return { from: getMonthStartIso(), to: getTodayIso() }
+}
+
 export function EmployeePerformanceReport() {
-  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getTodayIso() })
+  const [dateRange, setDateRange] = useState(getDefaultDateRange)
   const [employeeId, setEmployeeId] = useState(ALL)
   const [companyName, setCompanyName] = useState(ALL)
   const [productId, setProductId] = useState(ALL)
@@ -73,6 +77,9 @@ export function EmployeePerformanceReport() {
     setOperationName(ALL)
   }
 
+  const defaultDateRange = getDefaultDateRange()
+  const isDefaultDateRange = dateRange.from === defaultDateRange.from && dateRange.to === defaultDateRange.to
+
   return (
     <div className="flex flex-1 min-h-0 flex-col gap-4">
       <div className="shrink-0 flex flex-wrap items-end gap-3">
@@ -93,12 +100,12 @@ export function EmployeePerformanceReport() {
             maxDate={new Date()}
           />
         </div>
-        {(dateRange.from || dateRange.to) && (
+        {!isDefaultDateRange && (
           <button
-            onClick={() => setDateRange({ from: "", to: "" })}
+            onClick={() => setDateRange(defaultDateRange)}
             className="h-10 rounded-lg border border-border px-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
           >
-            Clear
+            Reset
           </button>
         )}
 

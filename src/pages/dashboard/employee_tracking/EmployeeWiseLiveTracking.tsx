@@ -34,7 +34,7 @@ function StatCard({ label, count, icon, iconBg, borderColor, textColor, active, 
       type="button"
       onClick={onClick}
       className={cn(
-        "flex min-w-36 shrink-0 items-center gap-3 rounded-xl border-2 bg-card p-4 text-left shadow-sm transition-all sm:min-w-0 sm:shrink",
+        "flex min-w-36 shrink-0 items-center gap-3 rounded-xl border-2 bg-card p-3 text-left shadow-sm transition-all sm:min-w-0 sm:shrink",
         borderColor,
         active && "ring-2 ring-offset-1 ring-blue-400 ring-offset-background"
       )}
@@ -157,7 +157,7 @@ export function EmployeeWiseLiveTracking() {
       <div className="shrink-0 pb-4">
         <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-5">
           <StatCard
-            label="Total Employees" count={summary?.totalEmployees ?? 0}
+            label="Total Alloted Operators" count={summary?.totalEmployees ?? 0}
             icon={<Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
             iconBg="bg-blue-100 dark:bg-blue-950/40" borderColor="border-blue-200 dark:border-blue-900" textColor="text-blue-700 dark:text-blue-400"
             active={statusFilter === null}

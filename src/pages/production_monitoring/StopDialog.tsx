@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,15 +15,34 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   operation: Operation | null
-  onSave: (data: StopFormData) => void
+  /** True when the schedule already hit its target — the backend rejects a non-zero Successful Qty in that case. */
+  targetReached?: boolean
+  onSave: (data: StopFormData) => Promise<void>
 }
 
-export function StopDialog({ open, onOpenChange, operation, onSave }: Props) {
+export function StopDialog({ open, onOpenChange, operation, targetReached, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "" })
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSave = () => {
-    onSave(form)
-    setForm({ successQty: "", rejectedQty: "", remarks: "" })
+  useEffect(() => {
+    if (open) {
+      setForm({ successQty: targetReached ? "0" : "", rejectedQty: "", remarks: "" })
+      setError(null)
+    }
+  }, [open, targetReached])
+
+  const handleSave = async () => {
+    setError(null)
+    setSubmitting(true)
+    try {
+      await onSave(form)
+      setForm({ successQty: "", rejectedQty: "", remarks: "" })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to stop. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -35,6 +54,12 @@ export function StopDialog({ open, onOpenChange, operation, onSave }: Props) {
           </DialogTitle>
         </DialogHeader>
         <p className="text-center text-xs font-semibold text-red-500 mb-4">Stopped</p>
+
+        {targetReached && (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-3">
+            Target quantity already achieved — enter 0 in Successful Qty.
+          </p>
+        )}
 
         <div className="space-y-3">
           <div className="space-y-1">
@@ -66,15 +91,21 @@ export function StopDialog({ open, onOpenChange, operation, onSave }: Props) {
           </div>
         </div>
 
+        {error && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-2 py-1.5 mt-3">
+            {error}
+          </p>
+        )}
+
         <div className="flex gap-2 mt-4">
           <Button
             onClick={handleSave}
-            disabled={form.successQty === ""}
+            disabled={form.successQty === "" || submitting}
             className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white"
           >
-            Save
+            {submitting ? "Saving..." : "Save"}
           </Button>
-          <Button onClick={() => onOpenChange(false)} variant="destructive" className="flex-1 h-8 text-xs">
+          <Button onClick={() => onOpenChange(false)} variant="destructive" className="flex-1 h-8 text-xs" disabled={submitting}>
             Cancel
           </Button>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { MOCK_STORES } from "@/pages/master_data/store/data"
+import { useGetStoresQuery } from "@/store/services/storeApi"
 import type { HandoverPendingRecord } from "@/types/handoverToStore"
 
 export interface HandoverFormData {
@@ -26,11 +26,18 @@ interface HandoverDialogProps {
 }
 
 export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialogProps) {
-  const [storeName, setStoreName]     = useState(MOCK_STORES[0]?.storeName ?? "")
+  const { data: storesData } = useGetStoresQuery()
+  const stores = useMemo(() => (storesData ?? []).filter((s) => s.isActive), [storesData])
+
+  const [storeName, setStoreName]     = useState("")
   const [receivedBy, setReceivedBy]   = useState("")
   const [handoverQty, setHandoverQty] = useState("")
   const [remarks, setRemarks]         = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!storeName && stores.length) setStoreName(stores[0].storeName)
+  }, [stores, storeName])
 
   const qty = Number(handoverQty)
   const qtyExceedsReady = handoverQty !== "" && row !== null && qty > row.readyToMove
@@ -41,7 +48,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
     setIsSubmitting(true)
     try {
       await onConfirm({ storeName, receivedBy, handoverQty: Number(handoverQty), remarks })
-      setStoreName(MOCK_STORES[0]?.storeName ?? "")
+      setStoreName(stores[0]?.storeName ?? "")
       setReceivedBy("")
       setHandoverQty("")
       setRemarks("")
@@ -83,9 +90,9 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
           <div className="flex flex-col gap-1.5">
             <Label className="text-sm font-semibold text-gray-700">Store Name <span className="text-red-500">*</span></Label>
             <Select value={storeName} onValueChange={setStoreName}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
               <SelectContent>
-                {MOCK_STORES.map((s) => (
+                {stores.map((s) => (
                   <SelectItem key={s.storeId} value={s.storeName}>{s.storeName}</SelectItem>
                 ))}
               </SelectContent>

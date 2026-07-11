@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Navigate } from "react-router-dom"
 import { ChevronLeft } from "lucide-react"
 import { getOperatorUser } from "@/utils/auth"
+import { getApiErrorMessage } from "@/utils/apiError"
 import {
   useLazyGetOperatorSchedulesQuery,
   useLazyGetOperatorOperationsQuery,
@@ -180,13 +181,22 @@ export const ProductionMonitoring = () => {
   }
 
   const handleStopSave = async ({ successQty, rejectedQty, remarks }: { successQty: string; rejectedQty: string; remarks: string }) => {
-    await runAction({
-      ...buildActionBase(),
-      action: "STOP",
-      successfulQty: successQty ? Number(successQty) : 0,
-      rejectedQty: rejectedQty ? Number(rejectedQty) : 0,
-      reason: "", remarks,
-    })
+    try {
+      await operatorAction({
+        ...buildActionBase(),
+        action: "STOP",
+        successfulQty: successQty ? Number(successQty) : 0,
+        rejectedQty: rejectedQty ? Number(rejectedQty) : 0,
+        reason: "", remarks,
+      }).unwrap()
+    } catch (err) {
+      // Re-thrown so StopDialog can show it inline and keep the dialog open for the user to correct.
+      throw new Error(getApiErrorMessage(err, "Failed to stop. Please try again."))
+    }
+
+    if (selectedSchedule && selectedOperation) {
+      await loadLogReport(selectedSchedule.scheduleId, selectedOperation.sequenceNo)
+    }
     await refreshScheduleOperations()
     setStopOpen(false)
   }
@@ -258,7 +268,13 @@ export const ProductionMonitoring = () => {
         )}
       </div>
 
-      <StopDialog open={stopOpen} onOpenChange={setStopOpen} operation={selectedOperation} onSave={handleStopSave} />
+      <StopDialog
+        open={stopOpen}
+        onOpenChange={setStopOpen}
+        operation={selectedOperation}
+        targetReached={selectedSchedule?.isTargetReached}
+        onSave={handleStopSave}
+      />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { createPortal } from "react-dom"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, ChevronDown, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
@@ -147,13 +148,14 @@ export function Header() {
         onClose={() => setChangePasswordOpen(false)}
       />
 
-      {loggingOut && (
+      {loggingOut && createPortal(
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 text-white">
             <Loader2 className="h-8 w-8 animate-spin" />
             <span className="text-sm font-medium">Logging out...</span>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   )
