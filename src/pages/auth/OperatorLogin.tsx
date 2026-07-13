@@ -62,52 +62,56 @@ export const OperatorLogin = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 px-8 py-4 overflow-y-auto flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4">
             {isLoading && (
-              <div className="col-span-2 flex items-center justify-center gap-2 py-8 text-sm text-gray-400">
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading operators…
               </div>
             )}
             {!isLoading && filtered.length === 0 && (
-              <p className="col-span-2 py-8 text-center text-sm text-gray-400">No operators found</p>
+              <p className="py-8 text-center text-sm text-gray-400">No operators found</p>
             )}
-            {!isLoading && filtered.map((op) => {
-              const isSelected = op.employeeId === employeeId
-              return (
-                <button
-                  key={op.employeeId}
-                  type="button"
-                  onClick={() => setEmployeeId(op.employeeId)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-xl p-2 text-left transition-all duration-150 border",
-                    isSelected
-                      ? "bg-[#1a2a4a] border-[#1a2a4a] text-white"
-                      : "bg-gray-100 border-transparent text-gray-900 hover:bg-gray-200"
-                  )}
-                >
-                  <div className="relative shrink-0">
-                    <div className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full",
-                      isSelected ? "bg-white/20" : "bg-gray-300"
-                    )}>
-                      <UserRound className={cn("h-4 w-4", isSelected ? "text-white" : "text-gray-500")} />
-                    </div>
-                    {isSelected && (
-                      <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500 ring-2 ring-[#1a2a4a]">
-                        <Check className="h-2 w-2 text-white" strokeWidth={3} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold leading-tight">{op.employeeName}</p>
-                    <p className={cn("truncate whitespace-nowrap text-[11px] leading-tight", isSelected ? "text-gray-300" : "text-gray-500")}>
-                      ID: {op.employeeId}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
+            {!isLoading && filtered.length > 0 && (
+              <div className="grid grid-cols-2 gap-2.5">
+                {filtered.map((op) => {
+                  const isSelected = op.employeeId === employeeId
+                  return (
+                    <button
+                      key={op.employeeId}
+                      type="button"
+                      onClick={() => setEmployeeId(op.employeeId)}
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl p-2 text-left transition-all duration-150 border",
+                        isSelected
+                          ? "bg-[#1a2a4a] border-[#1a2a4a] text-white"
+                          : "bg-gray-100 border-transparent text-gray-900 hover:bg-gray-200"
+                      )}
+                    >
+                      <div className="relative shrink-0">
+                        <div className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-full",
+                          isSelected ? "bg-white/20" : "bg-gray-300"
+                        )}>
+                          <UserRound className={cn("h-4 w-4", isSelected ? "text-white" : "text-gray-500")} />
+                        </div>
+                        {isSelected && (
+                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500 ring-2 ring-[#1a2a4a]">
+                            <Check className="h-2 w-2 text-white" strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold leading-tight">{op.employeeName}</p>
+                        <p className={cn("truncate whitespace-nowrap text-[11px] leading-tight", isSelected ? "text-gray-300" : "text-gray-500")}>
+                          ID: {op.employeeId}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           <div className="px-8 py-4 border-t border-gray-100 shrink-0">
