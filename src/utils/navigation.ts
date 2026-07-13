@@ -2,8 +2,8 @@ import {
   LayoutDashboard,
   CalendarRange,
   Factory,
-  CalendarClock,
-  ClipboardList,
+  // CalendarClock,
+  // ClipboardList,
   Database,
   UserCog,
   Building2,
@@ -51,23 +51,23 @@ export const navItems: NavItem[] = [
       { label: "Production History", path: "/production/history" },
     ],
   },
-  {
-    label: "Rework Schedules",
-    icon: CalendarClock,
-    children: [
-      { label: "Pending Rework Schedules", path: "/rework-schedules/pending" },
-      { label: "Completed Rework Schedules", path: "/rework-schedules/completed" },
-      { label: "Handover To Store", path: "/rework-schedules/handover-to-store" },
-    ],
-  },
-  {
-    label: "Rework Data",
-    icon: ClipboardList,
-    children: [
-      { label: "Rework Transaction Log", path: "/rework-data/log" },
-      { label: "Rework Production History", path: "/rework-data/history" },
-    ],
-  },
+  // {
+  //   label: "Rework Schedules",
+  //   icon: CalendarClock,
+  //   children: [
+  //     { label: "Pending Rework Schedules", path: "/rework-schedules/pending" },
+  //     { label: "Completed Rework Schedules", path: "/rework-schedules/completed" },
+  //     { label: "Handover To Store", path: "/rework-schedules/handover-to-store" },
+  //   ],
+  // },
+  // {
+  //   label: "Rework Data",
+  //   icon: ClipboardList,
+  //   children: [
+  //     { label: "Rework Transaction Log", path: "/rework-data/log" },
+  //     { label: "Rework Production History", path: "/rework-data/history" },
+  //   ],
+  // },
   {
     label: "Report",
     icon: FileBarChart,

@@ -15,17 +15,19 @@ import {
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
-import { toIsoDate } from "@/utils/date"
+import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
 import { COMPANIES, PRODUCTS, PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
 import type { ReworkScheduleRow } from "./PendingReworkSchedules"
 
 const schema = z.object({
-  reworkScheduleDate: z.string().min(1, "Rework schedule date is required"),
+  reworkScheduleDate: z.string().min(1, "Rework schedule date is required")
+    .refine((val) => !val || val >= getTodayIso(), "Rework schedule date cannot be in the past"),
   company:            z.string().min(1, "Company is required"),
   product:            z.string().min(1, "Product is required"),
   noOfOperations:     z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetQty:          z.coerce.number({ error: "Required" }).min(1, "Min 1"),
-  targetDate:         z.string().min(1, "Target date is required"),
+  targetDate:         z.string().min(1, "Target date is required")
+    .refine((val) => !val || val >= getTodayIso(), "Target date cannot be in the past"),
   priorityLevel:      z.enum(["High", "Medium", "Low"], { error: "Select a priority" }),
 })
 
@@ -82,7 +84,7 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
           <FormField control={form.control} name="reworkScheduleDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Rework Schedule Date</FormLabel>
-              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick rework schedule date" />
+              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick rework schedule date" minDate={startOfToday()} />
               <FormMessage />
             </FormItem>
           )} />
@@ -144,7 +146,7 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
           <FormField control={form.control} name="targetDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Target Date</FormLabel>
-              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick target date" />
+              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick target date" minDate={startOfToday()} />
               <FormMessage />
             </FormItem>
           )} />

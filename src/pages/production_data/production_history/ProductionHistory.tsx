@@ -3,7 +3,7 @@ import type { ColDef, ICellRendererParams, RowHeightParams } from "ag-grid-commu
 import { DataTable } from "@/shared/DataTable"
 import { useGetProductionHistoryQuery } from "@/store/services/productionHistoryApi"
 import type { ProductionHistoryScheduleRecord } from "@/types/productionHistory"
-import { fromIsoDate } from "@/utils/date"
+import { fromIsoDate, getMonthStartIso } from "@/utils/date"
 import {
   ExpandCell, isFullWidthRow, MIN_DETAIL_HEIGHT,
   type ScheduleDetailRow,
@@ -13,7 +13,7 @@ import { ScheduleOperationsDetail } from "./ScheduleOperationsDetail"
 type AnyRow = ProductionHistoryScheduleRecord | ScheduleDetailRow
 
 export function ProductionHistory() {
-  const [dateRange, setDateRange] = useState({ from: "", to: "" })
+  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: "" })
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Operations/logs load lazily inside the detail panel, so its natural height isn't known up
@@ -93,6 +93,7 @@ export function ProductionHistory() {
       loading={isLoading}
       hideSno
       showDateFilter
+      defaultFromDate={getMonthStartIso()}
       onDateFilter={(from, to) => setDateRange({ from, to })}
       isFullWidthRow={isFullWidthRow}
       fullWidthCellRenderer={renderDetail}

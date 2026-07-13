@@ -4,7 +4,7 @@ import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-import { formatLogDateTime, getTodayIso } from "@/utils/date"
+import { formatLogDateTime, getTodayIso, getMonthStartIso } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
 import type { TransactionLogRecord } from "@/types/transactionLog"
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/store/services/transactionLogApi"
 
 export function TransactionLog() {
-  const [dateRange, setDateRange] = useState({ from: getTodayIso(), to: getTodayIso() })
+  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getTodayIso() })
   const { data, isLoading } = useGetTransactionLogsQuery({ fromDate: dateRange.from, toDate: dateRange.to })
   const rows = useMemo(() => data ?? [], [data])
 
@@ -73,6 +73,7 @@ export function TransactionLog() {
         loading={isLoading}
         showDateFilter
         defaultToToday
+        defaultFromDate={getMonthStartIso()}
         onDateFilter={(from, to) => setDateRange({ from, to })}
       />
       <DeleteDialog

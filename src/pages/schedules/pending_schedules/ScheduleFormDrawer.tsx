@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
-import { toIsoDate } from "@/utils/date"
+import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
 import { PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductsQuery } from "@/store/services/productApi"
@@ -24,11 +24,13 @@ import type { PendingScheduleRecord } from "@/types/pendingSchedule"
 
 /* ── Schema ─────────────────────────────────────────────── */
 const schema = z.object({
-  scheduleDate:   z.string().min(1, "Schedule date is required"),
+  scheduleDate:   z.string().min(1, "Schedule date is required")
+    .refine((val) => !val || val >= getTodayIso(), "Schedule date cannot be in the past"),
   companyName:    z.string().min(1, "Company is required"),
   productName:    z.string().min(1, "Product is required"),
   targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
-  targetDate:     z.string().min(1, "Target date is required"),
+  targetDate:     z.string().min(1, "Target date is required")
+    .refine((val) => !val || val >= getTodayIso(), "Target date cannot be in the past"),
   priorityLevel:  z.enum(["High", "Medium", "Low"], { error: "Select a priority" }),
 })
 
@@ -96,7 +98,7 @@ export function ScheduleFormDrawer({
           <FormField control={form.control} name="scheduleDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Schedule Date</FormLabel>
-              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick schedule date" />
+              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick schedule date" minDate={startOfToday()} />
               <FormMessage />
             </FormItem>
           )} />
@@ -164,7 +166,7 @@ export function ScheduleFormDrawer({
           <FormField control={form.control} name="targetDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Target Date</FormLabel>
-              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick target date" />
+              <DatePicker value={field.value} onChange={field.onChange} placeholder="Pick target date" minDate={startOfToday()} />
               <FormMessage />
             </FormItem>
           )} />

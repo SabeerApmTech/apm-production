@@ -3,7 +3,7 @@ import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-co
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-import { formatLogDateTime, getTodayIso } from "@/utils/date"
+import { formatLogDateTime, getTodayIso, getMonthStartIso } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
 import type { HandoverTransactionRecord } from "@/types/handoverToStore"
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/store/services/handoverToStoreApi"
 
 export function HandoverTransactionLog() {
-  const [fromDate, setFromDate] = useState(getTodayIso())
+  const [fromDate, setFromDate] = useState(getMonthStartIso())
   const [toDate,   setToDate]   = useState(getTodayIso())
 
   const { data, isLoading } = useGetHandoverTransactionLogQuery({ fromDate, toDate })
@@ -85,6 +85,7 @@ export function HandoverTransactionLog() {
         loading={isLoading}
         showDateFilter
         defaultToToday
+        defaultFromDate={getMonthStartIso()}
         onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
       />
       <DeleteDialog

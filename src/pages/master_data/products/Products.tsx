@@ -29,15 +29,13 @@ function useIsMobile() {
 function StagesCell({ data }: ICellRendererParams<ProductRecord>) {
   if (!data) return null
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
-        {data.productionOperationCount} Production
+    <div className="flex flex-col justify-center gap-0.5 leading-tight">
+      <span className="text-xs font-semibold text-blue-600">
+        Production : {data.productionOperationCount} Stages
       </span>
-      {data.reworkOperationCount > 0 && (
-        <span className="inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-600">
-          {data.reworkOperationCount} Rework
-        </span>
-      )}
+      <span className="text-xs font-semibold text-amber-600">
+        Rework : {data.reworkOperationCount} Stages
+      </span>
     </div>
   )
 }

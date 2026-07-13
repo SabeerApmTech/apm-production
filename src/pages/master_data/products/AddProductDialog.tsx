@@ -25,6 +25,13 @@ export function AddProductDialog({
   const [productName, setProductName] = React.useState(product?.productName ?? "")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
+  React.useEffect(() => {
+    if (open) {
+      setItemCode(product?.itemCode ?? "")
+      setProductName(product?.productName ?? "")
+    }
+  }, [open, product])
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!itemCode.trim() || !productName.trim()) return

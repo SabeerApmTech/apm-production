@@ -24,6 +24,11 @@ export function getMonthStartIso(): string {
   return `${y}-${m}-01`
 }
 
+/** Today at midnight local time — for DatePicker's minDate, so "before" comparisons don't exclude today. */
+export function startOfToday(): Date {
+  return new Date(new Date().toDateString())
+}
+
 /** ISO "2026-05-26" → display "26/05/2026" */
 export function fromIsoDate(isoStr: string): string {
   const parts = isoStr.split("-")
