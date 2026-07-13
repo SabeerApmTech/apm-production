@@ -9,6 +9,9 @@ export interface AuthUser {
   phoneNumber: string
   dateOfBirth: string
   isActive: boolean
+  department?: string
+  token: string
+  tokenExpiresAt: string
 }
 
 export interface ApiResponse<T> {

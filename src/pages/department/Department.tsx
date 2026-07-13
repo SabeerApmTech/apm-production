@@ -13,7 +13,7 @@ const columnDefs: ColDef<DepartmentSummaryRecord>[] = [
 ]
 
 export function Department() {
-  const { data, isLoading } = useGetDepartmentSummaryQuery()
+  const { data, isLoading, isFetching, refetch } = useGetDepartmentSummaryQuery()
   const rowData = useMemo(() => data ?? [], [data])
 
   return (
@@ -22,6 +22,8 @@ export function Department() {
       rowData={rowData}
       columnDefs={columnDefs}
       loading={isLoading}
+      onRefresh={refetch}
+      refreshing={isFetching}
       hideSno
     />
   )

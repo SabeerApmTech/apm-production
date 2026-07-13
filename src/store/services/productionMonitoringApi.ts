@@ -38,8 +38,11 @@ export const productionMonitoringApi = api.injectEndpoints({
 })
 
 export const {
+  useGetOperatorSchedulesQuery,
   useLazyGetOperatorSchedulesQuery,
+  useGetOperatorOperationsQuery,
   useLazyGetOperatorOperationsQuery,
+  useGetOperatorLogReportQuery,
   useLazyGetOperatorLogReportQuery,
   useOperatorActionMutation,
 } = productionMonitoringApi

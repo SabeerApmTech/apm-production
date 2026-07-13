@@ -25,6 +25,13 @@ export function CompanyDialog({
   const [companyLocation, setCompanyLocation] = React.useState(company?.companyLocation ?? "")
   const [isSubmitting, setIsSubmitting]       = React.useState(false)
 
+  React.useEffect(() => {
+    if (open) {
+      setCompanyName(company?.companyName ?? "")
+      setCompanyLocation(company?.companyLocation ?? "")
+    }
+  }, [open, company])
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!companyName.trim() || !companyLocation.trim()) return

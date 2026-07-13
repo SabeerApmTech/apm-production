@@ -53,7 +53,7 @@ function ActiveCell({ data, onToggle, pendingId }: ActiveCellParams) {
 
 /* ── Page ───────────────────────────────────────────────── */
 export function Store() {
-  const { data, isLoading } = useGetStoresQuery()
+  const { data, isLoading, isFetching, refetch } = useGetStoresQuery()
   const stores = useMemo(() => data ?? [], [data])
 
   // Add/edit/toggle-active/delete are Supervisor-only.
@@ -150,6 +150,8 @@ export function Store() {
         rowData={stores}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         onAdd={canManage ? () => setDialogOpen(true) : undefined}
         onDelete={canManage ? requestDelete : undefined}
         checkbox={canManage}

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { createPortal } from "react-dom"
 import { useLocation, useNavigate } from "react-router-dom"
-import { Bell, ChevronDown, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
+import { Bell, ChevronDown, IdCard, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
 import { getRole, getAuthUser, getRoleLabel, clearAuth } from "@/utils/auth"
 import { useTheme } from "@/hooks/useTheme"
@@ -117,7 +117,28 @@ export function Header() {
                 </span>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent className="w-64">
+              {user && (
+                <>
+                  <div className="flex flex-col gap-2 px-3 py-2.5">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <IdCard className="h-4 w-4 text-muted-foreground" />
+                      Profile Info
+                    </div>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                      <span className="text-muted-foreground">Employee ID</span>
+                      <span className="text-right font-medium text-foreground">{user.employeeId}</span>
+                      <span className="text-muted-foreground">Name</span>
+                      <span className="text-right font-medium text-foreground">{user.employeeName}</span>
+                      <span className="text-muted-foreground">Department</span>
+                      <span className="text-right font-medium text-foreground">{user.department ?? "-"}</span>
+                      <span className="text-muted-foreground">Role</span>
+                      <span className="text-right font-medium text-foreground">{getRoleLabel(user.employeeRole)}</span>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 onSelect={() => {
                   // Let the menu close normally first, then open the dialog on the

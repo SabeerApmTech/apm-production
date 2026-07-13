@@ -28,7 +28,7 @@ import type { ScheduleFormValues } from "./ScheduleFormDrawer"
 
 /* ── Page ───────────────────────────────────────────────── */
 export function PendingSchedules() {
-  const { data, isLoading, refetch: refetchSchedules } = useGetPendingSchedulesQuery()
+  const { data, isLoading, isFetching, refetch: refetchSchedules } = useGetPendingSchedulesQuery()
   const schedules = useMemo(() => data ?? [], [data])
   const { data: companies } = useGetCompaniesQuery()
 
@@ -192,6 +192,8 @@ export function PendingSchedules() {
         rowData={localSchedules}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetchSchedules}
+        refreshing={isFetching}
         rowDrag
         hideSno
         onAdd={canManageSchedule ? () => { setEditId(null); setDrawerOpen(true) } : undefined}

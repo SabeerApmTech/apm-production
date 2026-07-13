@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
-export function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+export function Calendar({ className, classNames, components, showOutsideDays = true, ...props }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -38,11 +38,13 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         day_outside:         "text-muted-foreground opacity-50",
         day_disabled:        "text-muted-foreground opacity-50 cursor-not-allowed",
         day_hidden:          "invisible",
+        weeknumber:          "flex h-9 w-9 items-center justify-center text-xs font-medium text-muted-foreground",
         ...classNames,
       }}
       components={{
         IconLeft: () => <ChevronLeft className="h-4 w-4" />,
         IconRight: () => <ChevronRight className="h-4 w-4" />,
+        ...components,
       }}
       {...props}
     />

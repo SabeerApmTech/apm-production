@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import { Toaster } from "sonner";
 import { DashboardLayout } from "@/layout/DashboardLayout";
 import { PageSkeleton } from "@/components/PageSkeleton";
-import { getRole, getAuthUser } from "@/utils/auth";
+import { AuthExpiryWatcher } from "@/components/AuthExpiryWatcher";
+import { getRole, getAuthUser, isTokenExpired, clearAuth } from "@/utils/auth";
 
 const Login                  = lazy(() => import("./pages/auth/Login").then(m => ({ default: m.Login })));
 const OperatorLogin           = lazy(() => import("./pages/auth/OperatorLogin").then(m => ({ default: m.OperatorLogin })));
@@ -27,15 +28,21 @@ const ReworkHistory          = lazy(() => import("./pages/rework_data/rework_his
 const Notifications          = lazy(() => import("./pages/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const EmployeeWiseLiveTracking  = lazy(() => import("./pages/dashboard/employee_tracking/EmployeeWiseLiveTracking").then(m => ({ default: m.EmployeeWiseLiveTracking })));
 const ScheduleWiseLiveTracking  = lazy(() => import("./pages/dashboard/schedule_tracking/ScheduleWiseLiveTracking").then(m => ({ default: m.ScheduleWiseLiveTracking })));
-const LiveTrackingPage       = lazy(() => import("./pages/live_tracking/LiveTracking").then(m => ({ default: m.LiveTracking })));
+const OperatorLogReport      = lazy(() => import("./pages/live_tracking/OperatorLogReport").then(m => ({ default: m.OperatorLogReport })));
 const ProductionMonitoring   = lazy(() => import("./pages/production_monitoring/ProductionMonitoring").then(m => ({ default: m.ProductionMonitoring })));
 const EmployeePerformanceReport = lazy(() => import("./pages/reports/employee_performance/EmployeePerformanceReport").then(m => ({ default: m.EmployeePerformanceReport })));
 const ProductWiseReport      = lazy(() => import("./pages/reports/product_wise/ProductWiseReport").then(m => ({ default: m.ProductWiseReport })));
 
-/** Redirects unauthenticated users to /login */
+/** Redirects unauthenticated users (or admins whose token has expired) to /login */
 function ProtectedLayout() {
-  const isAuthenticated = !!getAuthUser() || getRole() === 'operator';
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (getRole() === 'operator') return <DashboardLayout />;
+
+  const user = getAuthUser();
+  if (user && isTokenExpired()) {
+    clearAuth();
+    return <Navigate to="/login" replace />;
+  }
+  if (!user) return <Navigate to="/login" replace />;
   return <DashboardLayout />;
 }
 
@@ -57,6 +64,7 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" richColors closeButton />
+      <AuthExpiryWatcher />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -65,10 +73,12 @@ function App() {
             <Route path="/" element={<RoleRedirect />} />
 
             {/* Operator-accessible routes */}
-            <Route path="/live-tracking" element={<LiveTrackingPage />} />
+            <Route path="/live-tracking" element={<EmployeeWiseLiveTracking />} />
+            {/* Reached via the "View Detail" link on /live-tracking — read-only view of another operator's current job */}
+            <Route path="/live-tracking/log-report" element={<OperatorLogReport />} />
             <Route path="/production-monitoring" element={<ProductionMonitoring />} />
 
-            {/* Admin-only routes — operators are redirected to /live-tracking */}
+            {/* Admin-only routes — operators are redirected to /production-monitoring */}
             <Route element={<AdminRoute />}>
               <Route path="/user-management/manager" element={<Manager />} />
               <Route path="/user-management/supervisor" element={<Supervisor />} />

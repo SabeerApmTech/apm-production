@@ -24,6 +24,40 @@ export function getMonthStartIso(): string {
   return `${y}-${m}-01`
 }
 
+/** Last day of the current month as an ISO "YYYY-MM-DD" string, for date-picker/query-param defaults. */
+export function getMonthEndIso(): string {
+  const now = new Date()
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  return dateToIso(lastDay)
+}
+
+/** Converts a Date to an ISO "YYYY-MM-DD" string (local time, not UTC). */
+export function dateToIso(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+/** Yesterday's date as an ISO "YYYY-MM-DD" string. */
+export function getYesterdayIso(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return dateToIso(d)
+}
+
+/** Sunday of the current week as an ISO "YYYY-MM-DD" string. */
+export function getWeekStartIso(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - d.getDay())
+  return dateToIso(d)
+}
+
+/** January 1st of the current year as an ISO "YYYY-MM-DD" string. */
+export function getYearStartIso(): string {
+  return `${new Date().getFullYear()}-01-01`
+}
+
 /** Today at midnight local time — for DatePicker's minDate, so "before" comparisons don't exclude today. */
 export function startOfToday(): Date {
   return new Date(new Date().toDateString())

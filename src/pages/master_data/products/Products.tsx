@@ -61,7 +61,7 @@ function ProductActionCell({ data, onEdit }: ProductActionCellParams) {
 export function Products() {
   const isMobile = useIsMobile()
 
-  const { data, isLoading } = useGetProductsQuery()
+  const { data, isLoading, isFetching, refetch } = useGetProductsQuery()
   const products = useMemo(() => data ?? [], [data])
 
   const [createProduct] = useCreateProductMutation()
@@ -126,6 +126,8 @@ export function Products() {
         rowData={products}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         onAdd={() => setDialogOpen(true)}
         onDelete={setDeleteRows}
         checkbox

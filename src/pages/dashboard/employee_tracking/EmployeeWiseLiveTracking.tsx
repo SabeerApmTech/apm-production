@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Users, XCircle, PlayCircle, PauseCircle, StopCircle, Eye, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getRole } from "@/utils/auth"
 import type { EmployeeTrackingRow, EmployeeTrackingStatus } from "@/types/dashboard"
 import {
   useGetEmployeeLiveTrackingQuery,
@@ -147,8 +148,20 @@ export function EmployeeWiseLiveTracking() {
     setStatusFilter((prev) => (prev === status ? null : status))
   }
 
-  const viewDetail = (scheduleId: string) => {
-    navigate(`/dashboard/schedule-wise-tracking?scheduleId=${encodeURIComponent(scheduleId)}`)
+  // Operators have no access to the Schedule Wise Live Tracking dashboard (admin-only), so their
+  // "View Detail" instead drops into that employee's read-only Log Report.
+  const viewDetail = (emp: EmployeeTrackingRow) => {
+    if (getRole() === "operator") {
+      const params = new URLSearchParams({
+        employeeId: emp.employeeId,
+        employeeName: emp.employeeName,
+        scheduleId: emp.scheduleId,
+        operationName: emp.operationName,
+      })
+      navigate(`/live-tracking/log-report?${params.toString()}`)
+    } else {
+      navigate(`/dashboard/schedule-wise-tracking?scheduleId=${encodeURIComponent(emp.scheduleId)}`)
+    }
   }
 
   return (
@@ -207,7 +220,7 @@ export function EmployeeWiseLiveTracking() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {employees.map((emp) => (
-              <EmployeeCard key={emp.employeeId} emp={emp} onViewDetail={() => viewDetail(emp.scheduleId)} />
+              <EmployeeCard key={emp.employeeId} emp={emp} onViewDetail={() => viewDetail(emp)} />
             ))}
             {employees.length === 0 && (
               <p className="col-span-full py-12 text-center text-sm text-muted-foreground">No employees found</p>

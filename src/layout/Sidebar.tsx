@@ -20,12 +20,18 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
   const location = useLocation()
   const role = getRole()
   const items = role === 'operator' ? operatorNavItems : navItems
+
+  // On mobile/tablet the sidebar overlays the page — picking a destination should close it,
+  // same as tapping the backdrop does, instead of leaving it open over the new page.
+  const { isMobile, setOpen } = useSidebar()
+  const closeOnMobile = () => { if (isMobile) setOpen(false) }
 
   const isChildActive = (children?: { path: string }[]) =>
     children?.some((c) => location.pathname.startsWith(c.path)) ?? false
@@ -70,7 +76,7 @@ export function AppSidebar() {
                         "bg-blue-600 text-white hover:bg-blue-600"
                     )}
                   >
-                    <NavLink to={item.path!}>
+                    <NavLink to={item.path!} onClick={closeOnMobile}>
                       <Icon className="h-4.5 w-4.5 shrink-0" />
                       <span>{item.label}</span>
                     </NavLink>
@@ -118,7 +124,7 @@ export function AppSidebar() {
                                 childActive && "bg-blue-600 text-white hover:bg-blue-600"
                               )}
                             >
-                              <NavLink to={child.path}>{child.label}</NavLink>
+                              <NavLink to={child.path} onClick={closeOnMobile}>{child.label}</NavLink>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         )

@@ -14,7 +14,7 @@ import {
 } from "@/store/services/handoverToStoreApi"
 
 export function HandoverPendingList() {
-  const { data, isLoading } = useGetHandoverPendingListQuery()
+  const { data, isLoading, isFetching, refetch } = useGetHandoverPendingListQuery()
   const rows = useMemo(() => data ?? [], [data])
 
   const [createHandover] = useCreateHandoverMutation()
@@ -70,6 +70,8 @@ export function HandoverPendingList() {
         rowData={rows}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
       />
       <HandoverDialog
         open={dialogRow !== null}

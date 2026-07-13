@@ -3,7 +3,7 @@ import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-co
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-import { formatLogDateTime, getTodayIso, getMonthStartIso } from "@/utils/date"
+import { formatLogDateTime, getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
 import type { HandoverTransactionRecord } from "@/types/handoverToStore"
 import {
@@ -13,9 +13,9 @@ import {
 
 export function HandoverTransactionLog() {
   const [fromDate, setFromDate] = useState(getMonthStartIso())
-  const [toDate,   setToDate]   = useState(getTodayIso())
+  const [toDate,   setToDate]   = useState(getMonthEndIso())
 
-  const { data, isLoading } = useGetHandoverTransactionLogQuery({ fromDate, toDate })
+  const { data, isLoading, isFetching, refetch } = useGetHandoverTransactionLogQuery({ fromDate, toDate })
   const rows = useMemo(() => data ?? [], [data])
 
   const [deleteHandover] = useDeleteHandoverMutation()
@@ -63,7 +63,6 @@ export function HandoverTransactionLog() {
       ]
       if (!canDelete) return baseColumns
       return [
-        ...baseColumns,
         {
           headerName: "Action",
           cellRenderer: DeleteCell,
@@ -71,6 +70,7 @@ export function HandoverTransactionLog() {
           sortable: false,
           maxWidth: 80,
         },
+        ...baseColumns,
       ]
     },
     [canDelete, openDelete]
@@ -83,9 +83,11 @@ export function HandoverTransactionLog() {
         rowData={rows}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         showDateFilter
-        defaultToToday
         defaultFromDate={getMonthStartIso()}
+        defaultToDate={getMonthEndIso()}
         onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
       />
       <DeleteDialog

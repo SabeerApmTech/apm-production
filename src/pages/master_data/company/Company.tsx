@@ -32,7 +32,7 @@ function ActionCell({ data, onEdit }: ActionCellParams) {
 
 /* ── Page ───────────────────────────────────────────────── */
 export function Company() {
-  const { data, isLoading } = useGetCompaniesQuery()
+  const { data, isLoading, isFetching, refetch } = useGetCompaniesQuery()
   const companies = useMemo(() => data ?? [], [data])
 
   const [createCompany] = useCreateCompanyMutation()
@@ -82,6 +82,8 @@ export function Company() {
         rowData={companies}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         onAdd={() => setDialogOpen(true)}
         onDelete={setDeleteRows}
         checkbox

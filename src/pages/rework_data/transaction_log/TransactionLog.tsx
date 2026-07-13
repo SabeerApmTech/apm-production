@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react"
-import type { ColDef } from "ag-grid-community"
+import type { ColDef, ValueGetterParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
@@ -38,21 +38,25 @@ export function ReworkTransactionLog() {
   const openDelete = useCallback((id: number) => setDeleteId(id), [])
 
   const columnDefs: ColDef<ReworkTransactionRow>[] = [
+    {
+      headerName: "Action",
+      cellRenderer: DeleteCell,
+      cellRendererParams: { onDelete: openDelete },
+      sortable: false, minWidth: 100,
+    },
     { field: "dateTime",         headerName: "Date & Time",        minWidth: 130, cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" } },
-    { field: "employeeId",       headerName: "Employee Id",        minWidth: 110 },
-    { field: "employeeName",     headerName: "Employee Name",      minWidth: 130 },
+    {
+      headerName: "Employee",
+      valueGetter: (p: ValueGetterParams<ReworkTransactionRow>) =>
+        p.data ? `${p.data.employeeId} : ${p.data.employeeName}` : "",
+      minWidth: 150,
+    },
     { field: "reworkScheduleId", headerName: "Rework Schedule ID", minWidth: 150 },
     { field: "company",          headerName: "Company",            cellStyle: { fontWeight: 600 }, minWidth: 120 },
     { field: "product",          headerName: "Product",            cellStyle: { fontWeight: 600 }, minWidth: 110 },
     { field: "operation",        headerName: "Operation",          minWidth: 140 },
     { field: "status",           headerName: "Status",             cellRenderer: StatusCell, minWidth: 110 },
     { field: "successfulQty",    headerName: "Success",            minWidth: 100 },
-    {
-      headerName: "Delete",
-      cellRenderer: DeleteCell,
-      cellRendererParams: { onDelete: openDelete },
-      sortable: false, minWidth: 100,
-    },
   ]
 
   return (

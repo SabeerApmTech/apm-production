@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
-import { getTodayIso, getMonthStartIso } from "@/utils/date"
+import { getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { useGetCompletedSchedulesQuery } from "@/store/services/completedScheduleApi"
 import type { CompletedScheduleRecord } from "@/types/completedSchedule"
 
@@ -25,9 +25,9 @@ const columnDefs: ColDef<CompletedScheduleRecord>[] = [
 
 export function CompletedSchedules() {
   const [fromDate, setFromDate] = useState(getMonthStartIso())
-  const [toDate,   setToDate]   = useState(getTodayIso())
+  const [toDate,   setToDate]   = useState(getMonthEndIso())
 
-  const { data, isLoading } = useGetCompletedSchedulesQuery({ fromDate, toDate })
+  const { data, isLoading, isFetching, refetch } = useGetCompletedSchedulesQuery({ fromDate, toDate })
   const schedules = useMemo(() => data ?? [], [data])
 
   return (
@@ -36,9 +36,11 @@ export function CompletedSchedules() {
       rowData={schedules}
       columnDefs={columnDefs}
       loading={isLoading}
+      onRefresh={refetch}
+      refreshing={isFetching}
       showDateFilter
-      defaultToToday
       defaultFromDate={getMonthStartIso()}
+      defaultToDate={getMonthEndIso()}
       onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
     />
   )

@@ -2,7 +2,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
 
-const SIDEBAR_WIDTH = "250px"
+const SIDEBAR_WIDTH = "210px"
 const SIDEBAR_BREAKPOINT = 1024
 
 type SidebarContextValue = {

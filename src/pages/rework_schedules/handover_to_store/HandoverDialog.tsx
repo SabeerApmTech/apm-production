@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
@@ -42,13 +42,18 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: Props) {
   const [handoverQty,   setHandoverQty]   = useState("")
   const [remarks,       setRemarks]       = useState("")
 
+  useEffect(() => {
+    if (open) {
+      setStoreLocation("Main Store")
+      setReceivedBy("")
+      setHandoverQty("")
+      setRemarks("")
+    }
+  }, [open, row])
+
   function handleConfirm() {
     if (!row) return
     onConfirm(row.id, { storeLocation, receivedBy, handoverQty: Number(handoverQty), remarks })
-    setStoreLocation("Main Store")
-    setReceivedBy("")
-    setHandoverQty("")
-    setRemarks("")
     onClose()
   }
 

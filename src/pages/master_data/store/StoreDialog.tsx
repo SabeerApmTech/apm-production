@@ -18,6 +18,10 @@ export function StoreDialog({ open, onClose, store, onAdd, onEdit }: StoreDialog
   const [storeName, setStoreName]     = React.useState(store?.storeName ?? "")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
+  React.useEffect(() => {
+    if (open) setStoreName(store?.storeName ?? "")
+  }, [open, store])
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!storeName.trim()) return

@@ -34,7 +34,7 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
   const managers = useGetManagersQuery(undefined, { skip: role !== "MANAGER" })
   const supervisors = useGetSupervisorsQuery(undefined, { skip: role !== "SUPERVISOR" })
   const operators = useGetOperatorsQuery(undefined, { skip: role !== "OPERATOR" })
-  const { data, isLoading } =
+  const { data, isLoading, isFetching, refetch } =
     role === "MANAGER" ? managers : role === "SUPERVISOR" ? supervisors : operators
   const rows = useMemo(() => data ?? [], [data])
 
@@ -191,6 +191,8 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
         rowData={rows}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         checkbox={canManage}
         onAdd={canManage ? openAdd : undefined}
         onDelete={canManage ? setDeleteRows : undefined}

@@ -13,12 +13,14 @@ interface Props {
   logs: LogReportEntry[]
   activeHours: string
   idleHours: string
-  onStart: () => void
-  onPause: () => void
-  onStop: () => void
+  onStart?: () => void
+  onPause?: () => void
+  onStop?: () => void
+  /** Hides the Start/Pause/Stop controls — used to view another operator's work read-only. */
+  readOnly?: boolean
 }
 
-export function WorkingView({ schedule, operation, logs, activeHours, idleHours, onStart, onPause, onStop }: Props) {
+export function WorkingView({ schedule, operation, logs, activeHours, idleHours, onStart, onPause, onStop, readOnly = false }: Props) {
   const lastEvent = logs.length ? logs[logs.length - 1].logEvent : null
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
@@ -91,6 +93,9 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
               <td className="px-3 py-2.5">{operation.pendingQty}</td>
               <td className="px-3 py-2.5"><StatusBadge logEvent={lastEvent} /></td>
               <td className="px-3 py-2.5">
+                {readOnly ? (
+                  <span className="text-gray-400">—</span>
+                ) : (
                 <div className="flex flex-col gap-1 items-start">
                   {isIdle && (
                     <Button
@@ -122,6 +127,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                     </>
                   )}
                 </div>
+                )}
               </td>
             </tr>
           </tbody>

@@ -4,12 +4,13 @@ import type {
   ColDef, GridReadyEvent, GridApi,
   RowClickedEvent, RowClassParams, RowStyle, RowDragEndEvent,
   IDetailCellRendererParams, IsFullWidthRowParams, RowHeightParams,
+  ValueFormatterParams, ValueGetterParams,
 } from "ag-grid-community"
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community"
 import * as XLSX from "xlsx"
-import { Search, Trash2, Plus, FileSpreadsheet } from "lucide-react"
+import { Search, Trash2, Plus, FileSpreadsheet, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DatePicker } from "@/components/ui/date-picker"
+import { DateRangeFilter } from "@/shared/DateRangeFilter"
 import { getTodayIso } from "@/utils/date"
 import { useTheme } from "@/hooks/useTheme"
 
@@ -54,6 +55,9 @@ export interface DataTableProps<T> {
   columnDefs: ColDef<T>[]
   /** Shows AG Grid's built-in loading overlay instead of the "no rows" state while the initial fetch is in flight. */
   loading?: boolean
+  /** Shows a refresh button in the toolbar; clicking it calls this and spins the icon while `refreshing` is true. */
+  onRefresh?: () => void
+  refreshing?: boolean
   onAdd?: () => void
   onDelete?: (rows: T[]) => void
   checkbox?: boolean
@@ -88,6 +92,8 @@ export function DataTable<T>({
   rowData,
   columnDefs,
   loading = false,
+  onRefresh,
+  refreshing = false,
   onAdd,
   onDelete,
   checkbox = false,
@@ -119,16 +125,8 @@ export function DataTable<T>({
   const [fromDate, setFromDate]           = useState(defaultFromDate ?? (defaultToToday ? getTodayIso() : ""))
   const [toDate,   setToDate]             = useState(defaultToDate ?? (defaultToToday ? getTodayIso() : ""))
 
-  const handleFromDate = useCallback((val: string) => {
-    setFromDate(val); onDateFilter?.(val, toDate)
-  }, [toDate, onDateFilter])
-
-  const handleToDate = useCallback((val: string) => {
-    setToDate(val); onDateFilter?.(fromDate, val)
-  }, [fromDate, onDateFilter])
-
-  const handleClearDates = useCallback(() => {
-    setFromDate(""); setToDate(""); onDateFilter?.("", "")
+  const handleDateRangeChange = useCallback((from: string, to: string) => {
+    setFromDate(from); setToDate(to); onDateFilter?.(from, to)
   }, [onDateFilter])
 
   useLayoutEffect(() => {
@@ -147,11 +145,13 @@ export function DataTable<T>({
 
   const defaultColDef = useMemo<ColDef>(
     () => ({
-      sortable: true,
+      sortable: false,
       resizable: true,
       filter: false,
       flex: 1,
       minWidth: 100,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
       // Vertical centering + text-overflow clipping live in the global `.ag-theme-quartz .ag-cell`
       // CSS rule (index.css), not here — a column's own cellStyle fully replaces (rather than
       // merges with) whatever's set here, so a JS-level default silently disappears for any
@@ -233,11 +233,20 @@ export function DataTable<T>({
   }, [onRowDragEnd])
 
   const exportToExcel = useCallback(() => {
-    const exportCols = columnDefs.filter((col) => col.field)
+    const exportCols = columnDefs.filter((col) => col.field || col.valueGetter)
     const headers = ["S.No", ...exportCols.map((col) => col.headerName ?? String(col.field ?? ""))]
     const rows = rowData.map((row, i) => [
       i + 1,
-      ...exportCols.map((col) => (row as Record<string, unknown>)[col.field as string] ?? ""),
+      ...exportCols.map((col) => {
+        const raw = col.field
+          ? (row as Record<string, unknown>)[col.field as string] ?? ""
+          : typeof col.valueGetter === "function"
+            ? col.valueGetter({ data: row } as unknown as ValueGetterParams<T>) ?? ""
+            : ""
+        return typeof col.valueFormatter === "function"
+          ? col.valueFormatter({ value: raw, data: row } as unknown as ValueFormatterParams<T>) ?? raw
+          : raw
+      }),
     ])
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
     const wb = XLSX.utils.book_new()
@@ -272,24 +281,7 @@ export function DataTable<T>({
         )}
 
         {showDateFilter && (
-          <div className="flex flex-row items-end gap-3">
-            <div className="flex flex-col gap-1 w-36 sm:w-44">
-              <span className="text-xs font-medium text-muted-foreground">From Date</span>
-              <DatePicker value={fromDate} onChange={handleFromDate} placeholder="From date" />
-            </div>
-            <div className="flex flex-col gap-1 w-36 sm:w-44">
-              <span className="text-xs font-medium text-muted-foreground">To Date</span>
-              <DatePicker value={toDate} onChange={handleToDate} placeholder="To date" maxDate={new Date()} />
-            </div>
-            {(fromDate || toDate) && (
-              <button
-                onClick={handleClearDates}
-                className="h-10 rounded-lg border border-border px-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+          <DateRangeFilter fromDate={fromDate} toDate={toDate} onChange={handleDateRangeChange} />
         )}
 
         {toolbarExtra}
@@ -306,6 +298,17 @@ export function DataTable<T>({
             className="h-9 w-56 rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-foreground outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 sm:w-72"
           />
         </div>
+
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={refreshing}
+            title="Refresh"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-all hover:bg-accent disabled:cursor-default"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+          </button>
+        )}
 
         <button
           onClick={exportToExcel}
@@ -353,7 +356,7 @@ export function DataTable<T>({
           <AgGridReact<T>
             rowData={rowData}
             columnDefs={allColumnDefs}
-            loading={loading}
+            loading={loading || refreshing}
             defaultColDef={defaultColDef}
             rowSelection={rowSelection}
             selectionColumnDef={selectionColumnDef}

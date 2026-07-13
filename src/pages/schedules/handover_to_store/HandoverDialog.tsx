@@ -39,6 +39,18 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
     if (!storeName && stores.length) setStoreName(stores[0].storeName)
   }, [stores, storeName])
 
+  // Reset the form whenever the dialog opens (covers both reopening after a Cancel and
+  // reopening for a different pending row) — storeName is left blank so the effect above
+  // re-derives it once stores are loaded.
+  useEffect(() => {
+    if (open) {
+      setStoreName("")
+      setReceivedBy("")
+      setHandoverQty("")
+      setRemarks("")
+    }
+  }, [open, row])
+
   const qty = Number(handoverQty)
   const qtyExceedsReady = handoverQty !== "" && row !== null && qty > row.readyToMove
   const isValid = storeName.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
@@ -48,10 +60,6 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
     setIsSubmitting(true)
     try {
       await onConfirm({ storeName, receivedBy, handoverQty: Number(handoverQty), remarks })
-      setStoreName(stores[0]?.storeName ?? "")
-      setReceivedBy("")
-      setHandoverQty("")
-      setRemarks("")
       onClose()
     } catch {
       // Toast middleware already surfaced the error; keep the dialog open so the user can retry.

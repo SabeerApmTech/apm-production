@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo } from "react"
-import type { ColDef, ValueFormatterParams } from "ag-grid-community"
+import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-import { formatLogDateTime, getTodayIso, getMonthStartIso } from "@/utils/date"
+import { formatLogDateTime, getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
 import type { TransactionLogRecord } from "@/types/transactionLog"
 import {
@@ -13,8 +13,8 @@ import {
 } from "@/store/services/transactionLogApi"
 
 export function TransactionLog() {
-  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getTodayIso() })
-  const { data, isLoading } = useGetTransactionLogsQuery({ fromDate: dateRange.from, toDate: dateRange.to })
+  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getMonthEndIso() })
+  const { data, isLoading, isFetching, refetch } = useGetTransactionLogsQuery({ fromDate: dateRange.from, toDate: dateRange.to })
   const rows = useMemo(() => data ?? [], [data])
 
   const [deleteTransactionLog] = useDeleteTransactionLogMutation()
@@ -36,6 +36,12 @@ export function TransactionLog() {
 
   const columnDefs: ColDef<TransactionLogRecord>[] = [
     {
+      headerName: "Action",
+      cellRenderer: DeleteCell,
+      cellRendererParams: { onDelete: openDelete },
+      sortable: false, maxWidth: 80,
+    },
+    {
       field: "logTime",
       headerName: "Date & Time",
       minWidth: 130,
@@ -43,8 +49,12 @@ export function TransactionLog() {
       valueFormatter: (p: ValueFormatterParams<TransactionLogRecord>) =>
         p.value ? formatLogDateTime(p.value) : "",
     },
-    { field: "employeeId",    headerName: "Employee Id",    minWidth: 110 },
-    { field: "employeeName",  headerName: "Employee Name",  minWidth: 130 },
+    {
+      headerName: "Employee",
+      valueGetter: (p: ValueGetterParams<TransactionLogRecord>) =>
+        p.data ? `${p.data.employeeId} : ${p.data.employeeName}` : "",
+      minWidth: 150,
+    },
     { field: "scheduleId",    headerName: "Schedule ID",    minWidth: 110 },
     { field: "companyName",   headerName: "Company",        cellStyle: { fontWeight: 600 }, minWidth: 120 },
     { field: "productName",   headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
@@ -56,12 +66,6 @@ export function TransactionLog() {
     { field: "rejectedQty",   headerName: "Rejected Qty",   minWidth: 120 },
     { field: "reason",        headerName: "Reason",         minWidth: 140, valueFormatter: (p) => p.value ?? "-" },
     { field: "remarks",       headerName: "Remarks",        minWidth: 110, valueFormatter: (p) => p.value ?? "-" },
-    {
-      headerName: "Action",
-      cellRenderer: DeleteCell,
-      cellRendererParams: { onDelete: openDelete },
-      sortable: false, maxWidth: 80,
-    },
   ]
 
   return (
@@ -71,9 +75,11 @@ export function TransactionLog() {
         rowData={rows}
         columnDefs={columnDefs}
         loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         showDateFilter
-        defaultToToday
         defaultFromDate={getMonthStartIso()}
+        defaultToDate={getMonthEndIso()}
         onDateFilter={(from, to) => setDateRange({ from, to })}
       />
       <DeleteDialog

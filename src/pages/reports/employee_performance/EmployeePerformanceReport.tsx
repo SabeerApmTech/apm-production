@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
-import { DatePicker } from "@/components/ui/date-picker"
+import { DateRangeFilter } from "@/shared/DateRangeFilter"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TabSwitcher, type TabItem } from "@/shared/TabSwitcher"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
@@ -9,7 +9,7 @@ import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductsQuery, useGetOperationsQuery } from "@/store/services/productApi"
 import { useGetEmployeePerformanceReportQuery } from "@/store/services/employeePerformanceReportApi"
 import type { EmployeePerformanceRecord } from "@/types/employeePerformanceReport"
-import { getMonthStartIso, getTodayIso } from "@/utils/date"
+import { getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { PerformanceByOperationChart } from "./PerformanceByOperationChart"
 
 type ViewTab = "chart" | "table"
@@ -22,7 +22,7 @@ const VIEW_TABS: TabItem<ViewTab>[] = [
 ]
 
 function getDefaultDateRange() {
-  return { from: getMonthStartIso(), to: getTodayIso() }
+  return { from: getMonthStartIso(), to: getMonthEndIso() }
 }
 
 export function EmployeePerformanceReport() {
@@ -41,7 +41,7 @@ export function EmployeePerformanceReport() {
     { skip: productId === ALL }
   )
 
-  const { data, isLoading } = useGetEmployeePerformanceReportQuery({
+  const { data, isLoading, isFetching, refetch } = useGetEmployeePerformanceReportQuery({
     fromDate: dateRange.from || undefined,
     toDate: dateRange.to || undefined,
     employeeId: employeeId === ALL ? undefined : employeeId,
@@ -85,88 +85,67 @@ export function EmployeePerformanceReport() {
     setOperationName(ALL)
   }
 
-  const defaultDateRange = getDefaultDateRange()
-  const isDefaultDateRange = dateRange.from === defaultDateRange.from && dateRange.to === defaultDateRange.to
-
   return (
     <div className="flex flex-1 min-h-0 flex-col gap-4">
-      <div className="shrink-0 flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1 w-36 sm:w-44">
-          <span className="text-xs font-medium text-muted-foreground">From Date</span>
-          <DatePicker
-            value={dateRange.from}
-            onChange={(from) => setDateRange((prev) => ({ ...prev, from }))}
-            placeholder="From date"
-          />
-        </div>
-        <div className="flex flex-col gap-1 w-36 sm:w-44">
-          <span className="text-xs font-medium text-muted-foreground">To Date</span>
-          <DatePicker
-            value={dateRange.to}
-            onChange={(to) => setDateRange((prev) => ({ ...prev, to }))}
-            placeholder="To date"
-            maxDate={new Date()}
-          />
-        </div>
-        {!isDefaultDateRange && (
-          <button
-            onClick={() => setDateRange(defaultDateRange)}
-            className="h-10 rounded-lg border border-border px-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
-          >
-            Reset
-          </button>
-        )}
+      <div className="shrink-0 flex flex-col gap-3">
+        <DateRangeFilter
+          fromDate={dateRange.from}
+          toDate={dateRange.to}
+          onChange={(from, to) => setDateRange({ from, to })}
+        />
 
-        <div className="flex flex-col gap-1 w-40">
-          <span className="text-xs font-medium text-muted-foreground">Operator</span>
-          <Select value={employeeId} onValueChange={setEmployeeId}>
-            <SelectTrigger><SelectValue placeholder="All Operators" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All Operators</SelectItem>
-              {(operators ?? []).map((o) => (
-                <SelectItem key={o.usersId} value={o.employeeId}>{o.employeeName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1 w-40">
+            <span className="text-xs font-medium text-muted-foreground">Operator</span>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
+              <SelectTrigger><SelectValue placeholder="All Operators" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All Operators</SelectItem>
+                {(operators ?? []).map((o) => (
+                  <SelectItem key={o.usersId} value={o.employeeId}>{o.employeeName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex flex-col gap-1 w-40">
-          <span className="text-xs font-medium text-muted-foreground">Company</span>
-          <Select value={companyName} onValueChange={setCompanyName}>
-            <SelectTrigger><SelectValue placeholder="All Companies" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All Companies</SelectItem>
-              {(companies ?? []).map((c) => (
-                <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="flex flex-col gap-1 w-40">
+            <span className="text-xs font-medium text-muted-foreground">Company</span>
+            <Select value={companyName} onValueChange={setCompanyName}>
+              <SelectTrigger><SelectValue placeholder="All Companies" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All Companies</SelectItem>
+                {(companies ?? []).map((c) => (
+                  <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex flex-col gap-1 w-40">
-          <span className="text-xs font-medium text-muted-foreground">Product</span>
-          <Select value={productId} onValueChange={handleProductChange}>
-            <SelectTrigger><SelectValue placeholder="All Products" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All Products</SelectItem>
-              {(products ?? []).map((p) => (
-                <SelectItem key={p.productId} value={String(p.productId)}>{p.productName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="flex flex-col gap-1 w-40">
+            <span className="text-xs font-medium text-muted-foreground">Product</span>
+            <Select value={productId} onValueChange={handleProductChange}>
+              <SelectTrigger><SelectValue placeholder="All Products" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All Products</SelectItem>
+                {(products ?? []).map((p) => (
+                  <SelectItem key={p.productId} value={String(p.productId)}>{p.productName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex flex-col gap-1 w-40">
-          <span className="text-xs font-medium text-muted-foreground">Operation</span>
-          <Select value={operationName} onValueChange={setOperationName} disabled={productId === ALL}>
-            <SelectTrigger><SelectValue placeholder="All Operations" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All Operations</SelectItem>
-              {(operations ?? []).map((op) => (
-                <SelectItem key={op.id} value={op.operationName}>{op.operationName}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1 w-40">
+            <span className="text-xs font-medium text-muted-foreground">Operation</span>
+            <Select value={operationName} onValueChange={setOperationName} disabled={productId === ALL}>
+              <SelectTrigger><SelectValue placeholder="All Operations" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All Operations</SelectItem>
+                {(operations ?? []).map((op) => (
+                  <SelectItem key={op.id} value={op.operationName}>{op.operationName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -186,6 +165,8 @@ export function EmployeePerformanceReport() {
             rowData={rowData}
             columnDefs={columnDefs}
             loading={isLoading}
+            onRefresh={refetch}
+            refreshing={isFetching}
             hideSno
           />
         )}
