@@ -8,7 +8,7 @@ import {
   UserCog,
   Building2,
   Monitor,
-  Navigation,
+  // Navigation,
   FileBarChart,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -107,9 +107,9 @@ export const operatorNavItems: NavItem[] = [
     icon: Monitor,
     path: "/production-monitoring",
   },
-  {
-    label: "Live Tracking",
-    icon: Navigation,
-    path: "/live-tracking",
-  },
+  // {
+  //   label: "Live Tracking",
+  //   icon: Navigation,
+  //   path: "/live-tracking",
+  // },
 ]

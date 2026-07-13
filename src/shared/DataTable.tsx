@@ -69,6 +69,8 @@ export interface DataTableProps<T> {
   defaultToToday?: boolean
   /** Pre-fills the From Date picker with this ISO date instead of today/blank — still user-editable. */
   defaultFromDate?: string
+  /** Pre-fills the To Date picker with this ISO date instead of today/blank — still user-editable. */
+  defaultToDate?: string
   masterDetail?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   detailCellRendererParams?: Partial<IDetailCellRendererParams<T, any>>
@@ -99,6 +101,7 @@ export function DataTable<T>({
   onDateFilter,
   defaultToToday = false,
   defaultFromDate,
+  defaultToDate,
   masterDetail = false,
   detailCellRendererParams,
   isRowMaster,
@@ -114,7 +117,7 @@ export function DataTable<T>({
   const [selectedCount, setSelectedCount] = useState(0)
   const [gridHeight, setGridHeight]       = useState(400)
   const [fromDate, setFromDate]           = useState(defaultFromDate ?? (defaultToToday ? getTodayIso() : ""))
-  const [toDate,   setToDate]             = useState(defaultToToday ? getTodayIso() : "")
+  const [toDate,   setToDate]             = useState(defaultToDate ?? (defaultToToday ? getTodayIso() : ""))
 
   const handleFromDate = useCallback((val: string) => {
     setFromDate(val); onDateFilter?.(val, toDate)

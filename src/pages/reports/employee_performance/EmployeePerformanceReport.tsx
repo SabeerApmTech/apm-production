@@ -49,14 +49,22 @@ export function EmployeePerformanceReport() {
     operationName: operationName === ALL ? undefined : operationName,
   })
 
+  // The API has no product filter param — filter client-side by the selected product's name.
+  const selectedProductName = useMemo(
+    () => (productId === ALL ? null : products?.find((p) => String(p.productId) === productId)?.productName ?? null),
+    [products, productId]
+  )
+
   // The API returns rows grouped by whatever order employees were created in — sort alphabetically
   // by name so both the chart's employee axis and the table's default order read A→Z.
   const rowData = useMemo(
     () =>
-      [...(data ?? [])].sort(
-        (a, b) => a.employeeName.localeCompare(b.employeeName) || a.operationName.localeCompare(b.operationName)
-      ),
-    [data]
+      (data ?? [])
+        .filter((row) => !selectedProductName || row.productName === selectedProductName)
+        .sort(
+          (a, b) => a.employeeName.localeCompare(b.employeeName) || a.operationName.localeCompare(b.operationName)
+        ),
+    [data, selectedProductName]
   )
 
   const columnDefs = useMemo<ColDef<EmployeePerformanceRecord>[]>(

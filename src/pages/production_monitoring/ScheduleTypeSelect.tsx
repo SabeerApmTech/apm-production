@@ -1,10 +1,10 @@
 import productionSchedulesImg from "@/assets/production_schedules.png"
-import reworkSchedulesImg from "@/assets/rework_schedules.png"
+// import reworkSchedulesImg from "@/assets/rework_schedules.png"
 import type { ScheduleType } from "./types"
 
 const TYPES: { type: ScheduleType; label: string; img: string }[] = [
   { type: "production", label: "Production Schedules", img: productionSchedulesImg },
-  { type: "rework",     label: "Rework Schedules",     img: reworkSchedulesImg     },
+  // { type: "rework",     label: "Rework Schedules",     img: reworkSchedulesImg     },
 ]
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 export function ScheduleTypeSelect({ onSelect }: Props) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xs">
+    <div className="grid grid-cols-1 gap-4 max-w-xs">
       {TYPES.map(({ type, label, img }) => (
         <button
           key={type}
