@@ -8,7 +8,7 @@ import { useGetProductsQuery } from "@/store/services/productApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductProductionSummaryQuery } from "@/store/services/productWiseReportApi"
 import type { ProductProductionSummaryRecord } from "@/types/productWiseReport"
-import { getMonthStartIso } from "@/utils/date"
+import { getMonthStartIso, getTodayIso } from "@/utils/date"
 import {
   CompanyDetailCellRenderer, ExpandCell, isFullWidthRow, getRowHeight,
   type CompanyDetailRow,
@@ -26,7 +26,7 @@ const VIEW_TABS: TabItem<ViewTab>[] = [
 ]
 
 export function ProductWiseReport() {
-  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: "" })
+  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getTodayIso() })
   const [itemCode, setItemCode] = useState(ALL)
   const [companyName, setCompanyName] = useState(ALL)
   const [expandedItemCode, setExpandedItemCode] = useState<string | null>(null)

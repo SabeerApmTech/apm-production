@@ -8,7 +8,7 @@ import {
   useGetEmployeeLiveTrackingByStatusQuery,
 } from "@/store/services/dashboardApi"
 
-const POLL_INTERVAL_MS = 15000
+const POLL_INTERVAL_MS = 3000
 
 const STATUS_CFG: Record<string, { label: string; dot: string; text: string; badge: string }> = {
   RUNNING:    { label: "Running",     dot: "bg-green-500", text: "text-green-700 dark:text-green-400", badge: "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900" },

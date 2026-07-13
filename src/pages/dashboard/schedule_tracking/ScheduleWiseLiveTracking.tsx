@@ -6,7 +6,7 @@ import { fromIsoDate } from "@/utils/date"
 import { useGetPendingSchedulesQuery } from "@/store/services/pendingScheduleApi"
 import { useGetScheduleLiveTrackingQuery } from "@/store/services/dashboardApi"
 
-const POLL_INTERVAL_MS = 15000
+const POLL_INTERVAL_MS = 3000
 
 const STEP_COLORS = [
   { bar: "#22c55e", rowBg: "bg-card" },
