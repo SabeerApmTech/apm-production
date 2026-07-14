@@ -31,6 +31,6 @@ const baseQueryWithAuth: BaseQueryFn = async (args, api, extraOptions) => {
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAuth,
-  tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "CompletedSchedule", "HandoverToStore", "Store"],
+  tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "CompletedSchedule", "HandoverToStore", "Store", "Notification"],
   endpoints: () => ({}),
 })

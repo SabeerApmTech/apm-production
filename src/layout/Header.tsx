@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChangePasswordDialog } from "@/layout/ChangePasswordDialog"
 import { useLogoutMutation } from "@/store/services/authApi"
+import { useGetNotificationCountsQuery } from "@/store/services/notificationApi"
+
+const NOTIFICATION_COUNTS_POLL_MS = 10000
 
 const EXTRA_TITLES: Record<string, string> = {
   "/notifications": "Notifications",
@@ -42,6 +45,11 @@ export function Header() {
   const [logout, { isLoading: loggingOut }] = useLogoutMutation()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
+  const { data: notificationCounts } = useGetNotificationCountsQuery(user?.employeeId ?? "", {
+    skip: role === "operator" || !user?.employeeId,
+    pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
+  })
+  const unreadCount = notificationCounts?.unread ?? 0
 
   const handleLogout = async () => {
     try {
@@ -87,9 +95,11 @@ export function Header() {
             className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
           >
             <Bell className="h-5 w-5" />
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
-              2
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </button>
         )}
 
