@@ -106,6 +106,10 @@ export const getOperatorUser = (): OperatorUser | null => {
   }
 }
 
+/** The signed-in employee's ID regardless of role — admins live under `authUser`, operators under `operatorUser`. */
+export const getCurrentEmployeeId = (): string =>
+  (getRole() === 'operator' ? getOperatorUser()?.employeeId : getAuthUser()?.employeeId) ?? ''
+
 /**
  * Add/edit/toggle-active/delete/reset-password permissions per managed entity type:
  * - Managers:   SUPERADMIN only.

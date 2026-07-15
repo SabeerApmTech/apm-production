@@ -3,7 +3,7 @@ import { createPortal } from "react-dom"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, ChevronDown, IdCard, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
-import { getRole, getAuthUser, getRoleLabel, clearAuth } from "@/utils/auth"
+import { getRole, getAuthUser, getRoleLabel, clearAuth, getCurrentEmployeeId } from "@/utils/auth"
 import { useTheme } from "@/hooks/useTheme"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
@@ -42,11 +42,12 @@ export function Header() {
   const title = getPageTitle(pathname)
   const role = getRole()
   const user = getAuthUser()
+  const employeeId = getCurrentEmployeeId()
   const [logout, { isLoading: loggingOut }] = useLogoutMutation()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
-  const { data: notificationCounts } = useGetNotificationCountsQuery(user?.employeeId ?? "", {
-    skip: role === "operator" || !user?.employeeId,
+  const { data: notificationCounts } = useGetNotificationCountsQuery(employeeId, {
+    skip: !employeeId,
     pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
   })
   const unreadCount = notificationCounts?.unread ?? 0
@@ -87,21 +88,18 @@ export function Header() {
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
 
-        {/* Bell — operators don't get notifications */}
-        {role !== 'operator' && (
-          <button
-            aria-label="Notifications"
-            onClick={() => navigate("/notifications")}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </button>
-        )}
+        <button
+          aria-label="Notifications"
+          onClick={() => navigate("/notifications")}
+          className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+        >
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
 
         {/* Operators — plain logout icon instead of the admin name dropdown */}
         {role === 'operator' && (

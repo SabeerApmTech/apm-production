@@ -77,6 +77,7 @@ function App() {
             {/* Reached via the "View Detail" link on /live-tracking — read-only view of another operator's current job */}
             <Route path="/live-tracking/log-report" element={<OperatorLogReport />} />
             <Route path="/production-monitoring" element={<ProductionMonitoring />} />
+            <Route path="/notifications" element={<Notifications />} />
 
             {/* Admin-only routes — operators are redirected to /production-monitoring */}
             <Route element={<AdminRoute />}>
@@ -99,7 +100,6 @@ function App() {
               <Route path="/rework-data/history" element={<ReworkHistory />} />
               <Route path="/reports/employee-performance" element={<EmployeePerformanceReport />} />
               <Route path="/reports/product-wise" element={<ProductWiseReport />} />
-              <Route path="/notifications" element={<Notifications />} />
               <Route path="/dashboard/employee-wise-tracking" element={<EmployeeWiseLiveTracking />} />
               <Route path="/dashboard/schedule-wise-tracking" element={<ScheduleWiseLiveTracking />} />
             </Route>

@@ -5,7 +5,7 @@ import {
   CalendarClock, CheckCircle2, UserCheck, Package, ArrowLeft, CheckCircle, Clock, Loader2, Check, ArrowUpRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getAuthUser } from "@/utils/auth"
+import { getCurrentEmployeeId } from "@/utils/auth"
 import {
   useClearAllNotificationsMutation,
   useGetNotificationsQuery,
@@ -231,7 +231,7 @@ function NotifDetail({ notif, onBack, onMarkRead, marking, onNavigate }: {
 /* ── Page ───────────────────────────────────────────────────────── */
 export function Notifications() {
   const navigate = useNavigate()
-  const employeeId = getAuthUser()?.employeeId ?? ""
+  const employeeId = getCurrentEmployeeId()
   const [search,       setSearch]       = useState("")
   const [activeTab,    setActiveTab]    = useState<FilterTab>("All")
   const [moduleFilter, setModuleFilter] = useState<string | null>(null)
