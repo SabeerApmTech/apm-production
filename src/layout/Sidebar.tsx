@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
 import { ChevronDown } from "lucide-react"
 import { useState } from "react"
 import companyLogo from "@/assets/company-logo-white.png"
@@ -25,13 +25,20 @@ import {
 
 export function AppSidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
   const role = getRole()
   const items = role === 'operator' ? operatorNavItems : navItems
+  const homePath = role === 'operator' ? '/production-monitoring' : '/dashboard/employee-wise-tracking'
 
   // On mobile/tablet the sidebar overlays the page — picking a destination should close it,
   // same as tapping the backdrop does, instead of leaving it open over the new page.
   const { isMobile, setOpen } = useSidebar()
   const closeOnMobile = () => { if (isMobile) setOpen(false) }
+
+  const goHome = () => {
+    navigate(homePath)
+    closeOnMobile()
+  }
 
   const isChildActive = (children?: { path: string }[]) =>
     children?.some((c) => location.pathname.startsWith(c.path)) ?? false
@@ -55,7 +62,9 @@ export function AppSidebar() {
     <Sidebar className="bg-[#27375D] dark:bg-[#0f1729]">
       {/* Logo */}
       <SidebarHeader className="flex items-center px-5 py-5">
-        <img src={companyLogo} alt="APM" className="h-9 w-auto object-contain" />
+        <button onClick={goHome} aria-label="Go to dashboard" className="cursor-pointer">
+          <img src={companyLogo} alt="APM" className="h-9 w-auto object-contain" />
+        </button>
       </SidebarHeader>
 
       <SidebarContent className="px-3 pb-4">

@@ -19,6 +19,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 type FilterTab = "All" | "Unread" | "Read"
 
@@ -227,12 +236,16 @@ export function Notifications() {
   const [activeTab,    setActiveTab]    = useState<FilterTab>("All")
   const [moduleFilter, setModuleFilter] = useState<string | null>(null)
   const [selectedId,   setSelectedId]   = useState<number | null>(null)
+  const [clearAllOpen, setClearAllOpen] = useState(false)
 
   const { data, isLoading, isFetching } = useGetNotificationsQuery(
     { employeeId, isRead: TAB_IS_READ[activeTab], module: moduleFilter ?? undefined },
-    { skip: !employeeId }
+    { skip: !employeeId, refetchOnMountOrArgChange: true }
   )
-  const { data: allData } = useGetNotificationsQuery({ employeeId }, { skip: !employeeId })
+  const { data: allData } = useGetNotificationsQuery(
+    { employeeId },
+    { skip: !employeeId, refetchOnMountOrArgChange: true }
+  )
 
   const availableModules = useMemo(() => {
     const modules = new Set<string>()
@@ -302,10 +315,13 @@ export function Notifications() {
 
   const handleClearAll = () => {
     if (!employeeId) return
-    if (window.confirm("Clear all notifications? This cannot be undone.")) {
-      setSelectedId(null)
-      clearAllNotifications(employeeId)
-    }
+    setClearAllOpen(true)
+  }
+
+  const confirmClearAll = () => {
+    setClearAllOpen(false)
+    setSelectedId(null)
+    clearAllNotifications(employeeId)
   }
 
   return (
@@ -444,6 +460,21 @@ export function Notifications() {
           </div>
         )}
       </div>
+
+      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear all notifications?</DialogTitle>
+            <DialogDescription>This will remove all your notifications and cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearAllOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmClearAll} disabled={clearing}>
+              {clearing ? "Clearing..." : "Clear All"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
