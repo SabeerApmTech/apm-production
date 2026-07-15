@@ -8,6 +8,8 @@ export interface NotificationItem {
   isRead: boolean
   readAt: string | null
   createdAt: string
+  navigationUrl: string | null
+  navigationId: string | null
 }
 
 export interface GetNotificationsResponse {

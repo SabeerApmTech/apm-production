@@ -26,7 +26,7 @@ export const userManagementApi = api.injectEndpoints({
       providesTags: [{ type: "UserList", id: "OPERATOR" }],
     }),
     getUserByEmployeeId: builder.query<UserRecord, string>({
-      query: (employeeId) => `/UserManagement/${employeeId}`,
+      query: (employeeId) => `/UserManagement/${encodeURIComponent(employeeId)}`,
       transformResponse: (res: ApiResponse<UserRecord>) => res.data,
     }),
     createUser: builder.mutation<ApiResponse<UserRecord>, CreateUserRequest>({
@@ -42,7 +42,7 @@ export const userManagementApi = api.injectEndpoints({
       { employeeId: string; role: ManagedRole; body: UpdateUserRequest }
     >({
       query: ({ employeeId, body }) => ({
-        url: `/UserManagement/${employeeId}`,
+        url: `/UserManagement/${encodeURIComponent(employeeId)}`,
         method: "PUT",
         body,
       }),
@@ -64,7 +64,7 @@ export const userManagementApi = api.injectEndpoints({
       { employeeId: string; role: ManagedRole; body: UpdateUserStatusRequest }
     >({
       query: ({ employeeId, body }) => ({
-        url: `/UserManagement/${employeeId}/status`,
+        url: `/UserManagement/${encodeURIComponent(employeeId)}/status`,
         method: "PUT",
         body,
       }),

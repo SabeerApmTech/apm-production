@@ -53,20 +53,6 @@ function moduleCfg(module: string) {
   return MODULE_CFG[module.toLowerCase()] ?? DEFAULT_MODULE_CFG
 }
 
-/* ── Module -> route, for the "navigate to module" icon ───────────── */
-const MODULE_ROUTES: Record<string, string> = {
-  schedule: "/pending-schedules",
-  product: "/master-data/products",
-  company: "/master-data/company",
-  store: "/master-data/store",
-  department: "/department",
-  rework: "/rework-schedules/pending",
-}
-
-function moduleRoute(module: string): string | undefined {
-  return MODULE_ROUTES[module.toLowerCase()]
-}
-
 /* ── Date helpers ──────────────────────────────────────────────────── */
 function formatTimeAgo(iso: string): string {
   const date = new Date(iso)
@@ -304,9 +290,8 @@ export function Notifications() {
     }
   }
 
-  const handleNavigateToModule = (module: string) => {
-    const route = moduleRoute(module)
-    if (route) navigate(route)
+  const handleNavigate = (navigationUrl: string) => {
+    navigate(navigationUrl)
   }
 
   const handleMarkAllRead = () => {
@@ -451,7 +436,7 @@ export function Notifications() {
             onBack={() => setSelectedId(null)}
             onMarkRead={() => markNotificationRead(selected.notificationId)}
             marking={marking}
-            onNavigate={moduleRoute(selected.module) ? () => handleNavigateToModule(selected.module) : undefined}
+            onNavigate={selected.navigationUrl ? () => handleNavigate(selected.navigationUrl!) : undefined}
           />
         ) : (
           <div className="hidden md:flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 gap-3">
