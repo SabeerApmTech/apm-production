@@ -1,5 +1,4 @@
-import { api } from "../api"
-import type { ApiResponse } from "@/types/auth"
+import { api, unwrap } from "../api"
 import type {
   ProductProductionSummaryParams,
   ProductProductionSummaryRecord,
@@ -18,7 +17,7 @@ export const productWiseReportApi = api.injectEndpoints({
         if (params?.itemCode) query.ItemCode = params.itemCode
         return { url: "/reports/product-production-summary", params: query }
       },
-      transformResponse: (res: ApiResponse<ProductProductionSummaryRecord[]>) => res.data,
+      transformResponse: unwrap,
     }),
   }),
 })

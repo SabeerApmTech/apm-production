@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo } from "react"
-import type { ColDef, ICellRendererParams } from "ag-grid-community"
-import { Pencil } from "lucide-react"
+import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { CompanyDialog } from "./CompanyDialog"
+import { useDialogState } from "@/hooks/useDialogState"
+import { EditActionCell } from "@/shared/renderers"
 import type { CompanyRecord } from "@/types/company"
 import {
   useGetCompaniesQuery,
@@ -12,40 +13,17 @@ import {
   useDeleteCompaniesMutation,
 } from "@/store/services/companyApi"
 
-/* ── Action cell ────────────────────────────────────────── */
-interface ActionCellParams extends ICellRendererParams<CompanyRecord> {
-  onEdit?: (id: number) => void
-}
-
-function ActionCell({ data, onEdit }: ActionCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onEdit?.(data.companyId) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-      >
-        <Pencil className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
-
 /* ── Page ───────────────────────────────────────────────── */
 export function Company() {
   const { data, isLoading, isFetching, refetch } = useGetCompaniesQuery()
-  const companies = useMemo(() => data ?? [], [data])
+  const companies = data ?? []
 
   const [createCompany] = useCreateCompanyMutation()
   const [updateCompany] = useUpdateCompanyMutation()
   const [deleteCompanies] = useDeleteCompaniesMutation()
 
-  const [dialogOpen, setDialogOpen]   = useState(false)
-  const [editCompany, setEditCompany] = useState<CompanyRecord | undefined>()
-  const [deleteRows, setDeleteRows]   = useState<CompanyRecord[] | null>(null)
-
-  const openEditDialog = useCallback((id: number) => {
-    setEditCompany(companies.find((c) => c.companyId === id))
-  }, [companies])
+  const dialog = useDialogState<CompanyRecord>()
+  const [deleteRows, setDeleteRows] = useState<CompanyRecord[] | null>(null)
 
   const closeDelete = useCallback(() => setDeleteRows(null), [])
 
@@ -70,9 +48,9 @@ export function Company() {
     () => [
       { field: "companyName", headerName: "Company Name", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
       { field: "companyLocation", headerName: "Location" },
-      { headerName: "Action", cellRenderer: ActionCell, cellRendererParams: { onEdit: openEditDialog }, sortable: false, maxWidth: 80 },
+      { headerName: "Action", cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
     ],
-    [openEditDialog]
+    [dialog]
   )
 
   return (
@@ -84,16 +62,16 @@ export function Company() {
         loading={isLoading}
         onRefresh={refetch}
         refreshing={isFetching}
-        onAdd={() => setDialogOpen(true)}
+        onAdd={dialog.openAdd}
         onDelete={setDeleteRows}
         checkbox
       />
 
       <CompanyDialog
-        key={editCompany?.companyId ?? "new"}
-        open={dialogOpen || editCompany !== undefined}
-        onClose={() => { setDialogOpen(false); setEditCompany(undefined) }}
-        company={editCompany}
+        key={dialog.editing?.companyId ?? "new"}
+        open={dialog.isOpen}
+        onClose={dialog.close}
+        company={dialog.editing}
         onAdd={handleAdd}
         onEdit={handleEdit}
       />

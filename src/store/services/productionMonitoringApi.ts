@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   LogReportResponse,
@@ -12,11 +12,11 @@ export const productionMonitoringApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getOperatorSchedules: builder.query<OperatorSchedule[], string>({
       query: (employeeId) => ({ url: "/ProductionMonitoring/operator-schedules", params: { employeeId } }),
-      transformResponse: (res: ApiResponse<OperatorSchedule[]>) => res.data,
+      transformResponse: unwrap,
     }),
     getOperatorOperations: builder.query<OperationRecord[], { employeeId: string; scheduleId: string }>({
       query: (params) => ({ url: "/ProductionMonitoring/operator-operations", params }),
-      transformResponse: (res: ApiResponse<OperationRecord[]>) => res.data,
+      transformResponse: unwrap,
     }),
     getOperatorLogReport: builder.query<LogReportResponse, { employeeId: string; scheduleId: string; sequenceNo: number }>({
       query: (params) => ({ url: "/ProductionMonitoring/operator-log-report", params }),

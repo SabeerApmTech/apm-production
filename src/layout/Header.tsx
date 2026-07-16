@@ -21,6 +21,7 @@ const NOTIFICATION_COUNTS_POLL_MS = 10000
 
 const EXTRA_TITLES: Record<string, string> = {
   "/notifications": "Notifications",
+  "/notifications/settings": "Notification Settings",
 }
 
 function getPageTitle(pathname: string): string {
@@ -47,7 +48,7 @@ export function Header() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { data: notificationCounts } = useGetNotificationCountsQuery(employeeId, {
-    skip: !employeeId,
+    skip: !employeeId || role === 'operator',
     pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
   })
   const unreadCount = notificationCounts?.unread ?? 0
@@ -80,26 +81,30 @@ export function Header() {
 
       {/* Right — theme toggle + notifications + user */}
       <div className="flex items-center gap-3">
-        <button
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          onClick={toggleTheme}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-        >
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
+        {role !== 'operator' && (
+          <button
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            onClick={toggleTheme}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+          >
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+        )}
 
-        <button
-          aria-label="Notifications"
-          onClick={() => navigate("/notifications")}
-          className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-        >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </button>
+        {role !== 'operator' && (
+          <button
+            aria-label="Notifications"
+            onClick={() => navigate("/notifications")}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Operators — plain logout icon instead of the admin name dropdown */}
         {role === 'operator' && (

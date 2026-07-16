@@ -1,12 +1,13 @@
 import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Box, Building2, BarChart2, Factory, Clock, TrendingUp, Loader2 } from "lucide-react"
+import { Box, Building2, BarChart2, Factory, Clock, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
 import { useGetPendingSchedulesQuery } from "@/store/services/pendingScheduleApi"
 import { useGetScheduleLiveTrackingQuery } from "@/store/services/dashboardApi"
-
-const POLL_INTERVAL_MS = 3000
+import { LoadingRow } from "@/shared/LoadingRow"
+import { StatCard } from "@/shared/StatCard"
+import { LIVE_TRACKING_POLL_INTERVAL_MS } from "@/shared/constants"
 
 const STEP_COLORS = [
   { bar: "#22c55e", rowBg: "bg-card" },
@@ -14,29 +15,6 @@ const STEP_COLORS = [
   { bar: "#a855f7", rowBg: "bg-red-50 dark:bg-red-950/20" },
   { bar: "#f97316", rowBg: "bg-amber-50 dark:bg-amber-950/20" },
 ]
-
-interface StatMiniCard {
-  label: string
-  value: string | number
-  icon: React.ReactNode
-  iconBg: string
-  borderColor: string
-  textColor: string
-}
-
-function StatMiniCard({ label, value, icon, iconBg, borderColor, textColor }: StatMiniCard) {
-  return (
-    <div className={cn("flex shrink-0 min-w-32 items-center gap-2 rounded-xl border-2 bg-card px-2.5 py-2.5 shadow-sm sm:flex-1 sm:min-w-0", borderColor)}>
-      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", iconBg)}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="whitespace-nowrap text-[11px] font-medium text-muted-foreground">{label}</p>
-        <p className={cn("truncate text-sm font-bold", textColor)}>{value}</p>
-      </div>
-    </div>
-  )
-}
 
 function ProgressBar({ value, color }: { value: number; color: string }) {
   return (
@@ -62,7 +40,7 @@ export function ScheduleWiseLiveTracking() {
 
   const { data: tracking, isLoading } = useGetScheduleLiveTrackingQuery(effectiveScheduleId, {
     skip: !effectiveScheduleId,
-    pollingInterval: POLL_INTERVAL_MS,
+    pollingInterval: LIVE_TRACKING_POLL_INTERVAL_MS,
   })
 
   const header = tracking?.header
@@ -104,22 +82,22 @@ export function ScheduleWiseLiveTracking() {
 
         {/* Stat mini cards — horizontal scroll on mobile */}
         <div className="flex gap-3 overflow-x-auto pb-1 sm:overflow-visible">
-          <StatMiniCard label="Product" value={header?.productName ?? "-"}
+          <StatCard size="sm" label="Product" value={header?.productName ?? "-"}
             icon={<Box className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />}
             iconBg="bg-blue-100 dark:bg-blue-950/40" borderColor="border-blue-200 dark:border-blue-900" textColor="text-blue-700 dark:text-blue-400" />
-          <StatMiniCard label="Company" value={header?.companyName ?? "-"}
+          <StatCard size="sm" label="Company" value={header?.companyName ?? "-"}
             icon={<Building2 className="h-4.5 w-4.5 text-purple-600 dark:text-purple-400" />}
             iconBg="bg-purple-100 dark:bg-purple-950/40" borderColor="border-purple-200 dark:border-purple-900" textColor="text-purple-700 dark:text-purple-400" />
-          <StatMiniCard label="Target Qty" value={(header?.targetQty ?? 0).toLocaleString()}
+          <StatCard size="sm" label="Target Qty" value={(header?.targetQty ?? 0).toLocaleString()}
             icon={<BarChart2 className="h-4.5 w-4.5 text-green-600 dark:text-green-400" />}
             iconBg="bg-green-100 dark:bg-green-950/40" borderColor="border-green-200 dark:border-green-900" textColor="text-green-700 dark:text-green-400" />
-          <StatMiniCard label="Produced" value={(header?.producedQty ?? 0).toLocaleString()}
+          <StatCard size="sm" label="Produced" value={(header?.producedQty ?? 0).toLocaleString()}
             icon={<Factory className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" />}
             iconBg="bg-amber-100 dark:bg-amber-950/40" borderColor="border-amber-200 dark:border-amber-900" textColor="text-amber-700 dark:text-amber-400" />
-          <StatMiniCard label="Pending" value={(header?.pendingQty ?? 0).toLocaleString()}
+          <StatCard size="sm" label="Pending" value={(header?.pendingQty ?? 0).toLocaleString()}
             icon={<Clock className="h-4.5 w-4.5 text-red-600 dark:text-red-400" />}
             iconBg="bg-red-100 dark:bg-red-950/40" borderColor="border-red-200 dark:border-red-900" textColor="text-red-700 dark:text-red-400" />
-          <StatMiniCard label="Avg Output/Day" value={(header?.averageOutputPerDay ?? 0).toLocaleString()}
+          <StatCard size="sm" label="Avg Output/Day" value={(header?.averageOutputPerDay ?? 0).toLocaleString()}
             icon={<TrendingUp className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />}
             iconBg="bg-indigo-100 dark:bg-indigo-950/40" borderColor="border-indigo-200 dark:border-indigo-900" textColor="text-indigo-700 dark:text-indigo-400" />
         </div>
@@ -164,12 +142,7 @@ export function ScheduleWiseLiveTracking() {
               </div>
             )
           })}
-          {isLoading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading operations…
-            </div>
-          )}
+          {isLoading && <LoadingRow label="Loading operations…" className="justify-center py-12" />}
           {!isLoading && operations.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">No operations found for this schedule</p>
           )}

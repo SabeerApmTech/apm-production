@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   CreateUserRequest,
@@ -12,22 +12,22 @@ export const userManagementApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getManagers: builder.query<UserRecord[], void>({
       query: () => "/UserManagement/managers",
-      transformResponse: (res: ApiResponse<UserRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "UserList", id: "MANAGER" }],
     }),
     getSupervisors: builder.query<UserRecord[], void>({
       query: () => "/UserManagement/supervisors",
-      transformResponse: (res: ApiResponse<UserRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "UserList", id: "SUPERVISOR" }],
     }),
     getOperators: builder.query<UserRecord[], void>({
       query: () => "/UserManagement/operators",
-      transformResponse: (res: ApiResponse<UserRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "UserList", id: "OPERATOR" }],
     }),
     getUserByEmployeeId: builder.query<UserRecord, string>({
       query: (employeeId) => `/UserManagement/${encodeURIComponent(employeeId)}`,
-      transformResponse: (res: ApiResponse<UserRecord>) => res.data,
+      transformResponse: unwrap,
     }),
     createUser: builder.mutation<ApiResponse<UserRecord>, CreateUserRequest>({
       query: (body) => ({

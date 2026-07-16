@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from "react"
 import type { ColDef, RowClickedEvent, ICellRendererParams } from "ag-grid-community"
-import { Pencil } from "lucide-react"
 import { Drawer } from "@/components/ui/drawer"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { AddProductDialog } from "./AddProductDialog"
 import { OperationsPanel } from "./OperationsPanel"
+import { useDialogState } from "@/hooks/useDialogState"
+import { EditActionCell } from "@/shared/renderers"
 import type { ProductRecord } from "@/types/product"
 import {
   useGetProductsQuery,
@@ -40,45 +41,22 @@ function StagesCell({ data }: ICellRendererParams<ProductRecord>) {
   )
 }
 
-interface ProductActionCellParams extends ICellRendererParams<ProductRecord> {
-  onEdit?: (id: number) => void
-}
-
-function ProductActionCell({ data, onEdit }: ProductActionCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onEdit?.(data.productId) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-      >
-        <Pencil className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
-
 /* ── Page ───────────────────────────────────────────────── */
 export function Products() {
   const isMobile = useIsMobile()
 
   const { data, isLoading, isFetching, refetch } = useGetProductsQuery()
-  const products = useMemo(() => data ?? [], [data])
+  const products = data ?? []
 
   const [createProduct] = useCreateProductMutation()
   const [updateProduct] = useUpdateProductMutation()
   const [deleteProducts] = useDeleteProductsMutation()
 
-  const [selectedId, setSelectedId]   = useState<number | null>(null)
-  const [dialogOpen, setDialogOpen]   = useState(false)
-  const [editProduct, setEditProduct] = useState<ProductRecord | undefined>()
-  const [deleteRows, setDeleteRows]   = useState<ProductRecord[] | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const dialog = useDialogState<ProductRecord>()
+  const [deleteRows, setDeleteRows] = useState<ProductRecord[] | null>(null)
 
   const selectedProduct = products.find((p) => p.productId === selectedId) ?? null
-
-  const openEditDialog = useCallback((id: number) => {
-    const product = products.find((p) => p.productId === id)
-    if (product) setEditProduct(product)
-  }, [products])
 
   const closeDelete = useCallback(() => setDeleteRows(null), [])
 
@@ -114,9 +92,9 @@ export function Products() {
       { field: "itemCode",     headerName: "Item Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
       { field: "productName",  headerName: "Product Name" },
       { headerName: "Operations", cellRenderer: StagesCell, sortable: false },
-      { headerName: "Action",  cellRenderer: ProductActionCell, cellRendererParams: { onEdit: openEditDialog }, sortable: false, maxWidth: 80 },
+      { headerName: "Action",  cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
     ],
-    [openEditDialog]
+    [dialog]
   )
 
   return (
@@ -128,7 +106,7 @@ export function Products() {
         loading={isLoading}
         onRefresh={refetch}
         refreshing={isFetching}
-        onAdd={() => setDialogOpen(true)}
+        onAdd={dialog.openAdd}
         onDelete={setDeleteRows}
         checkbox
         onRowClicked={onRowClicked}
@@ -162,10 +140,10 @@ export function Products() {
       )}
 
       <AddProductDialog
-        key={editProduct?.productId ?? "new"}
-        open={dialogOpen || editProduct !== undefined}
-        onClose={() => { setDialogOpen(false); setEditProduct(undefined) }}
-        product={editProduct}
+        key={dialog.editing?.productId ?? "new"}
+        open={dialog.isOpen}
+        onClose={dialog.close}
+        product={dialog.editing}
         onAdd={handleAdd}
         onEdit={handleEdit}
       />

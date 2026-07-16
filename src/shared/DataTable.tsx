@@ -8,9 +8,10 @@ import type {
 } from "ag-grid-community"
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community"
 import * as XLSX from "xlsx"
-import { Search, Trash2, Plus, FileSpreadsheet, RefreshCw } from "lucide-react"
+import { Search, Plus, FileSpreadsheet, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DateRangeFilter } from "@/shared/DateRangeFilter"
+import { DangerIconButton } from "@/shared/DangerIconButton"
 import { getTodayIso } from "@/utils/date"
 import { useTheme } from "@/hooks/useTheme"
 
@@ -47,6 +48,39 @@ const AG_VARS_DARK: Record<string, string> = {
   "--ag-selected-row-background-color": "#1e3a5f",
   "--ag-row-hover-color": "#26262b",
   "--ag-checkbox-checked-color": "#3b82f6",
+}
+
+const defaultColDef: ColDef = {
+  sortable: false,
+  resizable: true,
+  filter: false,
+  flex: 1,
+  minWidth: 100,
+  wrapHeaderText: true,
+  autoHeaderHeight: true,
+  // Vertical centering + text-overflow clipping live in the global `.ag-theme-quartz .ag-cell`
+  // CSS rule (index.css), not here — a column's own cellStyle fully replaces (rather than
+  // merges with) whatever's set here, so a JS-level default silently disappears for any
+  // column with custom styling (e.g. bold Company/Product text). The CSS class applies to
+  // every cell regardless, and a column's cellStyle can still override individual properties
+  // via inline style if it ever needs to (e.g. `whiteSpace: "pre-line"` for multi-line cells).
+}
+
+const dragColumn: ColDef = {
+  headerName: "",
+  rowDrag: true,
+  width: 44,
+  maxWidth: 44,
+  sortable: false,
+  resizable: false,
+  suppressMovable: true,
+  cellStyle: { padding: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" },
+}
+
+const snoColumn: ColDef = {
+  headerName: "S.No",
+  valueGetter: (p) => (p.node?.rowIndex ?? 0) + 1,
+  maxWidth: 70,
 }
 
 export interface DataTableProps<T> {
@@ -143,54 +177,12 @@ export function DataTable<T>({
     return () => ro.disconnect()
   }, [])
 
-  const defaultColDef = useMemo<ColDef>(
-    () => ({
-      sortable: false,
-      resizable: true,
-      filter: false,
-      flex: 1,
-      minWidth: 100,
-      wrapHeaderText: true,
-      autoHeaderHeight: true,
-      // Vertical centering + text-overflow clipping live in the global `.ag-theme-quartz .ag-cell`
-      // CSS rule (index.css), not here — a column's own cellStyle fully replaces (rather than
-      // merges with) whatever's set here, so a JS-level default silently disappears for any
-      // column with custom styling (e.g. bold Company/Product text). The CSS class applies to
-      // every cell regardless, and a column's cellStyle can still override individual properties
-      // via inline style if it ever needs to (e.g. `whiteSpace: "pre-line"` for multi-line cells).
-    }),
-    []
-  )
-
-  const dragColumn = useMemo<ColDef<T>>(
-    () => ({
-      headerName: "",
-      rowDrag: true,
-      width: 44,
-      maxWidth: 44,
-      sortable: false,
-      resizable: false,
-      suppressMovable: true,
-      cellStyle: { padding: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" },
-    }),
-    []
-  )
-
-  const snoColumn = useMemo<ColDef<T>>(
-    () => ({
-      headerName: "S.No",
-      valueGetter: (p) => (p.node?.rowIndex ?? 0) + 1,
-      maxWidth: 70,
-    }),
-    []
-  )
-
   const allColumnDefs = useMemo(() => {
     const leading: ColDef<T>[] = []
     if (rowDrag) leading.push(dragColumn)
     if (!hideSno) leading.push(snoColumn)
     return [...leading, ...columnDefs]
-  }, [rowDrag, hideSno, dragColumn, snoColumn, columnDefs])
+  }, [rowDrag, hideSno, columnDefs])
 
   const selectionColumnDef = useMemo(
     () => (checkbox ? { width: 48, maxWidth: 48, pinned: "left" as const } : undefined),
@@ -258,27 +250,7 @@ export function DataTable<T>({
     <div ref={containerRef} className="flex flex-1 flex-col gap-4 min-h-0">
       {/* Toolbar */}
       <div ref={toolbarRef} className="shrink-0 flex flex-wrap items-end gap-3">
-        {checkbox && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDelete}
-              disabled={selectedCount === 0}
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg border transition-all",
-                selectedCount > 0
-                  ? "border-red-400 bg-red-500 text-white shadow-sm hover:bg-red-600 active:bg-red-700"
-                  : "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-400 dark:text-red-700 cursor-default"
-              )}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-            {selectedCount > 0 && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 text-xs font-bold text-red-600 dark:text-red-300">
-                {selectedCount}
-              </span>
-            )}
-          </div>
-        )}
+        {checkbox && <DangerIconButton onClick={handleDelete} count={selectedCount} />}
 
         {showDateFilter && (
           <DateRangeFilter fromDate={fromDate} toDate={toDate} onChange={handleDateRangeChange} />

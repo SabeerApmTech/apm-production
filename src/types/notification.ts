@@ -3,7 +3,7 @@ export interface NotificationItem {
   title: string
   message: string
   notificationType: string
-  module: string
+  category: string
   referenceId: string
   isRead: boolean
   readAt: string | null
@@ -20,11 +20,19 @@ export interface GetNotificationsResponse {
 export interface GetNotificationsParams {
   employeeId: string
   isRead?: boolean
-  module?: string
+  category?: string
 }
 
 export interface NotificationCounts {
   all: number
   unread: number
   read: number
+}
+
+export interface NotificationSetting {
+  notificationSettingId: number
+  notificationEventId: number
+  category: string
+  eventType: string
+  isActive: boolean
 }

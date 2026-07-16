@@ -1,9 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 import type { ColDef, ICellRendererParams, RowHeightParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
+import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { useGetProductionHistoryQuery } from "@/store/services/productionHistoryApi"
+import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import { useGetProductsQuery } from "@/store/services/productApi"
 import type { ProductionHistoryScheduleRecord } from "@/types/productionHistory"
 import { fromIsoDate, getMonthEndIso, getMonthStartIso } from "@/utils/date"
+import { useDateRange } from "@/hooks/useDateRange"
 import {
   ExpandCell, isFullWidthRow, MIN_DETAIL_HEIGHT,
   type ScheduleDetailRow,
@@ -13,8 +17,13 @@ import { ScheduleOperationsDetail } from "./ScheduleOperationsDetail"
 type AnyRow = ProductionHistoryScheduleRecord | ScheduleDetailRow
 
 export function ProductionHistory() {
-  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getMonthEndIso() })
+  const dateRange = useDateRange()
+  const [companyName, setCompanyName] = useState(ALL)
+  const [productName, setProductName] = useState(ALL)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const { data: companies } = useGetCompaniesQuery()
+  const { data: products } = useGetProductsQuery()
 
   // Operations/logs load lazily inside the detail panel, so its natural height isn't known up
   // front — ScheduleOperationsDetail measures itself and reports back here; resetRowHeights() then
@@ -43,9 +52,9 @@ export function ProductionHistory() {
   const { data, isLoading, isFetching, refetch } = useGetProductionHistoryQuery({
     fromDate: dateRange.from || undefined,
     toDate: dateRange.to || undefined,
+    companyName: companyName === ALL ? undefined : companyName,
+    productName: productName === ALL ? undefined : productName,
   })
-
-  const rows = useMemo(() => data ?? [], [data])
 
   const toggleExpand = useCallback((scheduleId: string) => {
     setExpandedId((prev) => (prev === scheduleId ? null : scheduleId))
@@ -53,14 +62,14 @@ export function ProductionHistory() {
 
   const displayRows = useMemo<AnyRow[]>(() => {
     const result: AnyRow[] = []
-    for (const row of rows) {
+    for (const row of data ?? []) {
       result.push(row)
       if (expandedId === row.scheduleId) {
         result.push({ __isDetail: true, parentScheduleId: row.scheduleId })
       }
     }
     return result
-  }, [rows, expandedId])
+  }, [data, expandedId])
 
   const columnDefs = useMemo<ColDef<AnyRow>[]>(
     () => [
@@ -86,21 +95,43 @@ export function ProductionHistory() {
   )
 
   return (
-    <DataTable<AnyRow>
-      title="Production History"
-      rowData={displayRows}
-      columnDefs={columnDefs}
-      loading={isLoading}
-      onRefresh={refetch}
-      refreshing={isFetching}
-      hideSno
-      showDateFilter
-      defaultFromDate={getMonthStartIso()}
-      defaultToDate={getMonthEndIso()}
-      onDateFilter={(from, to) => setDateRange({ from, to })}
-      isFullWidthRow={isFullWidthRow}
-      fullWidthCellRenderer={renderDetail}
-      getRowHeight={getRowHeight}
-    />
+    <div className="flex flex-1 min-h-0 flex-col gap-4">
+      <div className="shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-end gap-4">
+          <FilterSelect
+            label="Company"
+            value={companyName}
+            onValueChange={setCompanyName}
+            allLabel="All Companies"
+            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+          />
+
+          <FilterSelect
+            label="Product"
+            value={productName}
+            onValueChange={setProductName}
+            allLabel="All Products"
+            options={(products ?? []).map((p) => ({ value: p.productName, label: p.productName }))}
+          />
+        </div>
+      </div>
+
+      <DataTable<AnyRow>
+        title="Production History"
+        rowData={displayRows}
+        columnDefs={columnDefs}
+        loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
+        hideSno
+        showDateFilter
+        defaultFromDate={getMonthStartIso()}
+        defaultToDate={getMonthEndIso()}
+        onDateFilter={dateRange.setRange}
+        isFullWidthRow={isFullWidthRow}
+        fullWidthCellRenderer={renderDetail}
+        getRowHeight={getRowHeight}
+      />
+    </div>
   )
 }

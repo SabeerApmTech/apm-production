@@ -5,6 +5,7 @@ import { DeleteDialog } from "@/shared/DeleteDialog"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
 import { formatLogDateTime, getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
+import { useDateRange } from "@/hooks/useDateRange"
 import type { HandoverTransactionRecord } from "@/types/handoverToStore"
 import {
   useGetHandoverTransactionLogQuery,
@@ -12,11 +13,13 @@ import {
 } from "@/store/services/handoverToStoreApi"
 
 export function HandoverTransactionLog() {
-  const [fromDate, setFromDate] = useState(getMonthStartIso())
-  const [toDate,   setToDate]   = useState(getMonthEndIso())
+  const dateRange = useDateRange()
 
-  const { data, isLoading, isFetching, refetch } = useGetHandoverTransactionLogQuery({ fromDate, toDate })
-  const rows = useMemo(() => data ?? [], [data])
+  const { data, isLoading, isFetching, refetch } = useGetHandoverTransactionLogQuery({
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
+  })
+  const rows = data ?? []
 
   const [deleteHandover] = useDeleteHandoverMutation()
   const [deleteId, setDeleteId] = useState<number | null>(null)
@@ -88,7 +91,7 @@ export function HandoverTransactionLog() {
         showDateFilter
         defaultFromDate={getMonthStartIso()}
         defaultToDate={getMonthEndIso()}
-        onDateFilter={(from, to) => { setFromDate(from); setToDate(to) }}
+        onDateFilter={dateRange.setRange}
       />
       <DeleteDialog
         open={deleteId !== null}

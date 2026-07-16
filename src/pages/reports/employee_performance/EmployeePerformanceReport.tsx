@@ -2,31 +2,25 @@ import { useMemo, useState } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DateRangeFilter } from "@/shared/DateRangeFilter"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { TabSwitcher, type TabItem } from "@/shared/TabSwitcher"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductsQuery, useGetOperationsQuery } from "@/store/services/productApi"
 import { useGetEmployeePerformanceReportQuery } from "@/store/services/employeePerformanceReportApi"
 import type { EmployeePerformanceRecord } from "@/types/employeePerformanceReport"
-import { getMonthEndIso, getMonthStartIso } from "@/utils/date"
+import { useDateRange } from "@/hooks/useDateRange"
 import { PerformanceByOperationChart } from "./PerformanceByOperationChart"
 
 type ViewTab = "chart" | "table"
-
-const ALL = "all"
 
 const VIEW_TABS: TabItem<ViewTab>[] = [
   { key: "chart", label: "Chart View" },
   { key: "table", label: "Table View" },
 ]
 
-function getDefaultDateRange() {
-  return { from: getMonthStartIso(), to: getMonthEndIso() }
-}
-
 export function EmployeePerformanceReport() {
-  const [dateRange, setDateRange] = useState(getDefaultDateRange)
+  const dateRange = useDateRange()
   const [employeeId, setEmployeeId] = useState(ALL)
   const [companyName, setCompanyName] = useState(ALL)
   const [productId, setProductId] = useState(ALL)
@@ -91,61 +85,46 @@ export function EmployeePerformanceReport() {
         <DateRangeFilter
           fromDate={dateRange.from}
           toDate={dateRange.to}
-          onChange={(from, to) => setDateRange({ from, to })}
+          onChange={dateRange.setRange}
         />
 
         <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1 w-40">
-            <span className="text-xs font-medium text-muted-foreground">Operator</span>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger><SelectValue placeholder="All Operators" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All Operators</SelectItem>
-                {(operators ?? []).map((o) => (
-                  <SelectItem key={o.usersId} value={o.employeeId}>{o.employeeName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterSelect
+            label="Operator"
+            value={employeeId}
+            onValueChange={setEmployeeId}
+            allLabel="All Operators"
+            options={(operators ?? []).map((o) => ({ value: o.employeeId, label: o.employeeName }))}
+            className="w-40"
+          />
 
-          <div className="flex flex-col gap-1 w-40">
-            <span className="text-xs font-medium text-muted-foreground">Company</span>
-            <Select value={companyName} onValueChange={setCompanyName}>
-              <SelectTrigger><SelectValue placeholder="All Companies" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All Companies</SelectItem>
-                {(companies ?? []).map((c) => (
-                  <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterSelect
+            label="Company"
+            value={companyName}
+            onValueChange={setCompanyName}
+            allLabel="All Companies"
+            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+            className="w-40"
+          />
 
-          <div className="flex flex-col gap-1 w-40">
-            <span className="text-xs font-medium text-muted-foreground">Product</span>
-            <Select value={productId} onValueChange={handleProductChange}>
-              <SelectTrigger><SelectValue placeholder="All Products" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All Products</SelectItem>
-                {(products ?? []).map((p) => (
-                  <SelectItem key={p.productId} value={String(p.productId)}>{p.productName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterSelect
+            label="Product"
+            value={productId}
+            onValueChange={handleProductChange}
+            allLabel="All Products"
+            options={(products ?? []).map((p) => ({ value: String(p.productId), label: p.productName }))}
+            className="w-40"
+          />
 
-          <div className="flex flex-col gap-1 w-40">
-            <span className="text-xs font-medium text-muted-foreground">Operation</span>
-            <Select value={operationName} onValueChange={setOperationName} disabled={productId === ALL}>
-              <SelectTrigger><SelectValue placeholder="All Operations" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All Operations</SelectItem>
-                {(operations ?? []).map((op) => (
-                  <SelectItem key={op.id} value={op.operationName}>{op.operationName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterSelect
+            label="Operation"
+            value={operationName}
+            onValueChange={setOperationName}
+            allLabel="All Operations"
+            options={(operations ?? []).map((op) => ({ value: op.operationName, label: op.operationName }))}
+            disabled={productId === ALL}
+            className="w-40"
+          />
         </div>
       </div>
 

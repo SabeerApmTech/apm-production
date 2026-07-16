@@ -2,7 +2,9 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Search, SlidersHorizontal, Bell, Ticket as TicketIcon,
-  CalendarClock, CheckCircle2, UserCheck, Package, ArrowLeft, CheckCircle, Clock, Loader2, Check, ArrowUpRight,
+  CalendarClock, Factory, UserPlus, Package, Building2, Store as StoreIcon, Target, PackageCheck,
+  PlayCircle, PauseCircle, StopCircle,
+  ArrowLeft, CheckCircle, Clock, Loader2, Check, ArrowUpRight, Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getCurrentEmployeeId } from "@/utils/auth"
@@ -37,20 +39,80 @@ const TAB_IS_READ: Record<FilterTab, boolean | undefined> = {
   Read: true,
 }
 
+interface NotificationFilters {
+  search: string
+  activeTab: FilterTab
+  categoryFilter: string | null
+}
+
+const DEFAULT_FILTERS: NotificationFilters = { search: "", activeTab: "All", categoryFilter: null }
+
 const EMPTY_NOTIFICATIONS: NotificationItem[] = []
 
-/* ── Icon / color config, keyed by module (case-insensitive) ─────── */
-const MODULE_CFG: Record<string, { bg: string; icon: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  ticket:   { bg: "bg-rose-100 dark:bg-rose-950/40",     icon: "text-rose-500 dark:text-rose-400",     Icon: TicketIcon    },
-  schedule: { bg: "bg-amber-100 dark:bg-amber-950/40",   icon: "text-amber-500 dark:text-amber-400",   Icon: CalendarClock },
-  target:   { bg: "bg-green-100 dark:bg-green-950/40",   icon: "text-green-500 dark:text-green-400",   Icon: CheckCircle2  },
-  rework:   { bg: "bg-purple-100 dark:bg-purple-950/40", icon: "text-purple-500 dark:text-purple-400", Icon: UserCheck     },
-  product:  { bg: "bg-indigo-100 dark:bg-indigo-950/40", icon: "text-indigo-500 dark:text-indigo-400", Icon: Package       },
-}
-const DEFAULT_MODULE_CFG = { bg: "bg-blue-100 dark:bg-blue-950/40", icon: "text-blue-500 dark:text-blue-400", Icon: Bell }
+/* ── Icon / color, derived from notificationType (e.g. "PRODUCTION_STARTED") ───────────────
+   Two independent axes so variety scales with the number of distinct types instead of needing
+   one exact-match entry per type: the glyph comes from whichever subject keyword appears in the
+   type string (PRODUCTION, SCHEDULE, EMPLOYEE, ...), and the color comes from whichever verb
+   keyword appears (STARTED, STOPPED, CREATED, ...). Same subject + different verb (e.g.
+   PRODUCTION_STARTED vs PRODUCTION_STOPPED) then reads as "same kind of event, different
+   outcome" — same icon, different color — instead of everything collapsing to one bell. */
+type IconType = React.ComponentType<{ className?: string }>
 
-function moduleCfg(module: string) {
-  return MODULE_CFG[module.toLowerCase()] ?? DEFAULT_MODULE_CFG
+const SUBJECT_ICON: [keyword: string, Icon: IconType][] = [
+  ["TARGET",     Target],
+  ["PRODUCTION", Factory],
+  ["OPERATION",  Factory],
+  ["SCHEDULE",   CalendarClock],
+  ["HANDOVER",   PackageCheck],
+  ["EMPLOYEE",   UserPlus],
+  ["USER",       UserPlus],
+  ["PRODUCT",    Package],
+  ["COMPANY",    Building2],
+  ["STORE",      StoreIcon],
+  ["TICKET",     TicketIcon],
+]
+
+const VERB_COLOR: [keyword: string, bg: string, icon: string][] = [
+  ["STARTED",   "bg-green-100 dark:bg-green-950/40",  "text-green-500 dark:text-green-400"],
+  ["RESUMED",   "bg-green-100 dark:bg-green-950/40",  "text-green-500 dark:text-green-400"],
+  ["COMPLETED", "bg-green-100 dark:bg-green-950/40",  "text-green-500 dark:text-green-400"],
+  ["ACHIEVED",  "bg-green-100 dark:bg-green-950/40",  "text-green-500 dark:text-green-400"],
+  ["PAUSED",    "bg-amber-100 dark:bg-amber-950/40",  "text-amber-500 dark:text-amber-400"],
+  ["STOPPED",   "bg-red-100 dark:bg-red-950/40",      "text-red-500 dark:text-red-400"],
+  ["DELETED",   "bg-red-100 dark:bg-red-950/40",      "text-red-500 dark:text-red-400"],
+  ["REJECTED",  "bg-red-100 dark:bg-red-950/40",      "text-red-500 dark:text-red-400"],
+  ["CANCELLED", "bg-red-100 dark:bg-red-950/40",      "text-red-500 dark:text-red-400"],
+  ["UPDATED",   "bg-blue-100 dark:bg-blue-950/40",    "text-blue-500 dark:text-blue-400"],
+  ["CREATED",   "bg-indigo-100 dark:bg-indigo-950/40", "text-indigo-500 dark:text-indigo-400"],
+]
+
+const DEFAULT_TYPE_CFG = { bg: "bg-blue-100 dark:bg-blue-950/40", icon: "text-blue-500 dark:text-blue-400", Icon: Bell }
+
+// "PRODUCTION_STARTED" -> PlayCircle overrides the subject icon for the production lifecycle
+// verbs specifically, since Factory alone can't show start/pause/stop at a glance.
+const PRODUCTION_VERB_ICON: Record<string, IconType> = {
+  STARTED: PlayCircle,
+  RESUMED: PlayCircle,
+  PAUSED: PauseCircle,
+  STOPPED: StopCircle,
+}
+
+function typeCfg(notificationType: string) {
+  const key = notificationType.toUpperCase()
+  const subject = SUBJECT_ICON.find(([kw]) => key.includes(kw))
+  const verb = VERB_COLOR.find(([kw]) => key.includes(kw))
+
+  let Icon: IconType = subject?.[1] ?? DEFAULT_TYPE_CFG.Icon
+  if (key.includes("PRODUCTION")) {
+    const verbKey = Object.keys(PRODUCTION_VERB_ICON).find((kw) => key.includes(kw))
+    if (verbKey) Icon = PRODUCTION_VERB_ICON[verbKey]
+  }
+
+  return {
+    bg: verb?.[1] ?? DEFAULT_TYPE_CFG.bg,
+    icon: verb?.[2] ?? DEFAULT_TYPE_CFG.icon,
+    Icon,
+  }
 }
 
 /* ── Date helpers ──────────────────────────────────────────────────── */
@@ -90,7 +152,7 @@ function NotifCard({ notif, selected, onClick }: {
   selected: boolean
   onClick: () => void
 }) {
-  const cfg = moduleCfg(notif.module)
+  const cfg = typeCfg(notif.notificationType)
   return (
     <button
       onClick={onClick}
@@ -113,7 +175,7 @@ function NotifCard({ notif, selected, onClick }: {
               {!notif.isRead && <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.module}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.category}</p>
           <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.message}</p>
         </div>
       </div>
@@ -129,10 +191,10 @@ function NotifDetail({ notif, onBack, onMarkRead, marking, onNavigate }: {
   marking: boolean
   onNavigate?: () => void
 }) {
-  const cfg = moduleCfg(notif.module)
+  const cfg = typeCfg(notif.notificationType)
   const details: { label: string; value: string }[] = [
     { label: "Reference ID", value: notif.referenceId },
-    { label: "Module", value: notif.module },
+    { label: "Category", value: notif.category },
     { label: "Type", value: notif.notificationType },
     { label: "Date & Time", value: formatFullDateTime(notif.createdAt) },
   ]
@@ -157,11 +219,11 @@ function NotifDetail({ notif, onBack, onMarkRead, marking, onNavigate }: {
               {onNavigate && (
                 <button
                   onClick={onNavigate}
-                  aria-label={`Go to ${notif.module}`}
+                  aria-label={`Go to ${notif.category}`}
                   className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-accent transition-colors"
                 >
                   <ArrowUpRight className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Go to {notif.module}</span>
+                  <span className="hidden sm:inline">Go to {notif.category}</span>
                 </button>
               )}
               {!notif.isRead && (
@@ -218,14 +280,13 @@ function NotifDetail({ notif, onBack, onMarkRead, marking, onNavigate }: {
 export function Notifications() {
   const navigate = useNavigate()
   const employeeId = getCurrentEmployeeId()
-  const [search,       setSearch]       = useState("")
-  const [activeTab,    setActiveTab]    = useState<FilterTab>("All")
-  const [moduleFilter, setModuleFilter] = useState<string | null>(null)
+  const [filters, setFilters] = useState<NotificationFilters>(DEFAULT_FILTERS)
+  const { search, activeTab, categoryFilter } = filters
   const [selectedId,   setSelectedId]   = useState<number | null>(null)
   const [clearAllOpen, setClearAllOpen] = useState(false)
 
   const { data, isLoading, isFetching } = useGetNotificationsQuery(
-    { employeeId, isRead: TAB_IS_READ[activeTab], module: moduleFilter ?? undefined },
+    { employeeId, isRead: TAB_IS_READ[activeTab], category: categoryFilter ?? undefined },
     { skip: !employeeId, refetchOnMountOrArgChange: true }
   )
   const { data: allData } = useGetNotificationsQuery(
@@ -233,10 +294,10 @@ export function Notifications() {
     { skip: !employeeId, refetchOnMountOrArgChange: true }
   )
 
-  const availableModules = useMemo(() => {
-    const modules = new Set<string>()
-    for (const n of allData?.notifications ?? []) modules.add(n.module)
-    return Array.from(modules).sort()
+  const availableCategories = useMemo(() => {
+    const categories = new Set<string>()
+    for (const n of allData?.notifications ?? []) categories.add(n.category)
+    return Array.from(categories).sort()
   }, [allData])
   const [markNotificationRead, { isLoading: marking }] = useMarkNotificationReadMutation()
   const [markAllNotificationsRead, { isLoading: markingAll }] = useMarkAllNotificationsReadMutation()
@@ -259,7 +320,7 @@ export function Notifications() {
     return notifications.filter((n) =>
       n.title.toLowerCase().includes(q) ||
       n.message.toLowerCase().includes(q) ||
-      n.module.toLowerCase().includes(q)
+      n.category.toLowerCase().includes(q)
     )
   }, [notifications, search])
 
@@ -325,7 +386,7 @@ export function Notifications() {
               {TABS.map(({ key, label, count }) => (
                 <button
                   key={key}
-                  onClick={() => setActiveTab(key)}
+                  onClick={() => setFilters((f) => ({ ...f, activeTab: key }))}
                   className={cn(
                     "pb-2.5 px-3 text-sm font-medium transition-colors whitespace-nowrap shrink-0",
                     activeTab === key
@@ -366,7 +427,7 @@ export function Notifications() {
                 type="text"
                 placeholder="Search Notification"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
                 className="h-9 w-full rounded-lg border border-border bg-card text-foreground pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
               />
             </div>
@@ -375,28 +436,35 @@ export function Notifications() {
                 <button
                   className={cn(
                     "flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors shrink-0",
-                    moduleFilter
+                    categoryFilter
                       ? "border-blue-300 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
                       : "border-border bg-card text-muted-foreground hover:bg-accent"
                   )}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
-                  {moduleFilter ? moduleFilter : "Filter"}
+                  {categoryFilter ? categoryFilter : "Filter"}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-48">
-                <DropdownMenuItem onSelect={() => setModuleFilter(null)} className="justify-between">
-                  All Modules
-                  {!moduleFilter && <Check className="h-4 w-4" />}
+                <DropdownMenuItem onSelect={() => setFilters((f) => ({ ...f, categoryFilter: null }))} className="justify-between">
+                  All Categories
+                  {!categoryFilter && <Check className="h-4 w-4" />}
                 </DropdownMenuItem>
-                {availableModules.map((module) => (
-                  <DropdownMenuItem key={module} onSelect={() => setModuleFilter(module)} className="justify-between">
-                    {module}
-                    {moduleFilter === module && <Check className="h-4 w-4" />}
+                {availableCategories.map((category) => (
+                  <DropdownMenuItem key={category} onSelect={() => setFilters((f) => ({ ...f, categoryFilter: category }))} className="justify-between">
+                    {category}
+                    {categoryFilter === category && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <button
+              aria-label="Notification Settings"
+              onClick={() => navigate("/notifications/settings")}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shrink-0 transition-colors hover:bg-accent"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
           </div>
 
           {/* Grouped list */}

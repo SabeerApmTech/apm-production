@@ -2,13 +2,13 @@ import { useCallback, useMemo, useState } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DateRangeFilter } from "@/shared/DateRangeFilter"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { TabSwitcher, type TabItem } from "@/shared/TabSwitcher"
 import { useGetProductsQuery } from "@/store/services/productApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductProductionSummaryQuery } from "@/store/services/productWiseReportApi"
 import type { ProductProductionSummaryRecord } from "@/types/productWiseReport"
-import { getMonthEndIso, getMonthStartIso } from "@/utils/date"
+import { useDateRange } from "@/hooks/useDateRange"
 import {
   CompanyDetailCellRenderer, ExpandCell, isFullWidthRow, getRowHeight,
   type CompanyDetailRow,
@@ -18,15 +18,13 @@ import { ProductByCompanyChart } from "./ProductByCompanyChart"
 type AnyRow = ProductProductionSummaryRecord | CompanyDetailRow
 type ViewTab = "chart" | "table"
 
-const ALL = "all"
-
 const VIEW_TABS: TabItem<ViewTab>[] = [
   { key: "chart", label: "Chart View" },
   { key: "table", label: "Table View" },
 ]
 
 export function ProductWiseReport() {
-  const [dateRange, setDateRange] = useState({ from: getMonthStartIso(), to: getMonthEndIso() })
+  const dateRange = useDateRange()
   const [itemCode, setItemCode] = useState(ALL)
   const [companyName, setCompanyName] = useState(ALL)
   const [expandedItemCode, setExpandedItemCode] = useState<string | null>(null)
@@ -41,11 +39,10 @@ export function ProductWiseReport() {
     itemCode: itemCode === ALL ? undefined : itemCode,
   })
 
-  const allRows = useMemo(() => data ?? [], [data])
-
   // The API has no company filter param — filter client-side, narrowing each product's
   // `companies` breakdown (and its producedQty) down to just the selected company.
   const rows = useMemo(() => {
+    const allRows = data ?? []
     if (companyName === ALL) return allRows
     return allRows
       .map((row) => {
@@ -53,7 +50,7 @@ export function ProductWiseReport() {
         return { ...row, companies, producedQty: companies.reduce((sum, c) => sum + c.producedQty, 0) }
       })
       .filter((row) => row.companies.length > 0)
-  }, [allRows, companyName])
+  }, [data, companyName])
 
   const toggleExpand = useCallback((code: string) => {
     setExpandedItemCode((prev) => (prev === code ? null : code))
@@ -103,34 +100,24 @@ export function ProductWiseReport() {
         <DateRangeFilter
           fromDate={dateRange.from}
           toDate={dateRange.to}
-          onChange={(from, to) => setDateRange({ from, to })}
+          onChange={dateRange.setRange}
         />
         <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1 w-48">
-            <span className="text-xs font-medium text-muted-foreground">Product</span>
-            <Select value={itemCode} onValueChange={setItemCode}>
-              <SelectTrigger><SelectValue placeholder="All Products" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All Products</SelectItem>
-                {(products ?? []).map((p) => (
-                  <SelectItem key={p.productId} value={p.itemCode}>{p.productName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterSelect
+            label="Product"
+            value={itemCode}
+            onValueChange={setItemCode}
+            allLabel="All Products"
+            options={(products ?? []).map((p) => ({ value: p.itemCode, label: p.productName }))}
+          />
 
-          <div className="flex flex-col gap-1 w-48">
-            <span className="text-xs font-medium text-muted-foreground">Company</span>
-            <Select value={companyName} onValueChange={setCompanyName}>
-              <SelectTrigger><SelectValue placeholder="All Companies" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All Companies</SelectItem>
-                {(companies ?? []).map((c) => (
-                  <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterSelect
+            label="Company"
+            value={companyName}
+            onValueChange={setCompanyName}
+            allLabel="All Companies"
+            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+          />
         </div>
       </div>
 

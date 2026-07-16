@@ -2,18 +2,16 @@ import { useState, useCallback, useMemo } from "react"
 import type { ColDef, ValueGetterParams } from "ag-grid-community"
 import { ArrowUpDown } from "lucide-react"
 import { DataTable } from "@/shared/DataTable"
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { ScheduleFormDrawer } from "./ScheduleFormDrawer"
 import { DeleteDialog } from "@/shared/DeleteDialog"
+import { ConfirmPriorityDialog } from "@/shared/ConfirmPriorityDialog"
 import { AllocationDialog } from "./AllocationDialog"
 import { PriorityBadge } from "@/shared/renderers/PriorityBadge"
 import { TargetDateCell } from "@/shared/renderers/TargetDateCell"
 import { EditDeleteCell } from "@/shared/renderers/EditDeleteCell"
 import { ActionButtonCell } from "@/shared/renderers/ActionButtonCell"
 import { getAuthUser } from "@/utils/auth"
+import { useSyncedState } from "@/hooks/useSyncedState"
 import { STAFF_ALLOCATION_BUTTON_STYLES, type StaffAllocationStatus } from "@/shared/constants"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import type { PendingScheduleRecord } from "@/types/pendingSchedule"
@@ -26,10 +24,15 @@ import {
 } from "@/store/services/pendingScheduleApi"
 import type { ScheduleFormValues } from "./ScheduleFormDrawer"
 
+// Must be a stable reference, not an inline `?? []` — useSyncedState resets whenever its source
+// argument changes identity, and a fresh `[]` literal computed every render (while `data` is
+// still undefined) would look like a new source on every render, looping forever.
+const EMPTY_SCHEDULES: PendingScheduleRecord[] = []
+
 /* ── Page ───────────────────────────────────────────────── */
 export function PendingSchedules() {
   const { data, isLoading, isFetching, refetch: refetchSchedules } = useGetPendingSchedulesQuery()
-  const schedules = useMemo(() => data ?? [], [data])
+  const schedules = data ?? EMPTY_SCHEDULES
   const { data: companies } = useGetCompaniesQuery()
 
   const [createPendingSchedule] = useCreatePendingScheduleMutation()
@@ -39,12 +42,7 @@ export function PendingSchedules() {
 
   // Drag-to-reorder is staged locally until confirmed, then persisted via update-priority and
   // resynced from the refetched list — this mirrors the fetched list until a drag is in progress.
-  const [prevSchedules, setPrevSchedules] = useState(schedules)
-  const [localSchedules, setLocalSchedules] = useState<PendingScheduleRecord[]>(schedules)
-  if (schedules !== prevSchedules) {
-    setPrevSchedules(schedules)
-    setLocalSchedules(schedules)
-  }
+  const [localSchedules, setLocalSchedules] = useSyncedState(schedules)
 
   const [newOrder, setNewOrder]             = useState<PendingScheduleRecord[] | null>(null)
   const [isDirty, setIsDirty]               = useState(false)
@@ -79,7 +77,7 @@ export function PendingSchedules() {
       }
     }
     setConfirmPriorityOpen(false)
-  }, [newOrder, updatePendingSchedulePriority])
+  }, [newOrder, updatePendingSchedulePriority, setLocalSchedules])
 
   /* ── CRUD ── */
   const handleAdd = useCallback(async (values: ScheduleFormValues) => {
@@ -201,22 +199,11 @@ export function PendingSchedules() {
         toolbarExtra={updatePriorityButton}
       />
 
-      <Dialog open={confirmPriorityOpen} onOpenChange={(o) => { if (!o) setConfirmPriorityOpen(false) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Update Priority Order</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-600 mt-1">
-            Are you sure you want to save the new priority order? This will reassign priority numbers to all schedules.
-          </p>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setConfirmPriorityOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfirmPriority} className="bg-blue-500 hover:bg-blue-600 text-white">
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmPriorityDialog
+        open={confirmPriorityOpen}
+        onClose={() => setConfirmPriorityOpen(false)}
+        onConfirm={handleConfirmPriority}
+      />
 
       <ScheduleFormDrawer
         key={editId ?? "new"}

@@ -15,7 +15,7 @@ import {
 
 export function HandoverPendingList() {
   const { data, isLoading, isFetching, refetch } = useGetHandoverPendingListQuery()
-  const rows = useMemo(() => data ?? [], [data])
+  const rows = data ?? []
 
   const [createHandover] = useCreateHandoverMutation()
   const [dialogRow, setDialogRow] = useState<HandoverPendingRecord | null>(null)

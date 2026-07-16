@@ -1,3 +1,7 @@
+// Shared poll interval for the live-tracking dashboards (Employee Wise, Schedule Wise) — kept
+// in one place so their refresh cadences stay in sync if this ever needs to change.
+export const LIVE_TRACKING_POLL_INTERVAL_MS = 3000
+
 export type PriorityLevel = "High" | "Medium" | "Low"
 
 export const PRIORITY_LEVELS: PriorityLevel[] = ["High", "Medium", "Low"]

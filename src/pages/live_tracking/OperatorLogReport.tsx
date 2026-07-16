@@ -1,11 +1,12 @@
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ChevronLeft, Loader2 } from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import {
   useGetOperatorSchedulesQuery,
   useGetOperatorOperationsQuery,
   useGetOperatorLogReportQuery,
 } from "@/store/services/productionMonitoringApi"
 import { WorkingView } from "@/pages/production_monitoring/WorkingView"
+import { LoadingRow } from "@/shared/LoadingRow"
 
 const POLL_INTERVAL_MS = 3000
 
@@ -54,12 +55,7 @@ export function OperatorLogReport() {
       </p>
 
       <div className="flex flex-1 min-h-0 flex-col">
-        {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading…
-          </div>
-        )}
+        {isLoading && <LoadingRow />}
 
         {!isLoading && (!schedule || !operation) && (
           <p className="text-sm text-muted-foreground">No active work found for this operator.</p>

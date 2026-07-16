@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type { CompanyRecord, CompanyRequest } from "@/types/company"
 
@@ -6,7 +6,7 @@ export const companyApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getCompanies: builder.query<CompanyRecord[], void>({
       query: () => "/Company",
-      transformResponse: (res: ApiResponse<CompanyRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "Company", id: "LIST" }],
     }),
     createCompany: builder.mutation<ApiResponse<CompanyRecord>, CompanyRequest>({

@@ -14,9 +14,12 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Loader2, Trash2, X } from "lucide-react"
+import { GripVertical, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DeleteDialog } from "@/shared/DeleteDialog"
+import { LoadingRow } from "@/shared/LoadingRow"
+import { DangerIconButton } from "@/shared/DangerIconButton"
+import { useSyncedState } from "@/hooks/useSyncedState"
 import type { OperationRow, OperationType } from "@/types/product"
 import {
   useGetOperationsQuery,
@@ -24,6 +27,11 @@ import {
   useDeleteOperationsMutation,
   useReorderOperationsMutation,
 } from "@/store/services/productApi"
+
+// Must be a stable reference, not an inline `?? []` — useSyncedState resets whenever its source
+// argument changes identity, and a fresh `[]` literal computed every render (while `data` is
+// still undefined) would look like a new source on every render, looping forever.
+const EMPTY_OPERATIONS: OperationRow[] = []
 
 interface SortableRowProps {
   op: OperationRow
@@ -89,14 +97,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
 
   // Mirrors the fetched list but updates immediately on drag so reordering feels instant,
   // rather than waiting for the reorder request to round-trip before the row visually moves.
-  // Reset (during render, not an effect) whenever the underlying query result changes.
-  const [prevData, setPrevData] = React.useState(data)
-  const [localOperations, setLocalOperations] = React.useState<OperationRow[]>(data ?? [])
-  if (data !== prevData) {
-    setPrevData(data)
-    setLocalOperations(data ?? [])
-  }
-  const operations = localOperations
+  const [operations, setLocalOperations] = useSyncedState(data ?? EMPTY_OPERATIONS)
 
   React.useEffect(() => {
     if (isAdding) inputRef.current?.focus()
@@ -204,23 +205,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
 
       {/* Toolbar */}
       <div className="flex shrink-0 items-center gap-2 border-b border-gray-100 px-4 py-2">
-        <button
-          onClick={() => setDeleteConfirmOpen(true)}
-          disabled={selectedIds.size === 0}
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-lg border transition-all",
-            selectedIds.size > 0
-              ? "border-red-400 bg-red-500 text-white hover:bg-red-600"
-              : "border-red-200 bg-red-50 text-red-300 cursor-default"
-          )}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-        {selectedIds.size > 0 && (
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 px-1.5 text-xs font-bold text-red-600">
-            {selectedIds.size}
-          </span>
-        )}
+        <DangerIconButton onClick={() => setDeleteConfirmOpen(true)} count={selectedIds.size} size="sm" />
         <div className="flex-1" />
         <button
           onClick={() => setIsAdding(true)}
@@ -287,10 +272,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
         )}
 
         {isLoading && (
-          <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-400">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading operations…
-          </div>
+          <LoadingRow label="Loading operations…" className="justify-center py-12 text-gray-400" />
         )}
 
         {!isLoading && operations.length === 0 && !isAdding && (

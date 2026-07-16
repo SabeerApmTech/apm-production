@@ -1,12 +1,13 @@
 import { useState, useCallback, useMemo } from "react"
 import type { ColDef, ICellRendererParams } from "ag-grid-community"
-import { Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { Switch } from "@/components/ui/switch"
 import { StoreDialog } from "./StoreDialog"
 import { getAuthUser } from "@/utils/auth"
+import { useDialogState } from "@/hooks/useDialogState"
+import { EditActionCell } from "@/shared/renderers"
 import type { StoreRecord } from "@/types/store"
 import {
   useGetStoresQuery,
@@ -14,24 +15,6 @@ import {
   useUpdateStoreMutation,
   useDeleteStoresMutation,
 } from "@/store/services/storeApi"
-
-/* ── Action cell ────────────────────────────────────────── */
-interface ActionCellParams extends ICellRendererParams<StoreRecord> {
-  onEdit?: (id: number) => void
-}
-
-function ActionCell({ data, onEdit }: ActionCellParams) {
-  return (
-    <div className="flex h-full items-center">
-      <button
-        onClick={(e) => { e.stopPropagation(); if (data) onEdit?.(data.storeId) }}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-      >
-        <Pencil className="h-4 w-4" />
-      </button>
-    </div>
-  )
-}
 
 /* ── Active toggle cell ─────────────────────────────────── */
 interface ActiveCellParams extends ICellRendererParams<StoreRecord> {
@@ -54,7 +37,7 @@ function ActiveCell({ data, onToggle, pendingId }: ActiveCellParams) {
 /* ── Page ───────────────────────────────────────────────── */
 export function Store() {
   const { data, isLoading, isFetching, refetch } = useGetStoresQuery()
-  const stores = useMemo(() => data ?? [], [data])
+  const stores = data ?? []
 
   // Add/edit/toggle-active/delete are Supervisor-only.
   const canManage = getAuthUser()?.employeeRole === "SUPERVISOR"
@@ -63,14 +46,9 @@ export function Store() {
   const [updateStore] = useUpdateStoreMutation()
   const [deleteStores] = useDeleteStoresMutation()
 
-  const [dialogOpen, setDialogOpen]   = useState(false)
-  const [editStore, setEditStore]     = useState<StoreRecord | undefined>()
-  const [deleteRows, setDeleteRows]   = useState<StoreRecord[] | null>(null)
-  const [togglingId, setTogglingId]   = useState<number | null>(null)
-
-  const openEditDialog = useCallback((id: number) => {
-    setEditStore(stores.find((s) => s.storeId === id))
-  }, [stores])
+  const dialog = useDialogState<StoreRecord>()
+  const [deleteRows, setDeleteRows] = useState<StoreRecord[] | null>(null)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const closeDelete = useCallback(() => setDeleteRows(null), [])
 
@@ -103,10 +81,12 @@ export function Store() {
   }, [createStore])
 
   const handleEdit = useCallback(async (storeId: number, storeName: string) => {
-    const current = stores.find((s) => s.storeId === storeId)
     const employeeId = getAuthUser()?.employeeId ?? ""
-    await updateStore({ storeId, body: { storeName, isActive: current?.isActive ?? true, employeeId } }).unwrap()
-  }, [stores, updateStore])
+    await updateStore({
+      storeId,
+      body: { storeName, isActive: dialog.editing?.isActive ?? true, employeeId },
+    }).unwrap()
+  }, [updateStore, dialog])
 
   const handleToggle = useCallback(async (row: StoreRecord, next: boolean) => {
     const employeeId = getAuthUser()?.employeeId ?? ""
@@ -132,15 +112,15 @@ export function Store() {
         ? [
             {
               headerName: "Action",
-              cellRenderer: ActionCell,
-              cellRendererParams: { onEdit: openEditDialog },
+              cellRenderer: EditActionCell,
+              cellRendererParams: { onEdit: dialog.openEdit },
               sortable: false,
               maxWidth: 80,
             } satisfies ColDef<StoreRecord>,
           ]
         : []),
     ],
-    [openEditDialog, handleToggle, togglingId, canManage]
+    [dialog, handleToggle, togglingId, canManage]
   )
 
   return (
@@ -152,16 +132,16 @@ export function Store() {
         loading={isLoading}
         onRefresh={refetch}
         refreshing={isFetching}
-        onAdd={canManage ? () => setDialogOpen(true) : undefined}
+        onAdd={canManage ? dialog.openAdd : undefined}
         onDelete={canManage ? requestDelete : undefined}
         checkbox={canManage}
       />
 
       <StoreDialog
-        key={editStore?.storeId ?? "new"}
-        open={dialogOpen || editStore !== undefined}
-        onClose={() => { setDialogOpen(false); setEditStore(undefined) }}
-        store={editStore}
+        key={dialog.editing?.storeId ?? "new"}
+        open={dialog.isOpen}
+        onClose={dialog.close}
+        store={dialog.editing}
         onAdd={handleAdd}
         onEdit={handleEdit}
       />

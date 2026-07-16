@@ -1,24 +1,29 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
-import type { GetNotificationsParams, GetNotificationsResponse, NotificationCounts } from "@/types/notification"
+import type {
+  GetNotificationsParams,
+  GetNotificationsResponse,
+  NotificationCounts,
+  NotificationSetting,
+} from "@/types/notification"
 
 export const notificationApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getNotifications: builder.query<GetNotificationsResponse, GetNotificationsParams>({
-      query: ({ employeeId, isRead, module }) => ({
+      query: ({ employeeId, isRead, category }) => ({
         url: "/notifications",
         params: {
           employeeId,
           ...(isRead !== undefined ? { IsRead: isRead } : {}),
-          ...(module ? { Module: module } : {}),
+          ...(category ? { Category: category } : {}),
         },
       }),
-      transformResponse: (res: ApiResponse<GetNotificationsResponse>) => res.data,
+      transformResponse: unwrap,
       providesTags: ["Notification"],
     }),
     getNotificationCounts: builder.query<NotificationCounts, string>({
       query: (employeeId) => ({ url: "/notifications/counts", params: { employeeId } }),
-      transformResponse: (res: ApiResponse<NotificationCounts>) => res.data,
+      transformResponse: unwrap,
       providesTags: ["Notification"],
     }),
     markNotificationRead: builder.mutation<ApiResponse<null>, number>({
@@ -33,6 +38,19 @@ export const notificationApi = api.injectEndpoints({
       query: (employeeId) => ({ url: "/notifications/clear-all", method: "DELETE", params: { employeeId } }),
       invalidatesTags: ["Notification"],
     }),
+    getNotificationSettings: builder.query<NotificationSetting[], string>({
+      query: (employeeId) => ({ url: "/notifications/settings", params: { employeeId } }),
+      transformResponse: unwrap,
+      providesTags: ["NotificationSettings"],
+    }),
+    updateNotificationSetting: builder.mutation<ApiResponse<null>, { notificationSettingId: number; isActive: boolean }>({
+      query: ({ notificationSettingId, isActive }) => ({
+        url: `/notifications/settings/${notificationSettingId}`,
+        method: "PUT",
+        body: { isActive },
+      }),
+      invalidatesTags: ["NotificationSettings"],
+    }),
   }),
 })
 
@@ -42,4 +60,6 @@ export const {
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
   useClearAllNotificationsMutation,
+  useGetNotificationSettingsQuery,
+  useUpdateNotificationSettingMutation,
 } = notificationApi

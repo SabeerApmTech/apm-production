@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
+import { LoadingRow } from "@/shared/LoadingRow"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import {
   useGetOperationsByScheduleQuery,
@@ -229,17 +230,14 @@ export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialog
             {/* Steps — scrollable */}
             <div className="flex flex-col gap-3 px-6 py-4 overflow-y-auto flex-1 min-h-0">
               {isLoading && (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-400">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading operations…
-                </div>
+                <LoadingRow label="Loading operations…" className="justify-center py-8 text-gray-400" />
               )}
               {!isLoading && (operations ?? []).map((op) => (
                 <div
                   key={op.operationId}
-                  className="flex items-center justify-between rounded-2xl bg-gray-100 px-4 py-3.5 gap-3"
+                  className="flex items-start justify-between rounded-2xl bg-gray-100 px-4 py-3.5 gap-3"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900">
                       <div className="h-3.5 w-3.5 rounded-full border-[3px] border-white" />
                     </div>
@@ -247,7 +245,7 @@ export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialog
                       <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
                         Step {op.sequenceNo}
                       </p>
-                      <p className="truncate text-sm font-semibold text-gray-900">{op.operationName}</p>
+                      <p className="wrap-break-word text-sm font-semibold text-gray-900">{op.operationName}</p>
                       <div className="mt-0.5 flex items-center gap-1">
                         <Users className="h-3.5 w-3.5 text-gray-400" />
                         <span className="text-xs text-gray-500">{op.allocatedOperatorCount} operators</span>

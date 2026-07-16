@@ -87,16 +87,3 @@ export function formatLogDateTime(isoDateTime: string): string {
   const timePart = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
   return `${datePart}\n${timePart}`
 }
-
-/** Short DOB "10-Apr-94" → ISO "1994-04-10" (for HTML date inputs) */
-export function toInputDate(dob: string): string {
-  const months: Record<string, string> = {
-    Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-    May: "05", Jun: "06", Jul: "07", Aug: "08",
-    Sep: "09", Oct: "10", Nov: "11", Dec: "12",
-  }
-  const [d, m, y] = dob.split("-")
-  if (!d || !m || !y || !months[m]) return ""
-  const yr = parseInt(y) > 30 ? `19${y}` : `20${y}`
-  return `${yr}-${months[m]}-${d.padStart(2, "0")}`
-}

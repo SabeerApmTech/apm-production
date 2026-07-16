@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   CreateProductRequest,
@@ -17,7 +17,7 @@ export const productApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getProducts: builder.query<ProductRecord[], void>({
       query: () => "/Product",
-      transformResponse: (res: ApiResponse<ProductRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "Product", id: "LIST" }],
     }),
     createProduct: builder.mutation<ApiResponse<ProductRecord>, CreateProductRequest>({

@@ -4,7 +4,7 @@ import type { RawTransactionLogRecord, TransactionLogRecord } from "@/types/tran
 
 export const transactionLogApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getTransactionLogs: builder.query<TransactionLogRecord[], { fromDate?: string; toDate?: string } | void>({
+    getTransactionLogs: builder.query<TransactionLogRecord[], { fromDate?: string; toDate?: string; scheduleId?: string; companyName?: string; productName?: string } | void>({
       query: (params) => ({ url: "/TransactionLog/transaction-logs", params: params ?? undefined }),
       transformResponse: (res: ApiResponse<RawTransactionLogRecord[]>) =>
         res.data.map((t) => ({ ...t, id: t.transactionLogId })),

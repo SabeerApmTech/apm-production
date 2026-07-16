@@ -9,6 +9,7 @@ import { DeleteDialog } from "@/shared/DeleteDialog"
 import { canManageRole, getAuthUser } from "@/utils/auth"
 import { getApiErrorMessage } from "@/utils/apiError"
 import { fromIsoDate } from "@/utils/date"
+import { useDialogState } from "@/hooks/useDialogState"
 import type { ManagedRole, UserRecord } from "@/types/userManagement"
 import {
   useGetManagersQuery,
@@ -36,15 +37,14 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
   const operators = useGetOperatorsQuery(undefined, { skip: role !== "OPERATOR" })
   const { data, isLoading, isFetching, refetch } =
     role === "MANAGER" ? managers : role === "SUPERVISOR" ? supervisors : operators
-  const rows = useMemo(() => data ?? [], [data])
+  const rows = data ?? []
 
   const [createUser] = useCreateUserMutation()
   const [updateUser] = useUpdateUserMutation()
   const [deleteUsers] = useDeleteUsersMutation()
   const [updateUserStatus] = useUpdateUserStatusMutation()
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editRow, setEditRow] = useState<UserRecord | undefined>()
+  const dialog = useDialogState<UserRecord>()
   const [formError, setFormError] = useState<string | null>(null)
   const [resetRow, setResetRow] = useState<UserRecord | undefined>()
   const [deleteRows, setDeleteRows] = useState<UserRecord[] | null>(null)
@@ -56,18 +56,14 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
   const canResetPassword = canManage && role !== "OPERATOR"
 
   const openAdd = useCallback(() => {
-    setEditRow(undefined)
     setFormError(null)
-    setDrawerOpen(true)
-  }, [])
+    dialog.openAdd()
+  }, [dialog])
 
   const openEdit = useCallback((row: UserRecord) => {
-    setEditRow(row)
     setFormError(null)
-    setDrawerOpen(true)
-  }, [])
-
-  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
+    dialog.openEdit(row)
+  }, [dialog])
 
   const openResetPassword = useCallback((row: UserRecord) => setResetRow(row), [])
   const closeResetPassword = useCallback(() => setResetRow(undefined), [])
@@ -79,9 +75,9 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
     if (!currentUser) return
     setFormError(null)
     try {
-      if (editRow) {
+      if (dialog.editing) {
         await updateUser({
-          employeeId: editRow.employeeId,
+          employeeId: dialog.editing.employeeId,
           role,
           body: {
             employeeName: values.employeeName,
@@ -105,11 +101,11 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
           department: values.department,
         }).unwrap()
       }
-      setDrawerOpen(false)
+      dialog.close()
     } catch (err) {
       setFormError(getApiErrorMessage(err, "Failed to save. Please try again."))
     }
-  }, [editRow, role, createUser, updateUser])
+  }, [dialog, role, createUser, updateUser])
 
   const handleDelete = useCallback(async () => {
     if (!deleteRows?.length) return
@@ -199,14 +195,14 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
       />
 
       <Drawer
-        open={drawerOpen}
-        onClose={closeDrawer}
-        title={editRow ? `Edit ${title}` : `Add ${title}`}
+        open={dialog.isOpen}
+        onClose={dialog.close}
+        title={dialog.editing ? `Edit ${title}` : `Add ${title}`}
       >
         <EmployeeForm
-          row={editRow}
+          row={dialog.editing}
           apiError={formError}
-          onCancel={closeDrawer}
+          onCancel={dialog.close}
           onSubmit={handleSubmit}
         />
       </Drawer>

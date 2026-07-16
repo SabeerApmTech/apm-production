@@ -1,6 +1,7 @@
 export { EmploymentTypeBadge } from "./EmploymentTypeBadge"
 export { ActiveToggle } from "./ActiveToggle"
 export { ActionCell } from "./ActionCell"
+export { EditActionCell } from "./EditActionCell"
 export { PriorityBadge } from "./PriorityBadge"
 export { TargetDateCell } from "./TargetDateCell"
 export { DeleteCell } from "./DeleteCell"

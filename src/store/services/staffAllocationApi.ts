@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   AllocatedStaffMember,
@@ -11,14 +11,14 @@ export const staffAllocationApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getOperationsBySchedule: builder.query<OperationStepRecord[], number>({
       query: (pendingScheduleId) => `/PendingSchedule/get-operations-of-schedule/${pendingScheduleId}`,
-      transformResponse: (res: ApiResponse<OperationStepRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: (_result, _error, pendingScheduleId) => [
         { type: "ScheduleOperations", id: pendingScheduleId },
       ],
     }),
     getAllocatedStaff: builder.query<AllocatedStaffMember[], number>({
       query: (operationId) => `/StaffAllocation/${operationId}`,
-      transformResponse: (res: ApiResponse<AllocatedStaffMember[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: (_result, _error, operationId) => [
         { type: "ScheduleOperations", id: `staff-${operationId}` },
       ],

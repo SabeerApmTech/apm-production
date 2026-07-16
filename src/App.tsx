@@ -26,6 +26,7 @@ const ReworkHandoverToStore  = lazy(() => import("./pages/rework_schedules/hando
 const ReworkTransactionLog   = lazy(() => import("./pages/rework_data/transaction_log/TransactionLog").then(m => ({ default: m.ReworkTransactionLog })));
 const ReworkHistory          = lazy(() => import("./pages/rework_data/rework_history/ReworkHistory").then(m => ({ default: m.ReworkHistory })));
 const Notifications          = lazy(() => import("./pages/notifications/Notifications").then(m => ({ default: m.Notifications })));
+const NotificationSettings   = lazy(() => import("./pages/notifications/NotificationSettings").then(m => ({ default: m.NotificationSettings })));
 const EmployeeWiseLiveTracking  = lazy(() => import("./pages/dashboard/employee_tracking/EmployeeWiseLiveTracking").then(m => ({ default: m.EmployeeWiseLiveTracking })));
 const ScheduleWiseLiveTracking  = lazy(() => import("./pages/dashboard/schedule_tracking/ScheduleWiseLiveTracking").then(m => ({ default: m.ScheduleWiseLiveTracking })));
 const OperatorLogReport      = lazy(() => import("./pages/live_tracking/OperatorLogReport").then(m => ({ default: m.OperatorLogReport })));
@@ -62,7 +63,11 @@ function RoleRedirect() {
 
 function App() {
   return (
-    <BrowserRouter>
+    // useTransitions defaults to true, which wraps route changes in React.startTransition — when
+    // a lazy route's chunk hasn't loaded yet, a transition update suspends *without* showing the
+    // Suspense fallback below, so the URL changes but the old page stays frozen on screen until
+    // the chunk arrives. Opting out makes navigation synchronous so PageSkeleton shows instantly.
+    <BrowserRouter useTransitions={false}>
       <Toaster position="top-right" richColors closeButton />
       <AuthExpiryWatcher />
       <Suspense fallback={<PageSkeleton />}>
@@ -77,10 +82,11 @@ function App() {
             {/* Reached via the "View Detail" link on /live-tracking — read-only view of another operator's current job */}
             <Route path="/live-tracking/log-report" element={<OperatorLogReport />} />
             <Route path="/production-monitoring" element={<ProductionMonitoring />} />
-            <Route path="/notifications" element={<Notifications />} />
 
             {/* Admin-only routes — operators are redirected to /production-monitoring */}
             <Route element={<AdminRoute />}>
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/notifications/settings" element={<NotificationSettings />} />
               <Route path="/user-management/manager" element={<Manager />} />
               <Route path="/user-management/supervisor" element={<Supervisor />} />
               <Route path="/user-management/operator" element={<Operator />} />

@@ -1,6 +1,9 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 import type { BaseQueryFn } from "@reduxjs/toolkit/query/react"
 import { clearAuth, getLoginPath, getToken } from "@/utils/auth"
+import type { ApiResponse } from "@/types/auth"
+
+export const unwrap = <T,>(res: ApiResponse<T>): T => res.data
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "/api",
@@ -31,6 +34,6 @@ const baseQueryWithAuth: BaseQueryFn = async (args, api, extraOptions) => {
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAuth,
-  tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "CompletedSchedule", "HandoverToStore", "Store", "Notification"],
+  tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "CompletedSchedule", "HandoverToStore", "Store", "Notification", "NotificationSettings"],
   endpoints: () => ({}),
 })

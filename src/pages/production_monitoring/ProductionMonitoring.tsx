@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useReducer, useState } from "react"
 import { Navigate } from "react-router-dom"
 import { ChevronLeft } from "lucide-react"
 import { getOperatorUser } from "@/utils/auth"
@@ -9,8 +9,9 @@ import {
   useLazyGetOperatorLogReportQuery,
   useOperatorActionMutation,
 } from "@/store/services/productionMonitoringApi"
-import type { LogReportEntry, OperatorActionRequest, OperatorSchedule } from "@/types/productionMonitoring"
-import type { Operation, Schedule, ScheduleType, ViewStep } from "./types"
+import type { OperatorActionRequest } from "@/types/productionMonitoring"
+import type { Operation, Schedule } from "./types"
+import { flowReducer, initialFlowState } from "./reducer"
 import { ScheduleTypeSelect }  from "./ScheduleTypeSelect"
 import { ScheduleList }        from "./ScheduleList"
 import { OperationCards }      from "./OperationCards"
@@ -22,20 +23,14 @@ export const ProductionMonitoring = () => {
   const operatorUser = getOperatorUser()
   const employeeId = operatorUser?.employeeId ?? ""
 
-  const [view,               setView]               = useState<ViewStep>("loading")
-  const [scheduleType,       setScheduleType]       = useState<ScheduleType | null>(null)
-  const [schedules,          setSchedules]          = useState<OperatorSchedule[]>([])
-  const [selectedSchedule,   setSelectedSchedule]   = useState<Schedule | null>(null)
-  const [operations,         setOperations]         = useState<Operation[]>([])
-  const [selectedOperation,  setSelectedOperation]  = useState<Operation | null>(null)
-  const [logs,               setLogs]               = useState<LogReportEntry[]>([])
-  const [activeHours,        setActiveHours]        = useState("0.00")
-  const [idleHours,          setIdleHours]           = useState("0.00")
-  // True when we jumped straight to "working" because operator-schedules said this operator
-  // is already mid-session — there's no operations list to go "back" to in that case.
-  const [cameFromAutoRoute,  setCameFromAutoRoute]  = useState(false)
-  const [stopOpen,           setStopOpen]           = useState(false)
-  const [pauseOpen,          setPauseOpen]          = useState(false)
+  const [state, dispatch] = useReducer(flowReducer, initialFlowState)
+  const {
+    view, scheduleType, schedules, selectedSchedule, operations,
+    selectedOperation, logs, activeHours, idleHours, cameFromAutoRoute,
+  } = state
+
+  const [stopOpen,  setStopOpen]  = useState(false)
+  const [pauseOpen, setPauseOpen] = useState(false)
 
   const [fetchSchedules]  = useLazyGetOperatorSchedulesQuery()
   const [fetchOperations] = useLazyGetOperatorOperationsQuery()
@@ -44,9 +39,12 @@ export const ProductionMonitoring = () => {
 
   const loadLogReport = async (scheduleId: string, sequenceNo: number) => {
     const report = await fetchLogReport({ employeeId, scheduleId, sequenceNo }, false).unwrap()
-    setLogs(report.logs ?? [])
-    setActiveHours(report.activeHours ?? "0.00")
-    setIdleHours(report.idleHours ?? "0.00")
+    dispatch({
+      type: "LOG_REPORT_LOADED",
+      logs: report.logs ?? [],
+      activeHours: report.activeHours ?? "0.00",
+      idleHours: report.idleHours ?? "0.00",
+    })
   }
 
   // Runs exactly once per mount, and every step explicitly awaits the network response instead
@@ -60,27 +58,19 @@ export const ProductionMonitoring = () => {
       try {
         const data = await fetchSchedules(employeeId, false).unwrap()
         if (cancelled) return
-        setSchedules(data)
 
         const active = data.find(s => s.isWorking)
-        if (active) {
-          setSelectedSchedule(active)
-          setCameFromAutoRoute(true)
-          setView("working")
+        dispatch({ type: "SCHEDULES_LOADED", schedules: data, active })
+        if (!active) return
 
-          const ops = await fetchOperations({ employeeId, scheduleId: active.scheduleId }, false).unwrap()
-          if (cancelled) return
-          setOperations(ops)
+        const ops = await fetchOperations({ employeeId, scheduleId: active.scheduleId }, false).unwrap()
+        if (cancelled) return
+        dispatch({ type: "AUTO_ROUTE_OPERATIONS_LOADED", operations: ops })
 
-          const match = ops.find(o => o.sequenceNo === active.sequenceNo)
-          if (!match) return
-          setSelectedOperation(match)
-          await loadLogReport(active.scheduleId, match.sequenceNo)
-        } else if (data.length === 0) {
-          setView("empty")
-        } else {
-          setView("type")
-        }
+        const match = ops.find(o => o.sequenceNo === active.sequenceNo)
+        if (!match) return
+        dispatch({ type: "AUTO_ROUTE_OPERATION_MATCHED", operation: match })
+        await loadLogReport(active.scheduleId, match.sequenceNo)
       } catch {
         // Toast middleware already surfaced the error.
       }
@@ -98,37 +88,28 @@ export const ProductionMonitoring = () => {
   })
 
   const selectSchedule = async (schedule: Schedule) => {
-    setSelectedSchedule(schedule)
+    dispatch({ type: "SELECT_SCHEDULE_START", schedule })
     try {
       const ops = await fetchOperations({ employeeId, scheduleId: schedule.scheduleId }, false).unwrap()
-      setOperations(ops)
-      setView("operations")
+      dispatch({ type: "SELECT_SCHEDULE_SUCCESS", operations: ops })
     } catch {
-      setSelectedSchedule(null)
+      dispatch({ type: "SELECT_SCHEDULE_FAILED" })
       // Toast middleware already surfaced the error; stay on this view so the user can retry.
     }
   }
 
   const selectOperation = async (schedule: Schedule, operation: Operation) => {
-    setSelectedOperation(operation)
+    dispatch({ type: "SELECT_OPERATION_START", operation })
     try {
       await loadLogReport(schedule.scheduleId, operation.sequenceNo)
-      setView("working")
+      dispatch({ type: "SELECT_OPERATION_SUCCESS" })
     } catch {
-      setSelectedOperation(null)
+      dispatch({ type: "SELECT_OPERATION_FAILED" })
       // Toast middleware already surfaced the error; stay on this view so the user can retry.
     }
   }
 
-  const goBack = () => {
-    if (view === "list") { setView("type"); setScheduleType(null) }
-    else if (view === "operations") { setView("list"); setSelectedSchedule(null); setOperations([]) }
-    else if (view === "working" && !cameFromAutoRoute) {
-      setView("operations")
-      setSelectedOperation(null)
-      setLogs([])
-    }
-  }
+  const goBack = () => dispatch({ type: "GO_BACK" })
   const showBack = view === "list" || view === "operations" || (view === "working" && !cameFromAutoRoute)
 
   const currentEvent = logs.length ? logs[logs.length - 1].logEvent : null
@@ -170,11 +151,7 @@ export const ProductionMonitoring = () => {
     if (!selectedSchedule) return
     try {
       const ops = await fetchOperations({ employeeId, scheduleId: selectedSchedule.scheduleId }, false).unwrap()
-      setOperations(ops)
-      if (selectedOperation) {
-        const match = ops.find(o => o.sequenceNo === selectedOperation.sequenceNo)
-        if (match) setSelectedOperation(match)
-      }
+      dispatch({ type: "OPERATIONS_REFRESHED", operations: ops })
     } catch {
       // Toast middleware already surfaced the error.
     }
@@ -231,7 +208,7 @@ export const ProductionMonitoring = () => {
         )}
 
         {view === "type" && (
-          <ScheduleTypeSelect onSelect={type => { setScheduleType(type); setView("list") }} />
+          <ScheduleTypeSelect onSelect={type => dispatch({ type: "SELECT_TYPE", scheduleType: type })} />
         )}
 
         {view === "list" && scheduleType && (

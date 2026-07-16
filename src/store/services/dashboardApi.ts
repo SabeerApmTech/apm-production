@@ -1,5 +1,4 @@
-import { api } from "../api"
-import type { ApiResponse } from "@/types/auth"
+import { api, unwrap } from "../api"
 import type {
   EmployeeLiveTrackingResponse,
   EmployeeTrackingRow,
@@ -11,21 +10,21 @@ export const dashboardApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getEmployeeLiveTracking: builder.query<EmployeeLiveTrackingResponse, void>({
       query: () => "/Dashboard/employee-wise-live-tracking",
-      transformResponse: (res: ApiResponse<EmployeeLiveTrackingResponse>) => res.data,
+      transformResponse: unwrap,
     }),
     getEmployeeLiveTrackingByStatus: builder.query<EmployeeTrackingRow[], EmployeeTrackingStatus>({
       query: (status) => ({
         url: "/Dashboard/employee-wise-live-tracking-by-status",
         params: { Status: status },
       }),
-      transformResponse: (res: ApiResponse<EmployeeTrackingRow[]>) => res.data,
+      transformResponse: unwrap,
     }),
     getScheduleLiveTracking: builder.query<ScheduleLiveTrackingResponse, string>({
       query: (scheduleId) => ({
         url: "/Dashboard/schedule-wise-live-tracking",
         params: { ScheduleId: scheduleId },
       }),
-      transformResponse: (res: ApiResponse<ScheduleLiveTrackingResponse>) => res.data,
+      transformResponse: unwrap,
     }),
   }),
 })

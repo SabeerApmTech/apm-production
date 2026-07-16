@@ -1,4 +1,3 @@
-import { useMemo } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { useGetDepartmentSummaryQuery } from "@/store/services/departmentReportApi"
@@ -14,7 +13,7 @@ const columnDefs: ColDef<DepartmentSummaryRecord>[] = [
 
 export function Department() {
   const { data, isLoading, isFetching, refetch } = useGetDepartmentSummaryQuery()
-  const rowData = useMemo(() => data ?? [], [data])
+  const rowData = data ?? []
 
   return (
     <DataTable<DepartmentSummaryRecord>

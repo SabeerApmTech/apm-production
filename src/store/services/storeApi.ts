@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import { getAuthUser } from "@/utils/auth"
 import type { ApiResponse } from "@/types/auth"
 import type { StoreRecord, StoreRequest, StoreUpdateRequest } from "@/types/store"
@@ -7,7 +7,7 @@ export const storeApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getStores: builder.query<StoreRecord[], void>({
       query: () => "/store",
-      transformResponse: (res: ApiResponse<StoreRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "Store", id: "LIST" }],
     }),
     createStore: builder.mutation<ApiResponse<StoreRecord>, StoreRequest>({

@@ -1,5 +1,4 @@
-import { api } from "../api"
-import type { ApiResponse } from "@/types/auth"
+import { api, unwrap } from "../api"
 import type {
   EmployeePerformanceRecord,
   EmployeePerformanceReportParams,
@@ -20,7 +19,7 @@ export const employeePerformanceReportApi = api.injectEndpoints({
         if (params?.operationName) query.OperationName = params.operationName
         return { url: "/reports/employee-performance-report", params: query }
       },
-      transformResponse: (res: ApiResponse<EmployeePerformanceRecord[]>) => res.data,
+      transformResponse: unwrap,
     }),
   }),
 })

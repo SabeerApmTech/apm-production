@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
-import { ChevronRight, ChevronDown, Loader2 } from "lucide-react"
+import { ChevronRight, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LoadingRow } from "@/shared/LoadingRow"
 import {
   useGetProductionHistoryOperationsQuery,
   useGetProductionHistoryLogsQuery,
@@ -41,11 +42,7 @@ function LogsPanel({ scheduleId, sequenceNo }: LogsPanelProps) {
   const { data, isLoading } = useGetProductionHistoryLogsQuery({ scheduleId, sequenceNo })
 
   if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 py-3 pl-10 text-sm text-gray-500">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading logs…
-      </div>
-    )
+    return <LoadingRow label="Loading logs…" className="py-3 pl-10 text-gray-500" />
   }
 
   if (!data?.length) {
@@ -122,9 +119,7 @@ export function ScheduleOperationsDetail({ scheduleId, onHeightChange }: Schedul
   return (
     <div ref={containerRef} className="max-h-105 overflow-y-auto bg-gray-50 border-t border-b border-gray-200 px-6 py-3">
       {isLoading ? (
-        <div className="flex items-center gap-2 py-3 text-sm text-gray-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading operations…
-        </div>
+        <LoadingRow label="Loading operations…" className="py-3 text-gray-500" />
       ) : !data?.length ? (
         <div className="py-3 text-sm text-gray-500">No operations recorded for this schedule.</div>
       ) : (

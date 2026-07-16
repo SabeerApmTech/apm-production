@@ -1,12 +1,11 @@
-import { api } from "../api"
-import type { ApiResponse } from "@/types/auth"
+import { api, unwrap } from "../api"
 import type { CompletedScheduleRecord } from "@/types/completedSchedule"
 
 export const completedScheduleApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getCompletedSchedules: builder.query<CompletedScheduleRecord[], { fromDate?: string; toDate?: string } | void>({
       query: (params) => ({ url: "/CompletedSchedule", params: params ?? undefined }),
-      transformResponse: (res: ApiResponse<CompletedScheduleRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "CompletedSchedule", id: "LIST" }],
     }),
   }),

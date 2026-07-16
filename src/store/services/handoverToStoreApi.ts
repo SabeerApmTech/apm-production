@@ -1,4 +1,4 @@
-import { api } from "../api"
+import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   CreateHandoverRequest,
@@ -10,7 +10,7 @@ export const handoverToStoreApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getHandoverPendingList: builder.query<HandoverPendingRecord[], void>({
       query: () => "/HandoverToStore/HandoverPendingList",
-      transformResponse: (res: ApiResponse<HandoverPendingRecord[]>) => res.data,
+      transformResponse: unwrap,
       providesTags: [{ type: "HandoverToStore", id: "PENDING_LIST" }],
     }),
     getHandoverTransactionLog: builder.query<HandoverTransactionRecord[], { fromDate?: string; toDate?: string }>({
