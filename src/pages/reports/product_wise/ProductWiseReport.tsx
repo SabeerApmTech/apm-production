@@ -39,6 +39,32 @@ export function ProductWiseReport() {
     itemCode: itemCode === ALL ? undefined : itemCode,
   })
 
+  // There's no company-product master mapping in this app, but each summary row already carries
+  // its own per-company breakdown — so an itemCode-unfiltered fetch of the same summary is enough
+  // to derive both dropdowns' cross-filtered options. Reuses the main query's cache entry whenever
+  // no product is selected yet.
+  const { data: allSummary } = useGetProductProductionSummaryQuery({
+    fromDate: dateRange.from || undefined,
+    toDate: dateRange.to || undefined,
+  })
+
+  const productOptions = useMemo(() => {
+    if (companyName === ALL) return products ?? []
+    const codesForCompany = new Set(
+      (allSummary ?? [])
+        .filter((row) => row.companies.some((c) => c.companyName === companyName))
+        .map((row) => row.itemCode)
+    )
+    return (products ?? []).filter((p) => codesForCompany.has(p.itemCode))
+  }, [products, companyName, allSummary])
+
+  const companyOptions = useMemo(() => {
+    if (itemCode === ALL) return companies ?? []
+    const row = (allSummary ?? []).find((r) => r.itemCode === itemCode)
+    const namesForProduct = new Set((row?.companies ?? []).map((c) => c.companyName))
+    return (companies ?? []).filter((c) => namesForProduct.has(c.companyName))
+  }, [companies, itemCode, allSummary])
+
   // The API has no company filter param — filter client-side, narrowing each product's
   // `companies` breakdown (and its producedQty) down to just the selected company.
   const rows = useMemo(() => {
@@ -108,7 +134,7 @@ export function ProductWiseReport() {
             value={itemCode}
             onValueChange={setItemCode}
             allLabel="All Products"
-            options={(products ?? []).map((p) => ({ value: p.itemCode, label: p.productName }))}
+            options={productOptions.map((p) => ({ value: p.itemCode, label: p.productName }))}
           />
 
           <FilterSelect
@@ -116,7 +142,7 @@ export function ProductWiseReport() {
             value={companyName}
             onValueChange={setCompanyName}
             allLabel="All Companies"
-            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+            options={companyOptions.map((c) => ({ value: c.companyName, label: c.companyName }))}
           />
         </div>
       </div>

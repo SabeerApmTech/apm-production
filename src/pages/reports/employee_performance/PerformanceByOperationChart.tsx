@@ -42,6 +42,7 @@ export function PerformanceByOperationChart({ data }: Props) {
       backgroundColor: categoricalColor(i, theme),
       borderRadius: 4,
       maxBarThickness: 36,
+      stack: "operations",
     }))
 
     return { labels: employeeOrder.map((id) => employeeLabel.get(id) ?? id), datasets }
@@ -69,11 +70,13 @@ export function PerformanceByOperationChart({ data }: Props) {
       },
       scales: {
         x: {
+          stacked: true,
           grid: { display: false },
           ticks: { color: chrome.tick },
           border: { color: chrome.axis },
         },
         y: {
+          stacked: true,
           beginAtZero: true,
           grid: { color: chrome.grid },
           ticks: { color: chrome.tick },

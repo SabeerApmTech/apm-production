@@ -25,6 +25,31 @@ export function ProductionHistory() {
   const { data: companies } = useGetCompaniesQuery()
   const { data: products } = useGetProductsQuery()
 
+  // There's no company-product master mapping in this app — the history rows are the only place
+  // that link the two — so derive each dropdown's options from rows scoped by the *other* filter
+  // alone. Company and Product thus mutually narrow each other's options and can never end up
+  // pointing at a combination the other doesn't have.
+  const { data: companyRows } = useGetProductionHistoryQuery(
+    { fromDate: dateRange.from || undefined, toDate: dateRange.to || undefined, companyName: companyName === ALL ? undefined : companyName },
+    { skip: companyName === ALL }
+  )
+  const { data: productRows } = useGetProductionHistoryQuery(
+    { fromDate: dateRange.from || undefined, toDate: dateRange.to || undefined, productName: productName === ALL ? undefined : productName },
+    { skip: productName === ALL }
+  )
+
+  const productOptions = useMemo(() => {
+    if (companyName === ALL) return products ?? []
+    const namesForCompany = new Set((companyRows ?? []).map((r) => r.productName))
+    return (products ?? []).filter((p) => namesForCompany.has(p.productName))
+  }, [products, companyName, companyRows])
+
+  const companyOptions = useMemo(() => {
+    if (productName === ALL) return companies ?? []
+    const namesForProduct = new Set((productRows ?? []).map((r) => r.companyName))
+    return (companies ?? []).filter((c) => namesForProduct.has(c.companyName))
+  }, [companies, productName, productRows])
+
   // Operations/logs load lazily inside the detail panel, so its natural height isn't known up
   // front — ScheduleOperationsDetail measures itself and reports back here; resetRowHeights() then
   // makes the grid re-query getRowHeight so the row grows/shrinks to fit instead of leaving gaps.
@@ -103,7 +128,7 @@ export function ProductionHistory() {
             value={companyName}
             onValueChange={setCompanyName}
             allLabel="All Companies"
-            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+            options={companyOptions.map((c) => ({ value: c.companyName, label: c.companyName }))}
           />
 
           <FilterSelect
@@ -111,7 +136,7 @@ export function ProductionHistory() {
             value={productName}
             onValueChange={setProductName}
             allLabel="All Products"
-            options={(products ?? []).map((p) => ({ value: p.productName, label: p.productName }))}
+            options={productOptions.map((p) => ({ value: p.productName, label: p.productName }))}
           />
         </div>
       </div>

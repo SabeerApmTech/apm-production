@@ -43,12 +43,38 @@ export function TransactionLog() {
     productName: selectedProductName,
   })
 
+  // There's no company-product master mapping in this app — logs are the only place that link
+  // the two — so derive each dropdown's options from logs scoped by the *other* filter alone.
+  const { data: companyLogs } = useGetTransactionLogsQuery(
+    { fromDate: dateRange.from, toDate: dateRange.to, companyName: companyName === ALL ? undefined : companyName },
+    { skip: companyName === ALL }
+  )
+  const { data: productLogs } = useGetTransactionLogsQuery(
+    { fromDate: dateRange.from, toDate: dateRange.to, productName: selectedProductName },
+    { skip: productId === ALL }
+  )
+
+  const productOptions = useMemo(() => {
+    if (companyName === ALL) return products ?? []
+    const namesForCompany = new Set((companyLogs ?? []).map((r) => r.productName))
+    return (products ?? []).filter((p) => namesForCompany.has(p.productName))
+  }, [products, companyName, companyLogs])
+
+  const companyOptions = useMemo(() => {
+    if (productId === ALL) return companies ?? []
+    const namesForProduct = new Set((productLogs ?? []).map((r) => r.companyName))
+    return (companies ?? []).filter((c) => namesForProduct.has(c.companyName))
+  }, [companies, productId, productLogs])
+
   // The API has no operation filter param — filter client-side by the selected operation's name.
   const rows = useMemo(() => {
     const all = data ?? []
     return operationName === ALL ? all : all.filter((r) => r.operationName === operationName)
   }, [data, operationName])
 
+  // Company and Product mutually narrow each other's dropdown options above, so neither can end
+  // up pointing at a combination the other doesn't have — only Operation (a one-way dependent
+  // of Product, not narrowed itself) needs an explicit reset here.
   function handleProductChange(value: string) {
     setProductId(value)
     setOperationName(ALL)
@@ -123,7 +149,7 @@ export function TransactionLog() {
             value={companyName}
             onValueChange={setCompanyName}
             allLabel="All Companies"
-            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+            options={companyOptions.map((c) => ({ value: c.companyName, label: c.companyName }))}
           />
 
           <FilterSelect
@@ -131,7 +157,7 @@ export function TransactionLog() {
             value={productId}
             onValueChange={handleProductChange}
             allLabel="All Products"
-            options={(products ?? []).map((p) => ({ value: String(p.productId), label: p.productName }))}
+            options={productOptions.map((p) => ({ value: String(p.productId), label: p.productName }))}
           />
 
           <FilterSelect

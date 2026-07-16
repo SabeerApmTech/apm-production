@@ -49,6 +49,48 @@ export function EmployeePerformanceReport() {
     [products, productId]
   )
 
+  // There's no company-product master mapping in this app, and the report API only filters by
+  // employeeId/companyName/operationName server-side (no product param) — so pull one
+  // employee/company/operation-unfiltered row set (just the date range) and derive every
+  // dropdown's options from it by applying whichever of the *other* filters are active.
+  const { data: allRows } = useGetEmployeePerformanceReportQuery({
+    fromDate: dateRange.from || undefined,
+    toDate: dateRange.to || undefined,
+  })
+
+  const productOptions = useMemo(() => {
+    if (companyName === ALL && employeeId === ALL) return products ?? []
+    const relevant = (allRows ?? []).filter(
+      (r) =>
+        (companyName === ALL || r.companyName === companyName) &&
+        (employeeId === ALL || r.employeeId === employeeId)
+    )
+    const names = new Set(relevant.map((r) => r.productName))
+    return (products ?? []).filter((p) => names.has(p.productName))
+  }, [products, companyName, employeeId, allRows])
+
+  const companyOptions = useMemo(() => {
+    if (!selectedProductName && employeeId === ALL) return companies ?? []
+    const relevant = (allRows ?? []).filter(
+      (r) =>
+        (!selectedProductName || r.productName === selectedProductName) &&
+        (employeeId === ALL || r.employeeId === employeeId)
+    )
+    const names = new Set(relevant.map((r) => r.companyName))
+    return (companies ?? []).filter((c) => names.has(c.companyName))
+  }, [companies, selectedProductName, employeeId, allRows])
+
+  const operatorOptions = useMemo(() => {
+    if (companyName === ALL && !selectedProductName) return operators ?? []
+    const relevant = (allRows ?? []).filter(
+      (r) =>
+        (companyName === ALL || r.companyName === companyName) &&
+        (!selectedProductName || r.productName === selectedProductName)
+    )
+    const ids = new Set(relevant.map((r) => r.employeeId))
+    return (operators ?? []).filter((o) => ids.has(o.employeeId))
+  }, [operators, companyName, selectedProductName, allRows])
+
   // The API returns rows grouped by whatever order employees were created in — sort alphabetically
   // by name so both the chart's employee axis and the table's default order read A→Z.
   const rowData = useMemo(
@@ -79,6 +121,22 @@ export function EmployeePerformanceReport() {
     setOperationName(ALL)
   }
 
+  // Operator isn't itself narrowed by Company/Product, so switching operators can leave an
+  // already-selected Company/Product pointing at something this operator never worked on —
+  // drop those (using the already-loaded, unfiltered `allRows`) rather than leave a stale filter.
+  function handleEmployeeChange(value: string) {
+    setEmployeeId(value)
+    if (value === ALL) return
+    const rowsForEmployee = (allRows ?? []).filter((r) => r.employeeId === value)
+    if (companyName !== ALL && !rowsForEmployee.some((r) => r.companyName === companyName)) {
+      setCompanyName(ALL)
+    }
+    if (productId !== ALL && !rowsForEmployee.some((r) => r.productName === selectedProductName)) {
+      setProductId(ALL)
+      setOperationName(ALL)
+    }
+  }
+
   return (
     <div className="flex flex-1 min-h-0 flex-col gap-4">
       <div className="shrink-0 flex flex-col gap-3">
@@ -92,9 +150,9 @@ export function EmployeePerformanceReport() {
           <FilterSelect
             label="Operator"
             value={employeeId}
-            onValueChange={setEmployeeId}
+            onValueChange={handleEmployeeChange}
             allLabel="All Operators"
-            options={(operators ?? []).map((o) => ({ value: o.employeeId, label: o.employeeName }))}
+            options={operatorOptions.map((o) => ({ value: o.employeeId, label: o.employeeName }))}
             className="w-40"
           />
 
@@ -103,7 +161,7 @@ export function EmployeePerformanceReport() {
             value={companyName}
             onValueChange={setCompanyName}
             allLabel="All Companies"
-            options={(companies ?? []).map((c) => ({ value: c.companyName, label: c.companyName }))}
+            options={companyOptions.map((c) => ({ value: c.companyName, label: c.companyName }))}
             className="w-40"
           />
 
@@ -112,7 +170,7 @@ export function EmployeePerformanceReport() {
             value={productId}
             onValueChange={handleProductChange}
             allLabel="All Products"
-            options={(products ?? []).map((p) => ({ value: String(p.productId), label: p.productName }))}
+            options={productOptions.map((p) => ({ value: String(p.productId), label: p.productName }))}
             className="w-40"
           />
 
