@@ -34,6 +34,12 @@ const baseQueryWithAuth: BaseQueryFn = async (args, api, extraOptions) => {
 export const api = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAuth,
+  // Without this, remounting a query subscriber (e.g. navigating back to a page) just serves
+  // whatever's already cached instead of hitting the server again — fine for data that's only
+  // ever invalidated by our own mutations, but wrong here since other users/operators can change
+  // the same records in the background. Refetch on every mount so revisiting a page always shows
+  // current data; per-query `pollingInterval`s (live tracking, etc.) are unaffected by this.
+  refetchOnMountOrArgChange: true,
   tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ReworkTransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "ReworkMonitoringLog", "CompletedSchedule", "ReworkCompletedSchedule", "HandoverToStore", "ReworkHandoverToStore", "Store", "Notification", "NotificationSettings", "ReworkSchedule", "ReworkScheduleOperations"],
   endpoints: () => ({}),
 })
