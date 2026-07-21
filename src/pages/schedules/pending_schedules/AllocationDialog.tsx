@@ -16,7 +16,13 @@ import {
   useLazyGetLastAssignedTeamQuery,
   useAllocateStaffMutation,
 } from "@/store/services/staffAllocationApi"
-import type { OperationStepRecord } from "@/types/staffAllocation"
+import type { AllocatedStaffMember, OperationStepRecord } from "@/types/staffAllocation"
+
+// A sentinel distinct from any real query result (undefined while loading, or an array once
+// fetched) — seeding the "previous value" tracker with this instead of the query's own first
+// value forces the pre-select sync to run on mount even when the cache is already warm (e.g.
+// reopening right after a save), instead of mistaking "already equal to itself" for "unchanged".
+const UNSET = Symbol("unset")
 
 /* ── Manage Team view (rendered inside the same dialog, not a separate one) ── */
 interface ManageTeamViewProps {
@@ -37,7 +43,7 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
   // Pre-select whoever is already allocated to this operation when the view opens, without an
   // effect — adjusting state during render avoids the extra post-mount render pass a useEffect
   // would cost here. "Fetch Last Assigned Team" below fully replaces this selection with its own result.
-  const [prevAllocatedStaff, setPrevAllocatedStaff] = useState(allocatedStaff)
+  const [prevAllocatedStaff, setPrevAllocatedStaff] = useState<AllocatedStaffMember[] | undefined | typeof UNSET>(UNSET)
   if (allocatedStaff !== prevAllocatedStaff) {
     setPrevAllocatedStaff(allocatedStaff)
     if (allocatedStaff) {
