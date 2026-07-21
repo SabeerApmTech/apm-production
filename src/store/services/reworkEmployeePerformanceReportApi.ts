@@ -4,9 +4,9 @@ import type {
   EmployeePerformanceReportParams,
 } from "@/types/employeePerformanceReport"
 
-export const employeePerformanceReportApi = api.injectEndpoints({
+export const reworkEmployeePerformanceReportApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getEmployeePerformanceReport: builder.query<
+    getReworkEmployeePerformanceReport: builder.query<
       EmployeePerformanceRecord[],
       EmployeePerformanceReportParams | void
     >({
@@ -17,11 +17,11 @@ export const employeePerformanceReportApi = api.injectEndpoints({
         if (params?.employeeId) query.EmployeeId = params.employeeId
         if (params?.companyName) query.CompanyName = params.companyName
         if (params?.operationName) query.OperationName = params.operationName
-        return { url: "/reports/employee-production-report", params: query }
+        return { url: "/reports/rework-employee-performance-report", params: query }
       },
       transformResponse: unwrap,
     }),
   }),
 })
 
-export const { useGetEmployeePerformanceReportQuery } = employeePerformanceReportApi
+export const { useGetReworkEmployeePerformanceReportQuery } = reworkEmployeePerformanceReportApi

@@ -4,7 +4,7 @@ import type { DepartmentSummaryRecord } from "@/types/departmentReport"
 export const departmentReportApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getDepartmentSummary: builder.query<DepartmentSummaryRecord[], void>({
-      query: () => "/reports/departments",
+      query: () => "/departments",
       transformResponse: unwrap,
     }),
   }),

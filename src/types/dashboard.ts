@@ -55,3 +55,12 @@ export interface ScheduleLiveTrackingResponse {
   header: ScheduleTrackingHeader
   operations: ScheduleOperationRow[]
 }
+
+/** Wire shape from GET /api/Dashboard/schedules — the schedule picker options for Schedule Wise
+ * Live Tracking, spanning both production and rework schedules. */
+export interface DashboardScheduleOption {
+  scheduleId: string
+  companyName: string
+  productName: string
+  scheduleType: "PRODUCTION" | "REWORK"
+}

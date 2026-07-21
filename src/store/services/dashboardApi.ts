@@ -1,5 +1,6 @@
 import { api, unwrap } from "../api"
 import type {
+  DashboardScheduleOption,
   EmployeeLiveTrackingResponse,
   EmployeeTrackingRow,
   EmployeeTrackingStatus,
@@ -26,6 +27,10 @@ export const dashboardApi = api.injectEndpoints({
       }),
       transformResponse: unwrap,
     }),
+    getDashboardSchedules: builder.query<DashboardScheduleOption[], void>({
+      query: () => "/Dashboard/schedules",
+      transformResponse: unwrap,
+    }),
   }),
 })
 
@@ -33,4 +38,5 @@ export const {
   useGetEmployeeLiveTrackingQuery,
   useGetEmployeeLiveTrackingByStatusQuery,
   useGetScheduleLiveTrackingQuery,
+  useGetDashboardSchedulesQuery,
 } = dashboardApi

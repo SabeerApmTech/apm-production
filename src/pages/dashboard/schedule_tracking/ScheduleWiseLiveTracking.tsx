@@ -3,8 +3,7 @@ import { useSearchParams } from "react-router-dom"
 import { Box, Building2, BarChart2, Factory, Clock, TrendingUp, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
-import { useGetPendingSchedulesQuery } from "@/store/services/pendingScheduleApi"
-import { useGetScheduleLiveTrackingQuery } from "@/store/services/dashboardApi"
+import { useGetDashboardSchedulesQuery, useGetScheduleLiveTrackingQuery } from "@/store/services/dashboardApi"
 import { LoadingRow } from "@/shared/LoadingRow"
 import { StatCard } from "@/shared/StatCard"
 import { LIVE_TRACKING_POLL_INTERVAL_MS } from "@/shared/constants"
@@ -34,8 +33,10 @@ export function ScheduleWiseLiveTracking() {
   const [searchParams] = useSearchParams()
   const [selectedScheduleId, setSelectedScheduleId] = useState(() => searchParams.get("scheduleId") ?? "")
 
-  const { data: schedules } = useGetPendingSchedulesQuery()
+  const { data: schedules } = useGetDashboardSchedulesQuery()
   const scheduleOptions = schedules ?? []
+  const productionOptions = scheduleOptions.filter((s) => s.scheduleType === "PRODUCTION")
+  const reworkOptions = scheduleOptions.filter((s) => s.scheduleType === "REWORK")
   const effectiveScheduleId = selectedScheduleId || scheduleOptions[0]?.scheduleId || ""
 
   const { data: tracking, isLoading } = useGetScheduleLiveTrackingQuery(effectiveScheduleId, {
@@ -58,13 +59,28 @@ export function ScheduleWiseLiveTracking() {
             <select
               value={effectiveScheduleId}
               onChange={(e) => setSelectedScheduleId(e.target.value)}
-              className="h-10 rounded-xl border-2 border-border bg-card px-3 pr-8 text-sm font-semibold text-foreground shadow-sm outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors"
+              disabled={scheduleOptions.length === 0}
+              className="h-10 rounded-xl border-2 border-border bg-card px-3 pr-8 text-sm font-semibold text-foreground shadow-sm outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {scheduleOptions.map((s) => (
-                <option key={s.scheduleId} value={s.scheduleId}>
-                  {s.scheduleId} - {s.productName}
-                </option>
-              ))}
+              {scheduleOptions.length === 0 && <option value="">No Schedules</option>}
+              {productionOptions.length > 0 && (
+                <optgroup label="Production">
+                  {productionOptions.map((s) => (
+                    <option key={s.scheduleId} value={s.scheduleId}>
+                      {s.scheduleId} - {s.productName}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {reworkOptions.length > 0 && (
+                <optgroup label="Rework">
+                  {reworkOptions.map((s) => (
+                    <option key={s.scheduleId} value={s.scheduleId}>
+                      {s.scheduleId} - {s.productName}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
           <div className="flex flex-1 items-stretch gap-0 overflow-hidden rounded-xl border-2 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 sm:ml-3">

@@ -33,6 +33,8 @@ const OperatorLogReport      = lazy(() => import("./pages/live_tracking/Operator
 const ProductionMonitoring   = lazy(() => import("./pages/production_monitoring/ProductionMonitoring").then(m => ({ default: m.ProductionMonitoring })));
 const EmployeePerformanceReport = lazy(() => import("./pages/reports/employee_performance/EmployeePerformanceReport").then(m => ({ default: m.EmployeePerformanceReport })));
 const ProductWiseReport      = lazy(() => import("./pages/reports/product_wise/ProductWiseReport").then(m => ({ default: m.ProductWiseReport })));
+const ReworkEmployeePerformanceReport = lazy(() => import("./pages/rework_reports/employee_performance/EmployeePerformanceReport").then(m => ({ default: m.ReworkEmployeePerformanceReport })));
+const ReworkProductWiseReport = lazy(() => import("./pages/rework_reports/product_wise/ProductWiseReport").then(m => ({ default: m.ReworkProductWiseReport })));
 
 /** Redirects unauthenticated users (or admins whose token has expired) to /login */
 function ProtectedLayout() {
@@ -106,6 +108,8 @@ function App() {
               <Route path="/rework-data/history" element={<ReworkHistory />} />
               <Route path="/reports/employee-performance" element={<EmployeePerformanceReport />} />
               <Route path="/reports/product-wise" element={<ProductWiseReport />} />
+              <Route path="/rework/reports/employee-performance" element={<ReworkEmployeePerformanceReport />} />
+              <Route path="/rework/reports/product-wise" element={<ReworkProductWiseReport />} />
               <Route path="/dashboard/employee-wise-tracking" element={<EmployeeWiseLiveTracking />} />
               <Route path="/dashboard/schedule-wise-tracking" element={<ScheduleWiseLiveTracking />} />
             </Route>

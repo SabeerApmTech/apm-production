@@ -4,9 +4,9 @@ import type {
   ProductProductionSummaryRecord,
 } from "@/types/productWiseReport"
 
-export const productWiseReportApi = api.injectEndpoints({
+export const reworkProductWiseReportApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getProductProductionSummary: builder.query<
+    getReworkProductProductionSummary: builder.query<
       ProductProductionSummaryRecord[],
       ProductProductionSummaryParams | void
     >({
@@ -15,11 +15,11 @@ export const productWiseReportApi = api.injectEndpoints({
         if (params?.fromDate) query.FromDate = params.fromDate
         if (params?.toDate) query.ToDate = params.toDate
         if (params?.itemCode) query.ItemCode = params.itemCode
-        return { url: "/reports/product-production-report", params: query }
+        return { url: "/reports/product-rework-report", params: query }
       },
       transformResponse: unwrap,
     }),
   }),
 })
 
-export const { useGetProductProductionSummaryQuery } = productWiseReportApi
+export const { useGetReworkProductProductionSummaryQuery } = reworkProductWiseReportApi

@@ -8,6 +8,7 @@ import {
   Monitor,
   Navigation,
   FileBarChart,
+  FileChartColumn,
   RotateCcw,
   Recycle,
 } from "lucide-react"
@@ -52,6 +53,14 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    label: "Production Report",
+    icon: FileBarChart,
+    children: [
+      { label: "Employee Performance Report", path: "/reports/employee-performance" },
+      { label: "Product Wise Report", path: "/reports/product-wise" },
+    ],
+  },
+  {
     label: "Rework Schedules",
     icon: RotateCcw,
     children: [
@@ -70,11 +79,11 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    label: "Report",
-    icon: FileBarChart,
+    label: "Rework Report",
+    icon: FileChartColumn,
     children: [
-      { label: "Employee Performance Report", path: "/reports/employee-performance" },
-      { label: "Product Wise Report", path: "/reports/product-wise" },
+      { label: "Employee Performance Report", path: "/rework/reports/employee-performance" },
+      { label: "Product Wise Report", path: "/rework/reports/product-wise" },
     ],
   },
   {
