@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Box, Building2, BarChart2, Factory, Clock, TrendingUp } from "lucide-react"
+import { Box, Building2, BarChart2, Factory, Clock, TrendingUp, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
 import { useGetPendingSchedulesQuery } from "@/store/services/pendingScheduleApi"
@@ -80,8 +80,16 @@ export function ScheduleWiseLiveTracking() {
           </div>
         </div>
 
-        {/* Stat mini cards — horizontal scroll on mobile */}
-        <div className="flex gap-3 overflow-x-auto pb-1 sm:overflow-visible">
+        {/* Stat mini cards — horizontal scroll on mobile, wraps into a grid from sm+ so seven
+            cards get real width instead of being flex-squeezed into one row and truncating. */}
+        <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-4">
+          <StatCard size="sm" label="Schedule Type" value={header ? (header.scheduleType === "REWORK" ? "Rework" : "Production") : "-"}
+            icon={header?.scheduleType === "REWORK"
+              ? <RotateCcw className="h-4.5 w-4.5 text-purple-600 dark:text-purple-400" />
+              : <Factory className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />}
+            iconBg={header?.scheduleType === "REWORK" ? "bg-purple-100 dark:bg-purple-950/40" : "bg-blue-100 dark:bg-blue-950/40"}
+            borderColor={header?.scheduleType === "REWORK" ? "border-purple-200 dark:border-purple-900" : "border-blue-200 dark:border-blue-900"}
+            textColor={header?.scheduleType === "REWORK" ? "text-purple-700 dark:text-purple-400" : "text-blue-700 dark:text-blue-400"} />
           <StatCard size="sm" label="Product" value={header?.productName ?? "-"}
             icon={<Box className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />}
             iconBg="bg-blue-100 dark:bg-blue-950/40" borderColor="border-blue-200 dark:border-blue-900" textColor="text-blue-700 dark:text-blue-400" />

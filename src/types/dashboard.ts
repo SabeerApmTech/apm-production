@@ -19,6 +19,9 @@ export interface EmployeeTrackingRow {
   targetQty: number
   producedQty: number
   progressPercentage: number
+  /** An employee working both a production and a rework schedule appears as two separate rows,
+   * one per type, sharing the same employeeId — this is what tells them apart. */
+  scheduleType: "PRODUCTION" | "REWORK"
 }
 
 export interface EmployeeLiveTrackingResponse {
@@ -36,6 +39,7 @@ export interface ScheduleTrackingHeader {
   producedQty: number
   pendingQty: number
   averageOutputPerDay: number
+  scheduleType: "PRODUCTION" | "REWORK"
 }
 
 export interface ScheduleOperationRow {

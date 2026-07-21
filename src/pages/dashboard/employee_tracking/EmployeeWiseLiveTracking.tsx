@@ -37,20 +37,31 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   )
 }
 
+const SCHEDULE_TYPE_STYLES: Record<EmployeeTrackingRow["scheduleType"], string> = {
+  PRODUCTION: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900",
+  REWORK:     "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900",
+}
+
 function EmployeeCard({ emp, onViewDetail }: { emp: EmployeeTrackingRow; onViewDetail: () => void }) {
   const cfg = STATUS_CFG[emp.status] ?? STATUS_CFG.NOTSTARTED
   return (
     <div className="flex flex-col gap-0 overflow-hidden rounded-2xl border border-amber-200 bg-card shadow-sm dark:border-amber-900/60">
-      {/* Card header */}
-      <div className="flex items-center justify-between border-b border-amber-100 bg-amber-50/60 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/10">
-        <div>
-          <p className="text-sm font-bold text-foreground">{emp.employeeName}</p>
+      {/* Card header — top-aligned so a long employee name wrapping to two lines doesn't drag
+          the badges down or sideways with it; they stay pinned to the top-right on every card. */}
+      <div className="flex items-start justify-between gap-2 border-b border-amber-100 bg-amber-50/60 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/10">
+        <div className="min-w-0">
+          <p className="text-sm font-bold leading-snug text-foreground">{emp.employeeName}</p>
           <p className="text-xs text-muted-foreground">ID: {emp.employeeId}</p>
         </div>
-        <span className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold", cfg.badge, cfg.text)}>
-          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", cfg.dot)} />
-          {cfg.label}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", SCHEDULE_TYPE_STYLES[emp.scheduleType])}>
+            {emp.scheduleType === "REWORK" ? "Rework" : "Production"}
+          </span>
+          <span className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold", cfg.badge, cfg.text)}>
+            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", cfg.dot)} />
+            {cfg.label}
+          </span>
+        </div>
       </div>
 
       {/* Card body */}
@@ -185,7 +196,9 @@ export function EmployeeWiseLiveTracking() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {employees.map((emp) => (
-              <EmployeeCard key={emp.employeeId} emp={emp} onViewDetail={() => viewDetail(emp)} />
+              // An employee working both a production and rework schedule shows up as two rows
+              // sharing the same employeeId, so the key needs the schedule to stay unique.
+              <EmployeeCard key={`${emp.employeeId}-${emp.scheduleType}-${emp.scheduleId}`} emp={emp} onViewDetail={() => viewDetail(emp)} />
             ))}
             {employees.length === 0 && (
               <p className="col-span-full py-12 text-center text-sm text-muted-foreground">No employees found</p>
