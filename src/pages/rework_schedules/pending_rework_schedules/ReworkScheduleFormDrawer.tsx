@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -16,54 +17,83 @@ import {
 import { Drawer } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
 import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
-import { COMPANIES, PRODUCTS, PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
-import type { ReworkScheduleRow } from "./PendingReworkSchedules"
+import { getAuthUser } from "@/utils/auth"
+import { PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
+import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import { useGetProductsQuery } from "@/store/services/productApi"
+import type { ReworkPendingScheduleRecord, ReworkType } from "@/types/reworkSchedule"
 
+// Managers raise Customer Service / Rework From Store; every other role that can reach this
+// drawer (Supervisor) is locked to Inhouse Rework — the two lists are mutually exclusive.
+const MANAGER_REWORK_TYPES: { value: ReworkType; label: string }[] = [
+  { value: "CustomerService", label: "Customer Service" },
+  { value: "ReworkFromStore", label: "Rework From Store" },
+]
+const NON_MANAGER_REWORK_TYPES: { value: ReworkType; label: string }[] = [
+  { value: "InhouseRework", label: "Inhouse Rework" },
+]
+
+/* ── Schema ─────────────────────────────────────────────── */
 const schema = z.object({
   reworkScheduleDate: z.string().min(1, "Rework schedule date is required")
     .refine((val) => !val || val >= getTodayIso(), "Rework schedule date cannot be in the past"),
-  company:            z.string().min(1, "Company is required"),
-  product:            z.string().min(1, "Product is required"),
-  noOfOperations:     z.coerce.number({ error: "Required" }).min(1, "Min 1"),
-  targetQty:          z.coerce.number({ error: "Required" }).min(1, "Min 1"),
-  targetDate:         z.string().min(1, "Target date is required")
+  reworkType:     z.enum(["CustomerService", "ReworkFromStore", "InhouseRework"], { error: "Select a rework type" }),
+  companyName:    z.string().min(1, "Company is required"),
+  productName:    z.string().min(1, "Product is required"),
+  targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
+  targetDate:     z.string().min(1, "Target date is required")
     .refine((val) => !val || val >= getTodayIso(), "Target date cannot be in the past"),
-  priorityLevel:      z.enum(["High", "Medium", "Low"], { error: "Select a priority" }),
+  priorityLevel:  z.enum(["High", "Medium", "Low"], { error: "Select a priority" }),
 })
 
 export type ReworkScheduleFormValues = z.infer<typeof schema>
 
-interface Props {
+/* ── Component ──────────────────────────────────────────── */
+interface ReworkScheduleFormDrawerProps {
   open: boolean
   onClose: () => void
-  schedule?: ReworkScheduleRow
+  schedule?: ReworkPendingScheduleRecord
   onSubmit: (data: ReworkScheduleFormValues) => Promise<void> | void
 }
 
-export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: onExternalSubmit }: Props) {
+export function ReworkScheduleFormDrawer({
+  open,
+  onClose,
+  schedule,
+  onSubmit: onExternalSubmit,
+}: ReworkScheduleFormDrawerProps) {
   const isEdit = Boolean(schedule)
+  // Only Managers may raise Customer Service / Rework From Store — every other role that can
+  // reach this drawer (Supervisor) is locked to Inhouse Rework.
+  const isManager = getAuthUser()?.employeeRole === "MANAGER"
+
+  const { data: companies } = useGetCompaniesQuery()
+  const { data: products } = useGetProductsQuery()
 
   const form = useForm<ReworkScheduleFormValues>({
     resolver: zodResolver(schema) as Resolver<ReworkScheduleFormValues>,
     defaultValues: schedule
       ? {
           reworkScheduleDate: toIsoDate(schedule.reworkScheduleDate),
-          company:            schedule.company,
-          product:            schedule.product,
-          noOfOperations:     schedule.noOfOperations,
+          reworkType:         schedule.reworkType,
+          companyName:        schedule.companyName,
+          productName:        schedule.productName,
           targetQty:          schedule.targetQty,
           targetDate:         toIsoDate(schedule.targetDate),
           priorityLevel:      schedule.priorityLevel,
         }
       : {
-          reworkScheduleDate: "", company: "", product: "",
-          noOfOperations: undefined as unknown as number,
-          targetQty:      undefined as unknown as number,
+          reworkScheduleDate: "", companyName: "", productName: "",
+          reworkType: isManager ? undefined : "InhouseRework",
+          targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
         },
   })
 
   const { isSubmitting } = form.formState
+  const [selectedProductName, setSelectedProductName] = useState(schedule?.productName ?? "")
+  const selectedProduct = (products ?? []).find((p) => p.productName === selectedProductName)
+  const noOfOperations = isEdit ? schedule?.noOfOperations : selectedProduct?.reworkOperationCount
 
   async function handleSubmit(data: ReworkScheduleFormValues) {
     await onExternalSubmit(data)
@@ -81,6 +111,7 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-5">
 
+          {/* Rework Schedule Date */}
           <FormField control={form.control} name="reworkScheduleDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Rework Schedule Date</FormLabel>
@@ -89,8 +120,27 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
             </FormItem>
           )} />
 
+          {/* Rework Type — only Managers may pick Customer Service / Rework From Store; every other role is locked to Inhouse Rework */}
+          <FormField control={form.control} name="reworkType" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rework Type</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange} disabled={isEdit || !isManager}>
+                <FormControl>
+                  <SelectTrigger><SelectValue placeholder="Select rework type" /></SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(isManager ? MANAGER_REWORK_TYPES : NON_MANAGER_REWORK_TYPES).map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          {/* Company + Product */}
           <div className="grid grid-cols-2 gap-4">
-            <FormField control={form.control} name="company" render={({ field }) => (
+            <FormField control={form.control} name="companyName" render={({ field }) => (
               <FormItem>
                 <FormLabel>Company</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
@@ -98,22 +148,30 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
                     <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {COMPANIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {(companies ?? []).map((c) => (
+                      <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="product" render={({ field }) => (
+            <FormField control={form.control} name="productName" render={({ field }) => (
               <FormItem>
                 <FormLabel>Product</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
+                <Select
+                  value={field.value}
+                  onValueChange={(v) => { field.onChange(v); setSelectedProductName(v) }}
+                  disabled={isEdit}
+                >
                   <FormControl>
                     <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {(products ?? []).map((p) => (
+                      <SelectItem key={p.productId} value={p.productName}>{p.productName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -121,16 +179,12 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
             )} />
           </div>
 
+          {/* No of Operations + Target Qty */}
           <div className="grid grid-cols-2 gap-4">
-            <FormField control={form.control} name="noOfOperations" render={({ field }) => (
-              <FormItem>
-                <FormLabel>No of Operations</FormLabel>
-                <FormControl>
-                  <Input type="number" min={1} placeholder="e.g. 10" {...field} disabled />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <div className="flex flex-col gap-1.5">
+              <Label>No of Operations</Label>
+              <Input type="number" value={noOfOperations ?? ""} disabled />
+            </div>
 
             <FormField control={form.control} name="targetQty" render={({ field }) => (
               <FormItem>
@@ -143,6 +197,7 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
             )} />
           </div>
 
+          {/* Target Date */}
           <FormField control={form.control} name="targetDate" render={({ field }) => (
             <FormItem>
               <FormLabel>Target Date</FormLabel>
@@ -151,11 +206,16 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
             </FormItem>
           )} />
 
+          {/* Priority Level */}
           <FormField control={form.control} name="priorityLevel" render={({ field }) => (
             <FormItem>
               <FormLabel>Priority Level</FormLabel>
               <FormControl>
-                <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-6 pt-1">
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="flex gap-6 pt-1"
+                >
                   {PRIORITY_LEVELS.map((opt) => (
                     <div key={opt} className="flex items-center gap-2">
                       <RadioGroupItem value={opt} id={`priorityLevel-${opt}`} />
@@ -180,7 +240,9 @@ export function ReworkScheduleFormDrawer({ open, onClose, schedule, onSubmit: on
               disabled={isSubmitting}
               className="min-w-24 bg-blue-500 hover:bg-blue-600 text-white"
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? "Update" : "Submit"}
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isEdit ? "Update" : "Submit"}
             </Button>
           </div>
         </form>

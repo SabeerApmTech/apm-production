@@ -1,7 +1,8 @@
 /**
- * Wire shape from GET /api/ProductionMonitoring/operator-schedules — the operator's allotted
- * pending schedules. `scheduleType` isn't sent by the backend yet (defaults to "PRODUCTION" until
- * it is); when `isWorking` is true, `sequenceNo` identifies the operation currently in progress.
+ * Wire shape from GET /api/Production/operator-production-schedules (and its Rework counterpart,
+ * /api/Rework/operator-rework-schedules) — the operator's allotted pending schedules. `isWorking`
+ * can only be true for one schedule across both endpoints combined; when it is, `sequenceNo`
+ * identifies the operation currently in progress.
  */
 export interface OperatorSchedule {
   pendingScheduleId: number
@@ -19,7 +20,7 @@ export interface OperatorSchedule {
   sequenceNo?: number
 }
 
-/** Wire shape from GET /api/ProductionMonitoring/operator-operations — sequenceNo represents the step number. */
+/** Wire shape from GET /api/Production/operator-production-operations (or /api/Rework/operator-rework-operations) — sequenceNo represents the step number. */
 export interface OperationRecord {
   operationId: number
   sequenceNo: number
@@ -40,7 +41,7 @@ export interface LogReportEntry {
   remarks: string | null
 }
 
-/** Wire shape from GET /api/ProductionMonitoring/operator-log-report. */
+/** Wire shape from GET /api/Production/operator-production-log-report (or /api/Rework/operator-rework-log-report). */
 export interface LogReportResponse {
   activeHours: string
   idleHours: string

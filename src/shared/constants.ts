@@ -18,9 +18,6 @@ export const PRIORITY_TEXT_STYLES: Record<PriorityLevel, string> = {
   Low:    "text-green-600 dark:text-green-400",
 }
 
-export const COMPANIES = ["Lakshika", "Kingstrack", "ABC"]
-export const PRODUCTS  = ["AIS 140 Standard", "Dashcam", "CCTV"]
-
 export type StaffAllocationStatus = "FullyAlloted" | "PartiallyAlloted" | "NoneAlloted"
 
 export const STAFF_ALLOCATION_BUTTON_STYLES: Record<StaffAllocationStatus, string> = {

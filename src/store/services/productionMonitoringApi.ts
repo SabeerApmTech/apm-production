@@ -11,15 +11,15 @@ import type {
 export const productionMonitoringApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getOperatorSchedules: builder.query<OperatorSchedule[], string>({
-      query: (employeeId) => ({ url: "/ProductionMonitoring/operator-schedules", params: { employeeId } }),
+      query: (employeeId) => ({ url: "/Production/operator-production-schedules", params: { employeeId } }),
       transformResponse: unwrap,
     }),
     getOperatorOperations: builder.query<OperationRecord[], { employeeId: string; scheduleId: string }>({
-      query: (params) => ({ url: "/ProductionMonitoring/operator-operations", params }),
+      query: (params) => ({ url: "/Production/operator-production-operations", params }),
       transformResponse: unwrap,
     }),
     getOperatorLogReport: builder.query<LogReportResponse, { employeeId: string; scheduleId: string; sequenceNo: number }>({
-      query: (params) => ({ url: "/ProductionMonitoring/operator-log-report", params }),
+      query: (params) => ({ url: "/Production/operator-production-log-report", params }),
       // The backend returns a bare `[]` instead of the {activeHours, idleHours, logs} shape
       // when there are no logs yet — normalize that here so callers only ever see one shape.
       transformResponse: (res: ApiResponse<RawLogReportResponse>) =>
@@ -29,7 +29,7 @@ export const productionMonitoringApi = api.injectEndpoints({
       ],
     }),
     operatorAction: builder.mutation<ApiResponse<null>, OperatorActionRequest>({
-      query: (body) => ({ url: "/ProductionMonitoring/operator-action", method: "POST", body }),
+      query: (body) => ({ url: "/Production/operator-production-action", method: "POST", body }),
       invalidatesTags: (_result, _error, { scheduleId, sequenceNo }) => [
         { type: "ProductionMonitoringLog", id: `${scheduleId}:${sequenceNo}` },
       ],

@@ -18,9 +18,13 @@ export function StoreDialog({ open, onClose, store, onAdd, onEdit }: StoreDialog
   const [storeName, setStoreName]     = React.useState(store?.storeName ?? "")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  React.useEffect(() => {
+  // Resets the form field whenever the dialog (re)opens, without an effect — adjusting state
+  // during render avoids the extra post-mount render pass a useEffect would cost here.
+  const [prevOpen, setPrevOpen] = React.useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) setStoreName(store?.storeName ?? "")
-  }, [open, store])
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

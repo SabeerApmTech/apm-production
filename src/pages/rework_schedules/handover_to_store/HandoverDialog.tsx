@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
@@ -8,53 +8,66 @@ import { Label } from "@/components/ui/label"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-
-export interface ReworkHandoverPendingRow {
-  id: number
-  reworkScheduleId: string
-  company: string
-  product: string
-  targetQty: number
-  deliveredQty: number
-  pendingQty: number
-  readyToMove: number
-}
+import { useGetStoresQuery } from "@/store/services/storeApi"
+import type { ReworkHandoverPendingRecord } from "@/types/reworkHandoverToStore"
 
 export interface ReworkHandoverFormData {
-  storeLocation: string
+  storeName: string
   receivedBy: string
   handoverQty: number
   remarks: string
 }
 
-interface Props {
+interface HandoverDialogProps {
   open: boolean
   onClose: () => void
-  row: ReworkHandoverPendingRow | null
-  onConfirm: (rowId: number, data: ReworkHandoverFormData) => void
+  row: ReworkHandoverPendingRecord | null
+  onConfirm: (data: ReworkHandoverFormData) => Promise<void>
 }
 
-const STORE_LOCATIONS = ["Main Store", "Sub Store A", "Sub Store B", "Warehouse 1"]
+export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialogProps) {
+  const { data: storesData } = useGetStoresQuery()
+  const stores = useMemo(() => (storesData ?? []).filter((s) => s.isActive), [storesData])
 
-export function HandoverDialog({ open, onClose, row, onConfirm }: Props) {
-  const [storeLocation, setStoreLocation] = useState("Main Store")
-  const [receivedBy,    setReceivedBy]    = useState("")
-  const [handoverQty,   setHandoverQty]   = useState("")
-  const [remarks,       setRemarks]       = useState("")
+  const [storeName, setStoreName]     = useState("")
+  const [receivedBy, setReceivedBy]   = useState("")
+  const [handoverQty, setHandoverQty] = useState("")
+  const [remarks, setRemarks]         = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
+  // Reset the form whenever the dialog opens (covers both reopening after a Cancel and
+  // reopening for a different pending row), without an effect — adjusting state during render
+  // avoids the extra post-mount render pass a useEffect would cost here.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
-      setStoreLocation("Main Store")
+      setStoreName("")
       setReceivedBy("")
       setHandoverQty("")
       setRemarks("")
     }
-  }, [open, row])
+  }
 
-  function handleConfirm() {
-    if (!row) return
-    onConfirm(row.id, { storeLocation, receivedBy, handoverQty: Number(handoverQty), remarks })
-    onClose()
+  // Defaults to the first active store once the list loads, until the user picks one explicitly —
+  // derived at render time instead of synced into state via an effect.
+  const effectiveStoreName = storeName || stores[0]?.storeName || ""
+
+  const qty = Number(handoverQty)
+  const qtyExceedsReady = handoverQty !== "" && row !== null && qty > row.readyToMove
+  const isValid = effectiveStoreName.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
+
+  async function handleConfirm() {
+    if (!row || !isValid) return
+    setIsSubmitting(true)
+    try {
+      await onConfirm({ storeName: effectiveStoreName, receivedBy, handoverQty: Number(handoverQty), remarks })
+      onClose()
+    } catch {
+      // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!row) return null
@@ -74,7 +87,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: Props) {
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Product</p>
-            <p className="font-semibold text-gray-800">{row.product}</p>
+            <p className="font-semibold text-gray-800">{row.productName}</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Ready To Move Qty</p>
@@ -85,21 +98,39 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: Props) {
         {/* Form fields */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Store Location</Label>
-            <Select value={storeLocation} onValueChange={setStoreLocation}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label className="text-sm font-semibold text-gray-700">Store Name <span className="text-red-500">*</span></Label>
+            <Select value={effectiveStoreName} onValueChange={setStoreName}>
+              <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
               <SelectContent>
-                {STORE_LOCATIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {stores.map((s) => (
+                  <SelectItem key={s.storeId} value={s.storeName}>{s.storeName}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Received By</Label>
-            <Input placeholder="Enter Received By" value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} />
+            <Label className="text-sm font-semibold text-gray-700">Received By <span className="text-red-500">*</span></Label>
+            <Input
+              placeholder="Enter Received By"
+              value={receivedBy}
+              onChange={(e) => setReceivedBy(e.target.value)}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Handover Qty</Label>
-            <Input type="number" placeholder="Enter Handover Qty" value={handoverQty} onChange={(e) => setHandoverQty(e.target.value)} />
+            <Label className="text-sm font-semibold text-gray-700">Handover Qty <span className="text-red-500">*</span></Label>
+            <Input
+              type="number"
+              min={1}
+              max={row.readyToMove}
+              placeholder="Enter Handover Qty"
+              value={handoverQty}
+              onChange={(e) => setHandoverQty(e.target.value)}
+              aria-invalid={qtyExceedsReady}
+              className={qtyExceedsReady ? "border-red-400 focus-visible:ring-red-200" : undefined}
+            />
+            {qtyExceedsReady && (
+              <p className="text-xs text-red-500">Cannot exceed Ready To Move Qty ({row.readyToMove}).</p>
+            )}
           </div>
         </div>
 
@@ -118,10 +149,10 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: Props) {
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
           <Button
             onClick={handleConfirm}
-            disabled={!receivedBy || !handoverQty}
+            disabled={isSubmitting || !isValid}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Confirm Handover
+            {isSubmitting ? "Saving..." : "Confirm Handover"}
           </Button>
         </DialogFooter>
       </DialogContent>

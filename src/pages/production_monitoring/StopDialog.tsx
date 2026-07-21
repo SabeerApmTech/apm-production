@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,11 +24,15 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "" })
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
+  // Resets the form whenever the dialog (re)opens, without an effect — adjusting state during
+  // render avoids the extra post-mount render pass a useEffect would cost here.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setForm({ successQty: targetReached ? "0" : "", rejectedQty: "", remarks: "" })
     }
-  }, [open, targetReached])
+  }
 
   const handleSave = async () => {
     setSubmitting(true)

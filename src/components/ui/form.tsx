@@ -143,7 +143,6 @@ function FormMessage({ className, children, ...props }: React.ComponentProps<"p"
 }
 
 export {
-  useFormField,
   Form,
   FormItem,
   FormLabel,

@@ -28,10 +28,15 @@ export function Drawer({
     let timerId: ReturnType<typeof setTimeout>
 
     if (open) {
-      setMounted(true)
-      frameId = requestAnimationFrame(() => setVisible(true))
+      // Deferred a frame so mounting the panel and flipping it visible stay two separate
+      // commits — otherwise the browser never paints the pre-transition (translate-x-full)
+      // state and the slide-in animation doesn't run.
+      frameId = requestAnimationFrame(() => {
+        setMounted(true)
+        frameId = requestAnimationFrame(() => setVisible(true))
+      })
     } else {
-      setVisible(false)
+      frameId = requestAnimationFrame(() => setVisible(false))
       timerId = setTimeout(() => setMounted(false), 300)
     }
 

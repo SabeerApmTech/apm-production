@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
@@ -35,31 +35,33 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
   const [remarks, setRemarks]         = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (!storeName && stores.length) setStoreName(stores[0].storeName)
-  }, [stores, storeName])
-
   // Reset the form whenever the dialog opens (covers both reopening after a Cancel and
-  // reopening for a different pending row) — storeName is left blank so the effect above
-  // re-derives it once stores are loaded.
-  useEffect(() => {
+  // reopening for a different pending row), without an effect — adjusting state during render
+  // avoids the extra post-mount render pass a useEffect would cost here.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setStoreName("")
       setReceivedBy("")
       setHandoverQty("")
       setRemarks("")
     }
-  }, [open, row])
+  }
+
+  // Defaults to the first active store once the list loads, until the user picks one explicitly —
+  // derived at render time instead of synced into state via an effect.
+  const effectiveStoreName = storeName || stores[0]?.storeName || ""
 
   const qty = Number(handoverQty)
   const qtyExceedsReady = handoverQty !== "" && row !== null && qty > row.readyToMove
-  const isValid = storeName.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
+  const isValid = effectiveStoreName.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
 
   async function handleConfirm() {
     if (!row || !isValid) return
     setIsSubmitting(true)
     try {
-      await onConfirm({ storeName, receivedBy, handoverQty: Number(handoverQty), remarks })
+      await onConfirm({ storeName: effectiveStoreName, receivedBy, handoverQty: Number(handoverQty), remarks })
       onClose()
     } catch {
       // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
@@ -97,7 +99,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
           <div className="flex flex-col gap-1.5">
             <Label className="text-sm font-semibold text-gray-700">Store Name <span className="text-red-500">*</span></Label>
-            <Select value={storeName} onValueChange={setStoreName}>
+            <Select value={effectiveStoreName} onValueChange={setStoreName}>
               <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
               <SelectContent>
                 {stores.map((s) => (

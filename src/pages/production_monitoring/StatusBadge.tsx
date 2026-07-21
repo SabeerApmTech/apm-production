@@ -10,13 +10,6 @@ const CONFIG: Record<LogEvent, { dot: string; text: string; label: string }> = {
   STOP:   { dot: "bg-red-500",   text: "text-red-500 dark:text-red-400",     label: "Stopped" },
 }
 
-export const LOG_EVENT_LABELS: Record<LogEvent, string> = {
-  START: CONFIG.START.label,
-  RESUME: CONFIG.RESUME.label,
-  PAUSE: CONFIG.PAUSE.label,
-  STOP: CONFIG.STOP.label,
-}
-
 export function StatusBadge({ logEvent }: { logEvent: LogEvent | null }) {
   if (logEvent === null) return <span className="text-muted-foreground text-xs">—</span>
   const c = CONFIG[logEvent]

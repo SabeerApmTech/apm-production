@@ -25,12 +25,16 @@ export function AddProductDialog({
   const [productName, setProductName] = React.useState(product?.productName ?? "")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  React.useEffect(() => {
+  // Resets the form fields whenever the dialog (re)opens, without an effect — adjusting state
+  // during render avoids the extra post-mount render pass a useEffect would cost here.
+  const [prevOpen, setPrevOpen] = React.useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setItemCode(product?.itemCode ?? "")
       setProductName(product?.productName ?? "")
     }
-  }, [open, product])
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

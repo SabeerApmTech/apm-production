@@ -1,20 +1,23 @@
 import productionSchedulesImg from "@/assets/production_schedules.png"
-// import reworkSchedulesImg from "@/assets/rework_schedules.png"
+import reworkSchedulesImg from "@/assets/rework_schedules.png"
 import type { ScheduleType } from "./types"
 
 const TYPES: { type: ScheduleType; label: string; img: string }[] = [
   { type: "production", label: "Production Schedules", img: productionSchedulesImg },
-  // { type: "rework",     label: "Rework Schedules",     img: reworkSchedulesImg     },
+  { type: "rework",     label: "Rework Schedules",     img: reworkSchedulesImg     },
 ]
 
 interface Props {
   onSelect: (type: ScheduleType) => void
+  /** Only types with at least one allotted schedule are shown. */
+  availableTypes: ScheduleType[]
 }
 
-export function ScheduleTypeSelect({ onSelect }: Props) {
+export function ScheduleTypeSelect({ onSelect, availableTypes }: Props) {
+  const types = TYPES.filter(t => availableTypes.includes(t.type))
   return (
-    <div className="grid grid-cols-1 gap-4 max-w-xs">
-      {TYPES.map(({ type, label, img }) => (
+    <div className="grid grid-cols-2 gap-4 max-w-md">
+      {types.map(({ type, label, img }) => (
         <button
           key={type}
           onClick={() => onSelect(type)}

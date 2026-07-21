@@ -1,170 +1,181 @@
 import { useState, useCallback, useMemo } from "react"
-import type { ColDef } from "ag-grid-community"
+import type { ColDef, ValueGetterParams } from "ag-grid-community"
 import { ArrowUpDown } from "lucide-react"
 import { DataTable } from "@/shared/DataTable"
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { DeleteDialog } from "@/shared/DeleteDialog"
-import { AllocationDialog } from "@/pages/schedules/pending_schedules/AllocationDialog"
 import { ReworkScheduleFormDrawer } from "./ReworkScheduleFormDrawer"
+import { DeleteDialog } from "@/shared/DeleteDialog"
+import { ConfirmPriorityDialog } from "@/shared/ConfirmPriorityDialog"
+import { ReworkAllocationDialog } from "./ReworkAllocationDialog"
 import { PriorityBadge } from "@/shared/renderers/PriorityBadge"
 import { TargetDateCell } from "@/shared/renderers/TargetDateCell"
 import { EditDeleteCell } from "@/shared/renderers/EditDeleteCell"
 import { ActionButtonCell } from "@/shared/renderers/ActionButtonCell"
-import { fromIsoDate } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
+import { useSyncedState } from "@/hooks/useSyncedState"
+import { STAFF_ALLOCATION_BUTTON_STYLES, type StaffAllocationStatus } from "@/shared/constants"
+import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import type { ReworkPendingScheduleRecord } from "@/types/reworkSchedule"
+import {
+  useGetReworkPendingSchedulesQuery,
+  useCreateReworkPendingScheduleMutation,
+  useUpdateReworkPendingScheduleMutation,
+  useDeleteReworkPendingScheduleMutation,
+  useUpdateReworkPendingSchedulePriorityMutation,
+} from "@/store/services/reworkPendingScheduleApi"
 import type { ReworkScheduleFormValues } from "./ReworkScheduleFormDrawer"
 
-/* ── Types ─────────────────────────────────────────────── */
-export interface ReworkScheduleRow {
-  id: number
-  priorityNo: number
-  priorityLevel: "High" | "Medium" | "Low"
-  reworkScheduleDate: string
-  reworkScheduleId: string
-  company: string
-  product: string
-  noOfOperations: number
-  targetQty: number
-  producedQty: number
-  pendingQty: number
-  targetDate: string
-  createdBy: string
-}
-
-/* ── Mock data ──────────────────────────────────────────── */
-const initialSchedules: ReworkScheduleRow[] = [
-  {
-    id: 1, priorityNo: 1, priorityLevel: "High",
-    reworkScheduleDate: "26/05/2026", reworkScheduleId: "RS001-26",
-    company: "Lakshika", product: "AIS 140",
-    noOfOperations: 19, targetQty: 3000, producedQty: 1000, pendingQty: 2000,
-    targetDate: "31/5/2026", createdBy: "2547 : Basheer",
-  },
-  {
-    id: 2, priorityNo: 2, priorityLevel: "Medium",
-    reworkScheduleDate: "26/05/2026", reworkScheduleId: "RS002-26",
-    company: "Kingstrack", product: "Dashcam",
-    noOfOperations: 8, targetQty: 2000, producedQty: 500, pendingQty: 1500,
-    targetDate: "20/5/2026", createdBy: "2547 : Basheer",
-  },
-  {
-    id: 3, priorityNo: 3, priorityLevel: "Low",
-    reworkScheduleDate: "26/05/2026", reworkScheduleId: "RS003-26",
-    company: "Kingstrack", product: "CC TV",
-    noOfOperations: 12, targetQty: 3000, producedQty: 1200, pendingQty: 1800,
-    targetDate: "10/6/2026", createdBy: "2547 : Basheer",
-  },
-]
+// Must be a stable reference, not an inline `?? []` — useSyncedState resets whenever its source
+// argument changes identity, and a fresh `[]` literal computed every render (while `data` is
+// still undefined) would look like a new source on every render, looping forever.
+const EMPTY_SCHEDULES: ReworkPendingScheduleRecord[] = []
 
 /* ── Page ───────────────────────────────────────────────── */
 export function PendingReworkSchedules() {
-  const [schedules, setSchedules]       = useState<ReworkScheduleRow[]>(initialSchedules)
-  const [newOrder,  setNewOrder]        = useState<ReworkScheduleRow[] | null>(null)
-  const [isDirty,   setIsDirty]         = useState(false)
+  const { data, isLoading, isFetching, refetch: refetchSchedules } = useGetReworkPendingSchedulesQuery()
+  const schedules = data ?? EMPTY_SCHEDULES
+  const { data: companies } = useGetCompaniesQuery()
+
+  const [createReworkPendingSchedule] = useCreateReworkPendingScheduleMutation()
+  const [updateReworkPendingSchedule] = useUpdateReworkPendingScheduleMutation()
+  const [deleteReworkPendingSchedule] = useDeleteReworkPendingScheduleMutation()
+  const [updateReworkPendingSchedulePriority] = useUpdateReworkPendingSchedulePriorityMutation()
+
+  // Drag-to-reorder is staged locally until confirmed, then persisted via update-priority and
+  // resynced from the refetched list — this mirrors the fetched list until a drag is in progress.
+  const [localSchedules, setLocalSchedules] = useSyncedState(schedules)
+
+  const [newOrder, setNewOrder]             = useState<ReworkPendingScheduleRecord[] | null>(null)
+  const [isDirty, setIsDirty]               = useState(false)
   const [confirmPriorityOpen, setConfirmPriorityOpen] = useState(false)
-  const [drawerOpen, setDrawerOpen]     = useState(false)
-  const [editId,    setEditId]          = useState<number | null>(null)
-  const [deleteId,  setDeleteId]        = useState<number | null>(null)
-  const [allocationId, setAllocationId] = useState<number | null>(null)
+  const [drawerOpen, setDrawerOpen]         = useState(false)
+  const [editId, setEditId]                 = useState<number | null>(null)
+  const [deleteId, setDeleteId]             = useState<number | null>(null)
+  const [allocationId, setAllocationId]     = useState<number | null>(null)
 
-  const editSchedule = schedules.find((s) => s.id === editId)
+  const editSchedule = localSchedules.find((s) => s.reworkPendingScheduleId === editId)
 
-  const handleRowDragEnd = useCallback((reordered: ReworkScheduleRow[]) => {
-    const changed = reordered.some((s, i) => s.id !== schedules[i]?.id)
-    if (changed) { setNewOrder(reordered); setIsDirty(true) }
-  }, [schedules])
+  /* ── Drag ── */
+  const handleRowDragEnd = useCallback((reordered: ReworkPendingScheduleRecord[]) => {
+    const changed = reordered.some((s, i) => s.reworkPendingScheduleId !== localSchedules[i]?.reworkPendingScheduleId)
+    if (changed) {
+      setNewOrder(reordered)
+      setIsDirty(true)
+    }
+  }, [localSchedules])
 
-  const handleConfirmPriority = useCallback(() => {
+  const handleConfirmPriority = useCallback(async () => {
     if (newOrder) {
-      setSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
-      setNewOrder(null)
-      setIsDirty(false)
+      try {
+        await updateReworkPendingSchedulePriority(
+          newOrder.map((s, i) => ({ reworkPendingScheduleId: s.reworkPendingScheduleId, priorityNo: i + 1 }))
+        ).unwrap()
+        setLocalSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
+        setNewOrder(null)
+        setIsDirty(false)
+      } catch {
+        // Toast middleware already surfaced the error; keep the pending order so the user can retry.
+      }
     }
     setConfirmPriorityOpen(false)
-  }, [newOrder])
+  }, [newOrder, updateReworkPendingSchedulePriority, setLocalSchedules])
 
-  const handleAdd = useCallback((data: ReworkScheduleFormValues) => {
-    const next = Math.max(0, ...schedules.map((s) => s.id)) + 1
-    setSchedules((prev) => [
-      ...prev,
-      {
-        id: next,
-        priorityNo: prev.length + 1,
-        priorityLevel: data.priorityLevel,
-        reworkScheduleDate: fromIsoDate(data.reworkScheduleDate),
-        reworkScheduleId: `RS${String(next).padStart(3, "0")}-26`,
-        company: data.company,
-        product: data.product,
-        noOfOperations: data.noOfOperations,
-        targetQty: data.targetQty,
-        producedQty: 0,
-        pendingQty: data.targetQty,
-        targetDate: fromIsoDate(data.targetDate),
-        createdBy: "2547 : Basheer",
-      },
-    ])
-  }, [schedules])
+  /* ── CRUD ── */
+  const handleAdd = useCallback(async (values: ReworkScheduleFormValues) => {
+    const user = getAuthUser()
+    if (!user) return
+    const companyLocation = companies?.find((c) => c.companyName === values.companyName)?.companyLocation ?? ""
+    await createReworkPendingSchedule({
+      reworkScheduleDate: values.reworkScheduleDate,
+      reworkType: values.reworkType,
+      companyName: values.companyName,
+      companyLocation,
+      productName: values.productName,
+      targetQty: values.targetQty,
+      targetDate: values.targetDate,
+      priorityLevel: values.priorityLevel,
+      createdByEmpId: user.employeeId,
+    }).unwrap()
+  }, [companies, createReworkPendingSchedule])
 
-  const handleEdit = useCallback((data: ReworkScheduleFormValues) => {
-    if (editId === null) return
-    setSchedules((prev) =>
-      prev.map((s) =>
-        s.id === editId
-          ? {
-              ...s,
-              priorityLevel: data.priorityLevel,
-              reworkScheduleDate: fromIsoDate(data.reworkScheduleDate),
-              company: data.company,
-              product: data.product,
-              noOfOperations: data.noOfOperations,
-              targetQty: data.targetQty,
-              targetDate: fromIsoDate(data.targetDate),
-            }
-          : s
-      )
-    )
-  }, [editId])
+  const handleEdit = useCallback(async (values: ReworkScheduleFormValues) => {
+    const user = getAuthUser()
+    if (!editSchedule || !user) return
+    await updateReworkPendingSchedule({
+      reworkScheduleId: editSchedule.reworkScheduleId,
+      reworkScheduleDate: values.reworkScheduleDate,
+      targetQty: values.targetQty,
+      targetDate: values.targetDate,
+      priorityLevel: values.priorityLevel,
+      updatedByEmpId: user.employeeId,
+    }).unwrap()
+  }, [editSchedule, updateReworkPendingSchedule])
 
-  const handleDelete = useCallback(() => {
+  const closeDelete = useCallback(() => setDeleteId(null), [])
+
+  const handleDelete = useCallback(async () => {
     if (deleteId === null) return
-    setSchedules((prev) => prev.filter((s) => s.id !== deleteId))
-    setDeleteId(null)
-  }, [deleteId])
+    try {
+      await deleteReworkPendingSchedule(deleteId).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteId, deleteReworkPendingSchedule])
 
-  const openEdit   = useCallback((id: number) => { setEditId(id); setDrawerOpen(true) }, [])
+  /* ── Columns ── */
+  const openEdit   = useCallback((id: number) => { setEditId(id);   setDrawerOpen(true) }, [])
   const openDelete = useCallback((id: number) => setDeleteId(id), [])
   const openAlloc  = useCallback((id: number) => setAllocationId(id), [])
 
-  const columnDefs = useMemo<ColDef<ReworkScheduleRow>[]>(
+  // Only Supervisors can allocate staff — Super Admin and Manager see the action disabled.
+  const canAllocate = getAuthUser()?.employeeRole === "SUPERVISOR"
+  // Managers and Supervisors can add/edit/delete rework schedules — Supervisors are locked to
+  // raising Inhouse Rework only (enforced in ReworkScheduleFormDrawer); Super Admin is read-only.
+  const employeeRole = getAuthUser()?.employeeRole
+  const canManageSchedule = employeeRole === "MANAGER" || employeeRole === "SUPERVISOR"
+
+  const columnDefs = useMemo<ColDef<ReworkPendingScheduleRecord>[]>(
     () => [
       { field: "priorityNo",          headerName: "Priority No",          maxWidth: 100, sortable: false },
       { field: "priorityLevel",       headerName: "Priority Level",       cellRenderer: PriorityBadge, sortable: false, minWidth: 120 },
       { field: "reworkScheduleDate",  headerName: "Rework Schedule Date", minWidth: 160 },
       { field: "reworkScheduleId",    headerName: "Rework Schedule ID",   minWidth: 150 },
-      { field: "company",             headerName: "Company",              cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "product",             headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 100 },
+      { field: "companyName",         headerName: "Company",              cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      { field: "productName",         headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 100 },
       { field: "noOfOperations",      headerName: "No of Operations",     minWidth: 140 },
       { field: "targetQty",           headerName: "Target Qty",           minWidth: 100 },
       { field: "producedQty",         headerName: "Produced Qty",         minWidth: 120 },
-      { field: "pendingQty",          headerName: "Pending Qty",          minWidth: 110 },
       { field: "targetDate",          headerName: "Target Date",          cellRenderer: TargetDateCell, minWidth: 110 },
-      { field: "createdBy",           headerName: "Created By",           minWidth: 130 },
+      {
+        headerName: "Created By",
+        valueGetter: (p: ValueGetterParams<ReworkPendingScheduleRecord>) =>
+          p.data ? `${p.data.createdByEmpId} : ${p.data.createdByEmpName}` : "",
+        minWidth: 150,
+      },
       {
         headerName: "Staff Allocation",
         cellRenderer: ActionButtonCell,
-        cellRendererParams: { onAction: (data: ReworkScheduleRow) => openAlloc(data.id), label: "Allocate" },
+        cellRendererParams: {
+          onAction: (data: ReworkPendingScheduleRecord) => openAlloc(data.reworkPendingScheduleId),
+          label: "Allocate",
+          disabled: !canAllocate,
+          getButtonClass: (data: ReworkPendingScheduleRecord) =>
+            STAFF_ALLOCATION_BUTTON_STYLES[data.staffAllocationStatus as StaffAllocationStatus],
+        },
         sortable: false, minWidth: 130,
       },
-      {
-        headerName: "Actions",
-        cellRenderer: EditDeleteCell,
-        cellRendererParams: { onEdit: openEdit, onDelete: openDelete },
-        sortable: false, maxWidth: 90,
-      },
+      ...(canManageSchedule
+        ? [
+            {
+              headerName: "Actions",
+              cellRenderer: EditDeleteCell,
+              cellRendererParams: { onEdit: openEdit, onDelete: openDelete },
+              sortable: false,
+              maxWidth: 90,
+            } satisfies ColDef<ReworkPendingScheduleRecord>,
+          ]
+        : []),
     ],
-    [openEdit, openDelete, openAlloc]
+    [openEdit, openDelete, openAlloc, canAllocate, canManageSchedule]
   )
 
   const updatePriorityButton = isDirty ? (
@@ -179,33 +190,25 @@ export function PendingReworkSchedules() {
 
   return (
     <>
-      <DataTable<ReworkScheduleRow>
+      <DataTable<ReworkPendingScheduleRecord>
         title="Rework Schedule"
-        rowData={schedules}
+        rowData={localSchedules}
         columnDefs={columnDefs}
+        loading={isLoading}
+        onRefresh={refetchSchedules}
+        refreshing={isFetching}
         rowDrag
         hideSno
-        onAdd={() => { setEditId(null); setDrawerOpen(true) }}
+        onAdd={canManageSchedule ? () => { setEditId(null); setDrawerOpen(true) } : undefined}
         onRowDragEnd={handleRowDragEnd}
         toolbarExtra={updatePriorityButton}
       />
 
-      <Dialog open={confirmPriorityOpen} onOpenChange={(o) => { if (!o) setConfirmPriorityOpen(false) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Update Priority Order</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-600 mt-1">
-            Are you sure you want to save the new priority order? This will reassign priority numbers to all rework schedules.
-          </p>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setConfirmPriorityOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfirmPriority} className="bg-blue-500 hover:bg-blue-600 text-white">
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmPriorityDialog
+        open={confirmPriorityOpen}
+        onClose={() => setConfirmPriorityOpen(false)}
+        onConfirm={handleConfirmPriority}
+      />
 
       <ReworkScheduleFormDrawer
         key={editId ?? "new"}
@@ -217,15 +220,16 @@ export function PendingReworkSchedules() {
 
       <DeleteDialog
         open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={closeDelete}
         onConfirm={handleDelete}
         title="Delete Rework Schedule"
         description="Are you sure you want to delete this rework schedule? This action cannot be undone."
       />
 
-      <AllocationDialog
+      <ReworkAllocationDialog
+        key={allocationId ?? "none"}
         open={allocationId !== null}
-        onClose={() => setAllocationId(null)}
+        onClose={() => { setAllocationId(null); refetchSchedules() }}
         scheduleId={allocationId}
       />
     </>

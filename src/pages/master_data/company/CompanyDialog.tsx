@@ -25,12 +25,16 @@ export function CompanyDialog({
   const [companyLocation, setCompanyLocation] = React.useState(company?.companyLocation ?? "")
   const [isSubmitting, setIsSubmitting]       = React.useState(false)
 
-  React.useEffect(() => {
+  // Resets the form fields whenever the dialog (re)opens, without an effect — adjusting state
+  // during render avoids the extra post-mount render pass a useEffect would cost here.
+  const [prevOpen, setPrevOpen] = React.useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setCompanyName(company?.companyName ?? "")
       setCompanyLocation(company?.companyLocation ?? "")
     }
-  }, [open, company])
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

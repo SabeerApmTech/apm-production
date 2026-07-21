@@ -76,10 +76,12 @@ export function ExpandCell({ data, expandedItemCode, onToggle }: ExpandCellParam
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- helper colocated with ExpandCell, shared by the parent grid
 export function isFullWidthRow(params: IsFullWidthRowParams): boolean {
   return !!(params.rowNode.data as CompanyDetailRow)?.__isDetail
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- helper colocated with ExpandCell, shared by the parent grid
 export function getRowHeight(params: RowHeightParams): number | undefined {
   const row = params.data as CompanyDetailRow | undefined
   if (row?.__isDetail) {

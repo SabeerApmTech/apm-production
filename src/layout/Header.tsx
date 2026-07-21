@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, ChevronDown, IdCard, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
@@ -16,6 +16,7 @@ import {
 import { ChangePasswordDialog } from "@/layout/ChangePasswordDialog"
 import { useLogoutMutation } from "@/store/services/authApi"
 import { useGetNotificationCountsQuery } from "@/store/services/notificationApi"
+import bellNotificationSound from "@/assets/sounds/bell_notification.wav"
 
 const NOTIFICATION_COUNTS_POLL_MS = 10000
 
@@ -52,6 +53,15 @@ export function Header() {
     pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
   })
   const unreadCount = notificationCounts?.unread ?? 0
+  const previousUnreadCount = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!notificationCounts) return
+    if (previousUnreadCount.current !== null && unreadCount > previousUnreadCount.current) {
+      new Audio(bellNotificationSound).play().catch(() => {})
+    }
+    previousUnreadCount.current = unreadCount
+  }, [notificationCounts, unreadCount])
 
   const handleLogout = async () => {
     try {

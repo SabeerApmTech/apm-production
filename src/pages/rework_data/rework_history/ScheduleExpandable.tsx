@@ -18,12 +18,12 @@ export interface ExpandCellParams extends ICellRendererParams {
 
 export function ExpandCell({ data, expandedId, onToggle }: ExpandCellParams) {
   if (!data || (data as ScheduleDetailRow).__isDetail) return null
-  const row = data as { scheduleId: string }
-  const isExpanded = expandedId === row.scheduleId
+  const row = data as { reworkScheduleId: string }
+  const isExpanded = expandedId === row.reworkScheduleId
   return (
     <div className="flex h-full items-center justify-center">
       <button
-        onClick={(e) => { e.stopPropagation(); onToggle?.(row.scheduleId) }}
+        onClick={(e) => { e.stopPropagation(); onToggle?.(row.reworkScheduleId) }}
         className="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 transition-colors"
       >
         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}

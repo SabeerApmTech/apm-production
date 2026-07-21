@@ -220,6 +220,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"div">) {
 
 export {
   SidebarProvider,
+  // eslint-disable-next-line react-refresh/only-export-components -- hook is colocated with its provider, standard shadcn/ui convention
   useSidebar,
   Sidebar,
   SidebarTrigger,

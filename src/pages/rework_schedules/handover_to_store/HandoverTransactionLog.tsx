@@ -1,73 +1,104 @@
-import { useState, useMemo } from "react"
-import type { ColDef } from "ag-grid-community"
+import { useCallback, useMemo, useState } from "react"
+import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-
-interface ReworkHandoverLogRow {
-  id: number
-  dateTime: string
-  reworkScheduleId: string
-  company: string
-  product: string
-  handoverQty: number
-  givenBy: string
-  receivedBy: string
-  storeLocation: string
-  remarks: string
-}
-
-const MOCK_LOG: ReworkHandoverLogRow[] = [
-  { id: 1, dateTime: "09/06/2026\n11:20 am", reworkScheduleId: "RS001 - 26", company: "Lakshitha", product: "AIS 140", handoverQty: 1500, givenBy: "Sharmila", receivedBy: "Nandha", storeLocation: "Chennai", remarks: "-" },
-  { id: 2, dateTime: "09/06/2026\n02:00 pm", reworkScheduleId: "RS002 - 26", company: "Kingstrack", product: "Dashcam", handoverQty: 800,  givenBy: "Ravi",     receivedBy: "Ashwin", storeLocation: "Main Store", remarks: "-" },
-]
-
+import { formatLogDateTime, getMonthEndIso, getMonthStartIso } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
+import { useDateRange } from "@/hooks/useDateRange"
+import type { ReworkHandoverTransactionRecord } from "@/types/reworkHandoverToStore"
+import {
+  useGetReworkHandoverTransactionLogQuery,
+  useDeleteReworkHandoverMutation,
+} from "@/store/services/reworkHandoverToStoreApi"
 
 export function HandoverTransactionLog() {
-  const [rows,     setRows]     = useState<ReworkHandoverLogRow[]>(MOCK_LOG)
+  const dateRange = useDateRange()
+
+  const { data, isLoading, isFetching, refetch } = useGetReworkHandoverTransactionLogQuery({
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
+  })
+  const rows = data ?? []
+
+  const [deleteHandover] = useDeleteReworkHandoverMutation()
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  function handleDelete() {
-    if (deleteId === null) return
-    setRows((prev) => prev.filter((r) => r.id !== deleteId))
-    setDeleteId(null)
-  }
+  // Only Supervisors can delete a handover transaction.
+  const canDelete = getAuthUser()?.employeeRole === "SUPERVISOR"
 
-  const columnDefs = useMemo<ColDef<ReworkHandoverLogRow>[]>(
-    () => [
-      { field: "dateTime",         headerName: "Date & Time",        minWidth: 130, cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" } as Record<string, string | number> },
-      { field: "reworkScheduleId", headerName: "Rework Schedule Id", minWidth: 150 },
-      { field: "company",          headerName: "Company",            cellStyle: { fontWeight: 600 }, minWidth: 120 },
-      { field: "product",          headerName: "Product",            cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "handoverQty",      headerName: "Handover Qty",       minWidth: 120 },
-      { field: "givenBy",          headerName: "Given By",           minWidth: 120 },
-      { field: "receivedBy",       headerName: "Received By",        minWidth: 120 },
-      { field: "storeLocation",    headerName: "Store Location",     minWidth: 130 },
-      { field: "remarks",          headerName: "Remarks",            minWidth: 110 },
-      {
-        headerName: "Action",
-        cellRenderer: DeleteCell,
-        cellRendererParams: { onDelete: (id: number) => setDeleteId(id) },
-        sortable: false, minWidth: 100,
-      },
-    ],
-    []
+  const closeDelete = useCallback(() => setDeleteId(null), [])
+  const openDelete   = useCallback((id: number) => setDeleteId(id), [])
+
+  const handleDelete = useCallback(async () => {
+    if (deleteId === null) return
+    const user = getAuthUser()
+    if (!user) return
+    try {
+      await deleteHandover({ handoverId: deleteId, employeeId: user.employeeId }).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteId, deleteHandover])
+
+  const columnDefs = useMemo<ColDef<ReworkHandoverTransactionRecord>[]>(
+    () => {
+      const baseColumns: ColDef<ReworkHandoverTransactionRecord>[] = [
+        {
+          field: "handoverDate", headerName: "Handover Date", minWidth: 130,
+          cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" },
+          valueFormatter: (p: ValueFormatterParams<ReworkHandoverTransactionRecord>) =>
+            p.value ? formatLogDateTime(p.value) : "",
+        },
+        { field: "reworkScheduleId", headerName: "Rework Schedule ID", minWidth: 150 },
+        { field: "companyName",      headerName: "Company",            cellStyle: { fontWeight: 600 }, minWidth: 120 },
+        { field: "productName",      headerName: "Product",            cellStyle: { fontWeight: 600 }, minWidth: 110 },
+        { field: "handoverQty",      headerName: "Handover Qty",       minWidth: 120 },
+        { field: "storeName",        headerName: "Store Name",         minWidth: 140 },
+        { field: "receivedBy",       headerName: "Received By",        minWidth: 130 },
+        { field: "remarks",          headerName: "Remarks",            minWidth: 130, valueFormatter: (p) => p.value ?? "-" },
+        {
+          headerName: "Created By",
+          valueGetter: (p: ValueGetterParams<ReworkHandoverTransactionRecord>) =>
+            p.data ? `${p.data.createdByEmpId} : ${p.data.createdByEmpName}` : "",
+          minWidth: 150,
+        },
+      ]
+      if (!canDelete) return baseColumns
+      return [
+        {
+          headerName: "Action",
+          cellRenderer: DeleteCell,
+          cellRendererParams: { onDelete: openDelete },
+          sortable: false,
+          maxWidth: 80,
+        },
+        ...baseColumns,
+      ]
+    },
+    [canDelete, openDelete]
   )
 
   return (
     <>
-      <DataTable<ReworkHandoverLogRow>
-        title="Rework Handover Log"
+      <DataTable<ReworkHandoverTransactionRecord>
+        title="Rework Handover Transaction Log"
         rowData={rows}
         columnDefs={columnDefs}
+        loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         showDateFilter
+        defaultFromDate={getMonthStartIso()}
+        defaultToDate={getMonthEndIso()}
+        onDateFilter={dateRange.setRange}
       />
       <DeleteDialog
         open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={closeDelete}
         onConfirm={handleDelete}
-        title="Delete Log Entry"
-        description="Are you sure you want to delete this handover log entry? This action cannot be undone."
+        title="Delete Transaction"
+        description="Are you sure you want to delete this handover transaction? This action cannot be undone."
       />
     </>
   )

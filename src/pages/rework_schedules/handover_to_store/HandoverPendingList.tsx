@@ -1,51 +1,77 @@
-import { useState, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import type { ColDef } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { ReadyToMoveCell } from "@/shared/renderers/ReadyToMoveCell"
 import { ActionButtonCell } from "@/shared/renderers/ActionButtonCell"
+import { fromIsoDate } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
 import { HandoverDialog } from "./HandoverDialog"
-import type { ReworkHandoverPendingRow, ReworkHandoverFormData } from "./HandoverDialog"
-
-const MOCK_PENDING: ReworkHandoverPendingRow[] = [
-  { id: 1, reworkScheduleId: "RS001 - 26", company: "Lakshitha", product: "AIS 140", targetQty: 3000, deliveredQty: 1000, pendingQty: 2000, readyToMove: 500  },
-  { id: 2, reworkScheduleId: "RS001 - 26", company: "Lakshitha", product: "AIS 140", targetQty: 3000, deliveredQty: 500,  pendingQty: 2500, readyToMove: 1000 },
-  { id: 3, reworkScheduleId: "RS002 - 26", company: "Kingstrack", product: "Dashcam", targetQty: 2000, deliveredQty: 800, pendingQty: 1200, readyToMove: 300  },
-]
+import type { ReworkHandoverFormData } from "./HandoverDialog"
+import type { ReworkHandoverPendingRecord } from "@/types/reworkHandoverToStore"
+import {
+  useGetReworkHandoverPendingListQuery,
+  useCreateReworkHandoverMutation,
+} from "@/store/services/reworkHandoverToStoreApi"
 
 export function HandoverPendingList() {
-  const [rows,      setRows]      = useState<ReworkHandoverPendingRow[]>(MOCK_PENDING)
-  const [dialogRow, setDialogRow] = useState<ReworkHandoverPendingRow | null>(null)
+  const { data, isLoading, isFetching, refetch } = useGetReworkHandoverPendingListQuery()
+  const rows = data ?? []
 
-  function handleHandover(rowId: number, _data: ReworkHandoverFormData) {
-    setRows((prev) => prev.filter((r) => r.id !== rowId))
-  }
+  const [createHandover] = useCreateReworkHandoverMutation()
+  const [dialogRow, setDialogRow] = useState<ReworkHandoverPendingRecord | null>(null)
 
-  const columnDefs = useMemo<ColDef<ReworkHandoverPendingRow>[]>(
+  // Only Supervisors can hand over stock to the store.
+  const canHandover = getAuthUser()?.employeeRole === "SUPERVISOR"
+
+  const handleHandover = useCallback(async (formData: ReworkHandoverFormData) => {
+    if (!dialogRow) return
+    const user = getAuthUser()
+    if (!user) return
+    await createHandover({
+      reworkScheduleId: dialogRow.reworkScheduleId,
+      storeName: formData.storeName,
+      receivedBy: formData.receivedBy,
+      handoverQty: formData.handoverQty,
+      remarks: formData.remarks,
+      createdByEmpId: user.employeeId,
+    }).unwrap()
+  }, [dialogRow, createHandover])
+
+  const columnDefs = useMemo<ColDef<ReworkHandoverPendingRecord>[]>(
     () => [
-      { field: "reworkScheduleId", headerName: "Rework Schedule Id", minWidth: 160 },
-      { field: "company",          headerName: "Company",            cellStyle: { fontWeight: 600 }, minWidth: 120 },
-      { field: "product",          headerName: "Product",            cellStyle: { fontWeight: 600 }, minWidth: 110 },
-      { field: "targetQty",        headerName: "Target Qty",         minWidth: 110 },
-      { field: "deliveredQty",     headerName: "Delivered Qty",      minWidth: 120 },
-      { field: "pendingQty",       headerName: "Pending Qty",        minWidth: 110 },
-      { field: "readyToMove",      headerName: "Ready To Move",      cellRenderer: ReadyToMoveCell, minWidth: 130 },
+      { field: "reworkScheduleDate", headerName: "Schedule Date", valueFormatter: (p) => fromIsoDate(p.value), minWidth: 130 },
+      { field: "reworkScheduleId",   headerName: "Rework Schedule Id", minWidth: 150 },
+      { field: "companyName",        headerName: "Company",       cellStyle: { fontWeight: 600 }, minWidth: 130 },
+      { field: "companyLocation",    headerName: "Location",      minWidth: 110 },
+      { field: "productName",        headerName: "Product",       cellStyle: { fontWeight: 600 }, minWidth: 150 },
+      { field: "targetQty",          headerName: "Target Qty",    minWidth: 110 },
+      { field: "producedQty",        headerName: "Produced Qty",  minWidth: 120 },
+      { field: "deliveredQty",       headerName: "Delivered Qty", minWidth: 120 },
+      { field: "handoverPendingQty", headerName: "Pending Qty",   minWidth: 110 },
+      { field: "readyToMove",        headerName: "Ready To Move", cellRenderer: ReadyToMoveCell, minWidth: 120 },
       {
         headerName: "Action",
         cellRenderer: ActionButtonCell,
-        cellRendererParams: { onAction: (row: ReworkHandoverPendingRow) => setDialogRow(row), label: "Handover" },
+        cellRendererParams: {
+          onAction: (row: ReworkHandoverPendingRecord) => setDialogRow(row),
+          label: "Handover",
+          disabled: !canHandover,
+        },
         sortable: false, minWidth: 110,
       },
     ],
-    []
+    [canHandover]
   )
 
   return (
     <>
-      <DataTable<ReworkHandoverPendingRow>
+      <DataTable<ReworkHandoverPendingRecord>
         title="Rework Handover Pending"
         rowData={rows}
         columnDefs={columnDefs}
-        showDateFilter
+        loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
       />
       <HandoverDialog
         open={dialogRow !== null}

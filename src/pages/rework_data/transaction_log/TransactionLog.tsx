@@ -1,79 +1,190 @@
-import { useState, useCallback } from "react"
-import type { ColDef, ValueGetterParams } from "ag-grid-community"
+import { useCallback, useMemo, useState } from "react"
+import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-community"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
-
-interface ReworkTransactionRow {
-  id: number
-  dateTime: string
-  employeeId: string
-  employeeName: string
-  reworkScheduleId: string
-  company: string
-  product: string
-  operation: string
-  status: "Running" | "Stopped"
-  successfulQty: number
-}
-
-const MOCK_TRANSACTIONS: ReworkTransactionRow[] = [
-  { id: 1, dateTime: "26/05/2026\n10:00 AM", employeeId: "1216", employeeName: "Ashwin", reworkScheduleId: "RS001-26", company: "Lakshitha", product: "CCDV",     operation: "Preprocessing",    status: "Running", successfulQty: 500 },
-  { id: 2, dateTime: "26/05/2026\n10:00 AM", employeeId: "0987", employeeName: "Naveen", reworkScheduleId: "RS002-26", company: "Kingstrack", product: "AIS - 140", operation: "Preprocessing",    status: "Stopped", successfulQty: 150 },
-  { id: 3, dateTime: "27/05/2026\n09:30 AM", employeeId: "1045", employeeName: "Ravi",   reworkScheduleId: "RS001-26", company: "Lakshitha", product: "AIS 140",   operation: "Firmware Flashing", status: "Running", successfulQty: 800 },
-]
-
+import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
+import { formatLogDateTime, getMonthEndIso, getMonthStartIso } from "@/utils/date"
+import { getAuthUser } from "@/utils/auth"
+import { useDateRange } from "@/hooks/useDateRange"
+import type { ReworkTransactionLogRecord } from "@/types/reworkTransactionLog"
+import {
+  useGetReworkTransactionLogsQuery,
+  useDeleteReworkTransactionLogMutation,
+} from "@/store/services/reworkTransactionLogApi"
+import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import { useGetProductsQuery, useGetOperationsQuery } from "@/store/services/productApi"
 
 export function ReworkTransactionLog() {
-  const [rows,     setRows]     = useState<ReworkTransactionRow[]>(MOCK_TRANSACTIONS)
+  const dateRange = useDateRange()
+  const [companyName, setCompanyName] = useState(ALL)
+  const [productId, setProductId] = useState(ALL)
+  const [operationName, setOperationName] = useState(ALL)
+
+  const { data: companies } = useGetCompaniesQuery()
+  const { data: products } = useGetProductsQuery()
+  const { data: operations } = useGetOperationsQuery(
+    { productId: Number(productId), operationType: "rework" },
+    { skip: productId === ALL }
+  )
+
+  // The API has no product-id filter param — resolve the selected id back to its name for the
+  // real server-side `productName` filter.
+  const selectedProductName = useMemo(
+    () => (productId === ALL ? undefined : products?.find((p) => String(p.productId) === productId)?.productName),
+    [products, productId]
+  )
+
+  const { data, isLoading, isFetching, refetch } = useGetReworkTransactionLogsQuery({
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
+    companyName: companyName === ALL ? undefined : companyName,
+    productName: selectedProductName,
+    operationName: operationName === ALL ? undefined : operationName,
+  })
+
+  // There's no company-product master mapping in this app — logs are the only place that link
+  // the two — so derive each dropdown's options from logs scoped by the *other* filter alone.
+  const { data: companyLogs } = useGetReworkTransactionLogsQuery(
+    { fromDate: dateRange.from, toDate: dateRange.to, companyName: companyName === ALL ? undefined : companyName },
+    { skip: companyName === ALL }
+  )
+  const { data: productLogs } = useGetReworkTransactionLogsQuery(
+    { fromDate: dateRange.from, toDate: dateRange.to, productName: selectedProductName },
+    { skip: productId === ALL }
+  )
+
+  const productOptions = useMemo(() => {
+    if (companyName === ALL) return products ?? []
+    const namesForCompany = new Set((companyLogs ?? []).map((r) => r.productName))
+    return (products ?? []).filter((p) => namesForCompany.has(p.productName))
+  }, [products, companyName, companyLogs])
+
+  const companyOptions = useMemo(() => {
+    if (productId === ALL) return companies ?? []
+    const namesForProduct = new Set((productLogs ?? []).map((r) => r.companyName))
+    return (companies ?? []).filter((c) => namesForProduct.has(c.companyName))
+  }, [companies, productId, productLogs])
+
+  // Company and Product mutually narrow each other's dropdown options above, so neither can end
+  // up pointing at a combination the other doesn't have — only Operation (a one-way dependent
+  // of Product, not narrowed itself) needs an explicit reset here.
+  function handleProductChange(value: string) {
+    setProductId(value)
+    setOperationName(ALL)
+  }
+
+  const [deleteTransactionLog] = useDeleteReworkTransactionLogMutation()
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  const handleDelete = useCallback(() => {
+  // Managers can't delete transaction log entries.
+  const canDelete = getAuthUser()?.employeeRole !== "MANAGER"
+
+  const closeDelete = useCallback(() => setDeleteId(null), [])
+  const openDelete  = useCallback((id: number) => setDeleteId(id), [])
+
+  const handleDelete = useCallback(async () => {
     if (deleteId === null) return
-    setRows((prev) => prev.filter((r) => r.id !== deleteId))
-    setDeleteId(null)
-  }, [deleteId])
+    const user = getAuthUser()
+    if (!user) return
+    try {
+      await deleteTransactionLog({ transactionId: deleteId, deletedByEmpId: user.employeeId }).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
+    }
+  }, [deleteId, deleteTransactionLog])
 
-  const openDelete = useCallback((id: number) => setDeleteId(id), [])
-
-  const columnDefs: ColDef<ReworkTransactionRow>[] = [
-    {
-      headerName: "Action",
-      cellRenderer: DeleteCell,
-      cellRendererParams: { onDelete: openDelete },
-      sortable: false, minWidth: 100,
-    },
-    { field: "dateTime",         headerName: "Date & Time",        minWidth: 130, cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" } },
-    {
-      headerName: "Employee",
-      valueGetter: (p: ValueGetterParams<ReworkTransactionRow>) =>
-        p.data ? `${p.data.employeeId} : ${p.data.employeeName}` : "",
-      minWidth: 150,
-    },
-    { field: "reworkScheduleId", headerName: "Rework Schedule ID", minWidth: 150 },
-    { field: "company",          headerName: "Company",            cellStyle: { fontWeight: 600 }, minWidth: 120 },
-    { field: "product",          headerName: "Product",            cellStyle: { fontWeight: 600 }, minWidth: 110 },
-    { field: "operation",        headerName: "Operation",          minWidth: 140 },
-    { field: "status",           headerName: "Status",             cellRenderer: StatusCell, minWidth: 110 },
-    { field: "successfulQty",    headerName: "Success",            minWidth: 100 },
-  ]
+  const columnDefs = useMemo<ColDef<ReworkTransactionLogRecord>[]>(() => {
+    const baseColumns: ColDef<ReworkTransactionLogRecord>[] = [
+      {
+        field: "logTime",
+        headerName: "Date & Time",
+        minWidth: 130,
+        cellStyle: { whiteSpace: "pre-line", lineHeight: "1.4" },
+        valueFormatter: (p: ValueFormatterParams<ReworkTransactionLogRecord>) =>
+          p.value ? formatLogDateTime(p.value) : "",
+      },
+      {
+        headerName: "Employee",
+        valueGetter: (p: ValueGetterParams<ReworkTransactionLogRecord>) =>
+          p.data ? `${p.data.employeeId} : ${p.data.employeeName}` : "",
+        minWidth: 150,
+      },
+      { field: "reworkScheduleId", headerName: "Rework Schedule ID", minWidth: 150 },
+      { field: "companyName",      headerName: "Company",            cellStyle: { fontWeight: 600 }, minWidth: 120 },
+      { field: "productName",      headerName: "Product",            cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      { field: "sequenceNo",       headerName: "Seq No",             maxWidth: 90 },
+      { field: "operationName",    headerName: "Operation",          minWidth: 140 },
+      { field: "status",           headerName: "Status",             cellRenderer: StatusCell, minWidth: 110 },
+      { field: "logEvent",         headerName: "Event",              minWidth: 100 },
+      { field: "successfulQty",    headerName: "Successful Qty",     minWidth: 130 },
+      { field: "rejectedQty",      headerName: "Rejected Qty",       minWidth: 120 },
+      { field: "reason",           headerName: "Reason",             minWidth: 140, valueFormatter: (p) => p.value ?? "-" },
+      { field: "remarks",          headerName: "Remarks",            minWidth: 110, valueFormatter: (p) => p.value ?? "-" },
+    ]
+    if (!canDelete) return baseColumns
+    return [
+      {
+        headerName: "Action",
+        cellRenderer: DeleteCell,
+        cellRendererParams: { onDelete: openDelete },
+        sortable: false, maxWidth: 80,
+      },
+      ...baseColumns,
+    ]
+  }, [canDelete, openDelete])
 
   return (
-    <>
-      <DataTable<ReworkTransactionRow>
+    <div className="flex flex-1 min-h-0 flex-col gap-4">
+      <div className="shrink-0 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-end gap-4">
+          <FilterSelect
+            label="Company"
+            value={companyName}
+            onValueChange={setCompanyName}
+            allLabel="All Companies"
+            options={companyOptions.map((c) => ({ value: c.companyName, label: c.companyName }))}
+          />
+
+          <FilterSelect
+            label="Product"
+            value={productId}
+            onValueChange={handleProductChange}
+            allLabel="All Products"
+            options={productOptions.map((p) => ({ value: String(p.productId), label: p.productName }))}
+          />
+
+          <FilterSelect
+            label="Operation"
+            value={operationName}
+            onValueChange={setOperationName}
+            allLabel="All Operations"
+            options={(operations ?? []).map((op) => ({ value: op.operationName, label: op.operationName }))}
+            disabled={productId === ALL}
+          />
+        </div>
+      </div>
+
+      <DataTable<ReworkTransactionLogRecord>
         title="Rework Transaction Log"
-        rowData={rows}
+        rowData={data ?? []}
         columnDefs={columnDefs}
+        loading={isLoading}
+        onRefresh={refetch}
+        refreshing={isFetching}
         showDateFilter
+        defaultFromDate={getMonthStartIso()}
+        defaultToDate={getMonthEndIso()}
+        onDateFilter={dateRange.setRange}
       />
       <DeleteDialog
         open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
+        onClose={closeDelete}
         onConfirm={handleDelete}
         title="Delete Transaction"
         description="Are you sure you want to delete this transaction? This action cannot be undone."
       />
-    </>
+    </div>
   )
 }

@@ -113,11 +113,9 @@ export interface DataTableProps<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   detailCellRendererParams?: Partial<IDetailCellRendererParams<T, any>>
   isRowMaster?: (dataItem: T) => boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   isFullWidthRow?: (params: IsFullWidthRowParams<T>) => boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fullWidthCellRenderer?: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getRowHeight?: (params: RowHeightParams<T>) => number | undefined | null
 }
 

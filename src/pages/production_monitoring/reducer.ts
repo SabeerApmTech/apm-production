@@ -4,14 +4,15 @@ import type { Operation, Schedule, ScheduleType, ViewStep } from "./types"
 export interface FlowState {
   view: ViewStep
   scheduleType: ScheduleType | null
-  schedules: OperatorSchedule[]
+  productionSchedules: OperatorSchedule[]
+  reworkSchedules: OperatorSchedule[]
   selectedSchedule: Schedule | null
   operations: Operation[]
   selectedOperation: Operation | null
   logs: LogReportEntry[]
   activeHours: string
   idleHours: string
-  // True when we jumped straight to "working" because operator-schedules said this operator is
+  // True when we jumped straight to "working" because the schedules endpoint said this operator is
   // already mid-session — there's no operations list to go "back" to in that case.
   cameFromAutoRoute: boolean
 }
@@ -19,7 +20,8 @@ export interface FlowState {
 export const initialFlowState: FlowState = {
   view: "loading",
   scheduleType: null,
-  schedules: [],
+  productionSchedules: [],
+  reworkSchedules: [],
   selectedSchedule: null,
   operations: [],
   selectedOperation: null,
@@ -30,7 +32,13 @@ export const initialFlowState: FlowState = {
 }
 
 export type FlowAction =
-  | { type: "SCHEDULES_LOADED"; schedules: OperatorSchedule[]; active?: Schedule }
+  | {
+      type: "SCHEDULES_LOADED"
+      productionSchedules: OperatorSchedule[]
+      reworkSchedules: OperatorSchedule[]
+      active?: Schedule
+      activeType?: ScheduleType
+    }
   | { type: "AUTO_ROUTE_OPERATIONS_LOADED"; operations: Operation[] }
   | { type: "AUTO_ROUTE_OPERATION_MATCHED"; operation: Operation }
   | { type: "SELECT_TYPE"; scheduleType: ScheduleType }
@@ -47,16 +55,20 @@ export type FlowAction =
 export function flowReducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case "SCHEDULES_LOADED": {
-      if (action.active) {
+      const { productionSchedules, reworkSchedules, active, activeType } = action
+      if (active && activeType) {
         return {
           ...state,
-          schedules: action.schedules,
-          selectedSchedule: action.active,
+          productionSchedules,
+          reworkSchedules,
+          scheduleType: activeType,
+          selectedSchedule: active,
           cameFromAutoRoute: true,
           view: "working",
         }
       }
-      return { ...state, schedules: action.schedules, view: action.schedules.length === 0 ? "empty" : "type" }
+      const isEmpty = productionSchedules.length === 0 && reworkSchedules.length === 0
+      return { ...state, productionSchedules, reworkSchedules, view: isEmpty ? "empty" : "type" }
     }
 
     case "AUTO_ROUTE_OPERATIONS_LOADED":

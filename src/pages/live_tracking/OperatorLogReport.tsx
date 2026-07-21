@@ -5,6 +5,11 @@ import {
   useGetOperatorOperationsQuery,
   useGetOperatorLogReportQuery,
 } from "@/store/services/productionMonitoringApi"
+import {
+  useGetOperatorReworkSchedulesQuery,
+  useGetOperatorReworkOperationsQuery,
+  useGetOperatorReworkLogReportQuery,
+} from "@/store/services/reworkMonitoringApi"
 import { WorkingView } from "@/pages/production_monitoring/WorkingView"
 import { LoadingRow } from "@/shared/LoadingRow"
 
@@ -13,7 +18,9 @@ const POLL_INTERVAL_MS = 3000
 /**
  * Read-only "Log Report" for another operator's current work — reached from the "View Detail"
  * button on Live Tracking, reusing the same WorkingView layout Production Monitoring shows an
- * operator for their own job, minus the Start/Pause/Stop controls.
+ * operator for their own job, minus the Start/Pause/Stop controls. Production and rework schedules
+ * live behind separate endpoints, so both are queried and whichever one actually contains the
+ * requested scheduleId is used for the operations/log-report follow-up calls.
  */
 export function OperatorLogReport() {
   const navigate = useNavigate()
@@ -23,21 +30,42 @@ export function OperatorLogReport() {
   const scheduleId = searchParams.get("scheduleId") ?? ""
   const operationName = searchParams.get("operationName") ?? ""
 
-  const { data: schedules, isLoading: isSchedulesLoading } = useGetOperatorSchedulesQuery(employeeId, {
+  const { data: productionSchedules, isLoading: isProductionSchedulesLoading } = useGetOperatorSchedulesQuery(employeeId, {
     skip: !employeeId,
   })
-  const schedule = schedules?.find((s) => s.scheduleId === scheduleId)
+  const { data: reworkSchedules, isLoading: isReworkSchedulesLoading } = useGetOperatorReworkSchedulesQuery(employeeId, {
+    skip: !employeeId,
+  })
+  const isSchedulesLoading = isProductionSchedulesLoading || isReworkSchedulesLoading
 
-  const { data: operations, isLoading: isOperationsLoading } = useGetOperatorOperationsQuery(
+  const isRework = !isSchedulesLoading && !productionSchedules?.some((s) => s.scheduleId === scheduleId)
+    && !!reworkSchedules?.some((s) => s.scheduleId === scheduleId)
+  const schedule = isRework
+    ? reworkSchedules?.find((s) => s.scheduleId === scheduleId)
+    : productionSchedules?.find((s) => s.scheduleId === scheduleId)
+
+  const { data: productionOperations, isLoading: isProductionOperationsLoading } = useGetOperatorOperationsQuery(
     { employeeId, scheduleId },
-    { skip: !employeeId || !scheduleId }
+    { skip: isSchedulesLoading || isRework || !employeeId || !scheduleId }
   )
+  const { data: reworkOperations, isLoading: isReworkOperationsLoading } = useGetOperatorReworkOperationsQuery(
+    { employeeId, scheduleId },
+    { skip: isSchedulesLoading || !isRework || !employeeId || !scheduleId }
+  )
+  const operations = isRework ? reworkOperations : productionOperations
+  const isOperationsLoading = isRework ? isReworkOperationsLoading : isProductionOperationsLoading
   const operation = operations?.find((o) => o.operationName === operationName) ?? operations?.[0]
 
-  const { data: report, isLoading: isReportLoading } = useGetOperatorLogReportQuery(
+  const { data: productionReport, isLoading: isProductionReportLoading } = useGetOperatorLogReportQuery(
     { employeeId, scheduleId, sequenceNo: operation?.sequenceNo ?? 0 },
-    { skip: !employeeId || !scheduleId || !operation, pollingInterval: POLL_INTERVAL_MS }
+    { skip: isRework || !employeeId || !scheduleId || !operation, pollingInterval: POLL_INTERVAL_MS }
   )
+  const { data: reworkReport, isLoading: isReworkReportLoading } = useGetOperatorReworkLogReportQuery(
+    { employeeId, scheduleId, sequenceNo: operation?.sequenceNo ?? 0 },
+    { skip: !isRework || !employeeId || !scheduleId || !operation, pollingInterval: POLL_INTERVAL_MS }
+  )
+  const report = isRework ? reworkReport : productionReport
+  const isReportLoading = isRework ? isReworkReportLoading : isProductionReportLoading
 
   const isLoading = isSchedulesLoading || isOperationsLoading || isReportLoading
 

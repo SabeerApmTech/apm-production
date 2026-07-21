@@ -11,28 +11,28 @@ import { getAuthUser } from "@/utils/auth"
 import { LoadingRow } from "@/shared/LoadingRow"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import {
-  useGetOperationsByScheduleQuery,
-  useGetAllocatedStaffQuery,
-  useLazyGetLastAssignedTeamQuery,
-  useAllocateStaffMutation,
-} from "@/store/services/staffAllocationApi"
-import type { OperationStepRecord } from "@/types/staffAllocation"
+  useGetReworkOperationsByScheduleQuery,
+  useGetReworkAllocatedStaffQuery,
+  useLazyGetReworkLastAssignedTeamQuery,
+  useAllocateReworkStaffMutation,
+} from "@/store/services/reworkStaffAllocationApi"
+import type { ReworkOperationStepRecord } from "@/types/reworkStaffAllocation"
 
 /* ── Manage Team view (rendered inside the same dialog, not a separate one) ── */
 interface ManageTeamViewProps {
-  pendingScheduleId: number
-  step: OperationStepRecord
+  reworkPendingScheduleId: number
+  step: ReworkOperationStepRecord
   onBack: () => void
 }
 
-function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps) {
+function ManageTeamView({ reworkPendingScheduleId, step, onBack }: ManageTeamViewProps) {
   const [search, setSearch] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const { data: operators } = useGetOperatorsQuery()
-  const { data: allocatedStaff } = useGetAllocatedStaffQuery(step.operationId)
-  const [fetchLastTeam, { isFetching: isFetchingLastTeam }] = useLazyGetLastAssignedTeamQuery()
-  const [allocateStaff, { isLoading: isSaving }] = useAllocateStaffMutation()
+  const { data: allocatedStaff } = useGetReworkAllocatedStaffQuery(step.reworkScheduleOperationId)
+  const [fetchLastTeam, { isFetching: isFetchingLastTeam }] = useLazyGetReworkLastAssignedTeamQuery()
+  const [allocateStaff, { isLoading: isSaving }] = useAllocateReworkStaffMutation()
 
   // Pre-select whoever is already allocated to this operation when the view opens, without an
   // effect — adjusting state during render avoids the extra post-mount render pass a useEffect
@@ -61,7 +61,7 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
   }
 
   async function handleFetchLastTeam() {
-    const result = await fetchLastTeam(step.operationId).unwrap()
+    const result = await fetchLastTeam(step.reworkScheduleOperationId).unwrap()
     if (result.data.length === 0) {
       toast.info(result.message)
       return
@@ -74,10 +74,10 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
     if (!user) return
     try {
       await allocateStaff({
-        scheduleOperationId: step.operationId,
+        reworkScheduleOperationId: step.reworkScheduleOperationId,
         employeeIds: [...selected],
         allocatedByEmpId: user.employeeId,
-        pendingScheduleId,
+        reworkPendingScheduleId,
       }).unwrap()
       onBack()
     } catch {
@@ -103,7 +103,7 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
         </div>
       </div>
 
-      {/* Body — count/fetch and search stay put; only the employee grid below scrolls */}
+      {/* Body — count and search stay put; only the employee grid below scrolls */}
       <div className="flex flex-col flex-1 min-h-0">
 
         <div className="flex flex-col gap-3 px-5 pt-3 shrink-0">
@@ -198,16 +198,16 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
 }
 
 /* ── Allocation Dialog (Operations) ─────────────────────── */
-interface AllocationDialogProps {
+interface ReworkAllocationDialogProps {
   open: boolean
   onClose: () => void
   scheduleId?: number | null
 }
 
-export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialogProps) {
-  const [manageStep, setManageStep] = useState<OperationStepRecord | null>(null)
+export function ReworkAllocationDialog({ open, onClose, scheduleId }: ReworkAllocationDialogProps) {
+  const [manageStep, setManageStep] = useState<ReworkOperationStepRecord | null>(null)
 
-  const { data: operations, isLoading } = useGetOperationsByScheduleQuery(scheduleId ?? 0, {
+  const { data: operations, isLoading } = useGetReworkOperationsByScheduleQuery(scheduleId ?? 0, {
     skip: scheduleId == null,
   })
 
@@ -221,7 +221,7 @@ export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialog
       <DialogContent className="max-w-2xl w-full p-0 gap-0 flex flex-col max-h-[85vh] overflow-hidden">
         {manageStep && scheduleId != null ? (
           <ManageTeamView
-            pendingScheduleId={scheduleId}
+            reworkPendingScheduleId={scheduleId}
             step={manageStep}
             onBack={() => setManageStep(null)}
           />
@@ -239,7 +239,7 @@ export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialog
               )}
               {!isLoading && (operations ?? []).map((op) => (
                 <div
-                  key={op.operationId}
+                  key={op.reworkScheduleOperationId}
                   className="flex items-start justify-between rounded-2xl bg-gray-100 px-4 py-3.5 gap-3"
                 >
                   <div className="flex items-start gap-3 min-w-0">
