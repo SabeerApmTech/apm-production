@@ -1,4 +1,4 @@
-export type EmployeeRole = "SUPERADMIN" | "MANAGER" | "SUPERVISOR"
+export type EmployeeRole = "SUPERADMIN" | "MANAGER" | "SUPERVISOR" | "OPERATOR"
 
 export interface AuthUser {
   userId: number

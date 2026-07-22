@@ -4,12 +4,24 @@ import { toast } from "sonner"
 import { getApiErrorDetails, getApiErrorMessage } from "@/utils/apiError"
 
 interface RtkQueryMeta {
-  arg?: { type?: "query" | "mutation" }
+  arg?: { type?: "query" | "mutation"; endpointName?: string }
 }
 
 function isMutation(action: UnknownAction): boolean {
   const meta = (action as { meta?: RtkQueryMeta }).meta
   return meta?.arg?.type === "mutation"
+}
+
+// Polling queries whose "not found" failures are an expected, momentary state rather than a
+// real problem — e.g. schedule-wise live tracking keeps polling a schedule id that becomes
+// stale the instant it's completed, right up until the page swaps to the next active schedule.
+// Surfacing that as an error toast just confuses the manager/supervisor watching the dashboard.
+const SILENT_QUERY_ENDPOINTS = new Set(["getScheduleLiveTracking"])
+
+function isSilencedQuery(action: UnknownAction): boolean {
+  const meta = (action as { meta?: RtkQueryMeta }).meta
+  const endpointName = meta?.arg?.endpointName
+  return !!endpointName && SILENT_QUERY_ENDPOINTS.has(endpointName)
 }
 
 /**
@@ -24,7 +36,7 @@ export const toastMiddleware: Middleware = () => (next) => (action) => {
   if (isFulfilled(typedAction) && isMutation(typedAction)) {
     const message = (typedAction.payload as { message?: string } | undefined)?.message
     if (message) toast.success(message)
-  } else if (isRejectedWithValue(typedAction)) {
+  } else if (isRejectedWithValue(typedAction) && !isSilencedQuery(typedAction)) {
     const message = getApiErrorMessage(typedAction.payload, "Something went wrong. Please try again.")
     const details = getApiErrorDetails(typedAction.payload)
     toast.error(message, details ? { description: details } : undefined)

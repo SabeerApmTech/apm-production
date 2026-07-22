@@ -2,14 +2,19 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { pad2 } from "./data"
+import { pad2, REJECTION_REASONS } from "./data"
 import type { Operation } from "./types"
 
 const textareaClass =
   "w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
 
-interface StopFormData { successQty: string; rejectedQty: string; remarks: string }
+/** `reason` mirrors the action API's own `reason` field — populated from the Rejection Reason
+ *  dropdown below, which only appears (and is only required) once there's a rejected qty. */
+interface StopFormData { successQty: string; rejectedQty: string; remarks: string; reason: string }
 
 interface Props {
   open: boolean
@@ -21,8 +26,9 @@ interface Props {
 }
 
 export function StopDialog({ open, onOpenChange, operation, targetReached, onSave }: Props) {
-  const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "" })
+  const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
   const [submitting, setSubmitting] = useState(false)
+  const hasRejection = Number(form.rejectedQty) > 0
 
   // Resets the form whenever the dialog (re)opens, without an effect — adjusting state during
   // render avoids the extra post-mount render pass a useEffect would cost here.
@@ -30,7 +36,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
   if (open !== prevOpen) {
     setPrevOpen(open)
     if (open) {
-      setForm({ successQty: targetReached ? "0" : "", rejectedQty: "", remarks: "" })
+      setForm({ successQty: targetReached ? "0" : "", rejectedQty: "", remarks: "", reason: "" })
     }
   }
 
@@ -38,7 +44,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
     setSubmitting(true)
     try {
       await onSave(form)
-      setForm({ successQty: "", rejectedQty: "", remarks: "" })
+      setForm({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
     } catch {
       // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
     } finally {
@@ -77,10 +83,25 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
             <Input
               type="number" min={0}
               value={form.rejectedQty}
-              onChange={e => setForm(f => ({ ...f, rejectedQty: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, rejectedQty: e.target.value, reason: "" }))}
               className="h-8 text-sm"
             />
           </div>
+          {hasRejection && (
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-600">Rejection Reason <span className="text-red-500">*</span></Label>
+              <Select value={form.reason} onValueChange={v => setForm(f => ({ ...f, reason: v }))}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Select reason..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {REJECTION_REASONS.map(r => (
+                    <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs text-gray-600">Remarks</Label>
             <textarea
@@ -95,7 +116,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
         <div className="flex gap-2 mt-4">
           <Button
             onClick={handleSave}
-            disabled={form.successQty === "" || submitting}
+            disabled={form.successQty === "" || (hasRejection && !form.reason) || submitting}
             className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white"
           >
             {submitting ? "Saving..." : "Save"}

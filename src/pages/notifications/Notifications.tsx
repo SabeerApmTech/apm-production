@@ -7,7 +7,7 @@ import {
   ArrowLeft, CheckCircle, Clock, Loader2, Check, ArrowUpRight, Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getCurrentEmployeeId } from "@/utils/auth"
+import { getAuthUser, getCurrentEmployeeId, getRole } from "@/utils/auth"
 import {
   useClearAllNotificationsMutation,
   useGetNotificationsQuery,
@@ -260,10 +260,15 @@ function NotifDetail({ notif, onBack, onMarkRead, marking, onNavigate }: {
           </table>
         </div>
 
-        {/* Description */}
+        {/* Status — the message itself is already shown under the title above, so this surfaces
+            read status/timing instead of repeating it. */}
         <div className="px-4 py-3 border-t border-border">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</h4>
-          <p className="text-sm text-foreground leading-relaxed">{notif.message}</p>
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Status</h4>
+          <p className="text-sm text-foreground leading-relaxed">
+            {notif.isRead && notif.readAt
+              ? `Marked as read on ${formatFullDateTime(notif.readAt)}`
+              : "Not read yet"}
+          </p>
         </div>
       </div>
 
@@ -276,10 +281,36 @@ function NotifDetail({ notif, onBack, onMarkRead, marking, onNavigate }: {
   )
 }
 
+/**
+ * The backend's own `navigationUrl` for an operator's schedule-allocation notification just
+ * points at the generic /production-monitoring entry screen, which would leave them re-picking
+ * the schedule type, schedule and step by hand. `referenceId` (scheduleId) and `navigationId`
+ * (step/sequenceNo) carry exactly what's needed to jump straight to that step's Log Report
+ * instead — the same 3-table (schedule summary / operation / log) view Production Monitoring
+ * shows once a step is selected.
+ */
+function resolveNavigationTarget(notif: NotificationItem, isOperator: boolean, employeeId: string, employeeName: string): string | null {
+  if (!notif.navigationUrl) return null
+  if (isOperator && notif.referenceId && notif.navigationId) {
+    const params = new URLSearchParams({
+      employeeId,
+      employeeName,
+      scheduleId: notif.referenceId,
+      sequenceNo: notif.navigationId,
+    })
+    return `/live-tracking/log-report?${params.toString()}`
+  }
+  return notif.navigationUrl
+}
+
 /* ── Page ───────────────────────────────────────────────────────── */
 export function Notifications() {
   const navigate = useNavigate()
   const employeeId = getCurrentEmployeeId()
+  const isOperator = getRole() === 'operator'
+  const employeeName = getAuthUser()?.employeeName ?? ""
+  // Operators have no notification categories to configure — Notification Settings is admin-only.
+  const canManageSettings = !isOperator
   const [filters, setFilters] = useState<NotificationFilters>(DEFAULT_FILTERS)
   const { search, activeTab, categoryFilter } = filters
   const [selectedId,   setSelectedId]   = useState<number | null>(null)
@@ -458,13 +489,15 @@ export function Notifications() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <button
-              aria-label="Notification Settings"
-              onClick={() => navigate("/notifications/settings")}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shrink-0 transition-colors hover:bg-accent"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
+            {canManageSettings && (
+              <button
+                aria-label="Notification Settings"
+                onClick={() => navigate("/notifications/settings")}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shrink-0 transition-colors hover:bg-accent"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* Grouped list */}
@@ -504,7 +537,10 @@ export function Notifications() {
             onBack={() => setSelectedId(null)}
             onMarkRead={() => markNotificationRead(selected.notificationId)}
             marking={marking}
-            onNavigate={selected.navigationUrl ? () => handleNavigate(selected.navigationUrl!) : undefined}
+            onNavigate={(() => {
+              const target = resolveNavigationTarget(selected, isOperator, employeeId, employeeName)
+              return target ? () => handleNavigate(target) : undefined
+            })()}
           />
         ) : (
           <div className="hidden md:flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 gap-3">

@@ -7,7 +7,6 @@ import { AuthExpiryWatcher } from "@/components/AuthExpiryWatcher";
 import { getRole, getAuthUser, isTokenExpired, clearAuth } from "@/utils/auth";
 
 const Login                  = lazy(() => import("./pages/auth/Login").then(m => ({ default: m.Login })));
-const OperatorLogin           = lazy(() => import("./pages/auth/OperatorLogin").then(m => ({ default: m.OperatorLogin })));
 const Manager                = lazy(() => import("./pages/user_management/manager/Manager").then(m => ({ default: m.Manager })));
 const Supervisor             = lazy(() => import("./pages/user_management/supervisor/Supervisor").then(m => ({ default: m.Supervisor })));
 const Operator               = lazy(() => import("./pages/user_management/operator/Operator").then(m => ({ default: m.Operator })));
@@ -36,10 +35,8 @@ const ProductWiseReport      = lazy(() => import("./pages/reports/product_wise/P
 const ReworkEmployeePerformanceReport = lazy(() => import("./pages/rework_reports/employee_performance/EmployeePerformanceReport").then(m => ({ default: m.ReworkEmployeePerformanceReport })));
 const ReworkProductWiseReport = lazy(() => import("./pages/rework_reports/product_wise/ProductWiseReport").then(m => ({ default: m.ReworkProductWiseReport })));
 
-/** Redirects unauthenticated users (or admins whose token has expired) to /login */
+/** Redirects unauthenticated users (or users whose token has expired) to /login */
 function ProtectedLayout() {
-  if (getRole() === 'operator') return <DashboardLayout />;
-
   const user = getAuthUser();
   if (user && isTokenExpired()) {
     clearAuth();
@@ -75,7 +72,6 @@ function App() {
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/operator-login" element={<OperatorLogin />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/" element={<RoleRedirect />} />
 
@@ -84,10 +80,10 @@ function App() {
             {/* Reached via the "View Detail" link on /live-tracking — read-only view of another operator's current job */}
             <Route path="/live-tracking/log-report" element={<OperatorLogReport />} />
             <Route path="/production-monitoring" element={<ProductionMonitoring />} />
+            <Route path="/notifications" element={<Notifications />} />
 
             {/* Admin-only routes — operators are redirected to /production-monitoring */}
             <Route element={<AdminRoute />}>
-              <Route path="/notifications" element={<Notifications />} />
               <Route path="/notifications/settings" element={<NotificationSettings />} />
               <Route path="/user-management/manager" element={<Manager />} />
               <Route path="/user-management/supervisor" element={<Supervisor />} />

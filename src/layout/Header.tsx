@@ -49,7 +49,7 @@ export function Header() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { data: notificationCounts } = useGetNotificationCountsQuery(employeeId, {
-    skip: !employeeId || role === 'operator',
+    skip: !employeeId,
     pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
   })
   const unreadCount = notificationCounts?.unread ?? 0
@@ -70,13 +70,6 @@ export function Header() {
       clearAuth()
       navigate("/login", { replace: true })
     }
-  }
-
-  // Operators never authenticated against /Authentication/login, so there's no session to
-  // revoke server-side — just drop the locally-stored operator identity and role.
-  const handleOperatorLogout = () => {
-    clearAuth()
-    navigate("/operator-login", { replace: true })
   }
 
   return (
@@ -101,90 +94,74 @@ export function Header() {
           </button>
         )}
 
-        {role !== 'operator' && (
-          <button
-            aria-label="Notifications"
-            onClick={() => navigate("/notifications")}
-            className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-          >
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
-                {unreadCount > 99 ? "99+" : unreadCount}
+        <button
+          aria-label="Notifications"
+          onClick={() => navigate("/notifications")}
+          className="relative flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+        >
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-foreground hover:bg-accent transition-colors">
+              <UserCircle2 className="h-7 w-7 shrink-0 text-muted-foreground" />
+              <span className="hidden sm:inline-flex items-center gap-1">
+                {user?.employeeName ?? "Admin"}
+                {user && <span className="text-muted-foreground font-normal">({getRoleLabel(user.employeeRole)})</span>}
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </span>
-            )}
-          </button>
-        )}
-
-        {/* Operators — plain logout icon instead of the admin name dropdown */}
-        {role === 'operator' && (
-          <button
-            aria-label="Logout"
-            onClick={handleOperatorLogout}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        )}
-
-        {/* Admin user — hidden for operators */}
-        {role !== 'operator' && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-foreground hover:bg-accent transition-colors">
-                <UserCircle2 className="h-7 w-7 shrink-0 text-muted-foreground" />
-                <span className="hidden sm:inline-flex items-center gap-1">
-                  {user?.employeeName ?? "Admin"}
-                  {user && <span className="text-muted-foreground font-normal">({getRoleLabel(user.employeeRole)})</span>}
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64">
-              {user && (
-                <>
-                  <div className="flex flex-col gap-2 px-3 py-2.5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <IdCard className="h-4 w-4 text-muted-foreground" />
-                      Profile Info
-                    </div>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                      <span className="text-muted-foreground">Employee ID</span>
-                      <span className="text-right font-medium text-foreground">{user.employeeId}</span>
-                      <span className="text-muted-foreground">Name</span>
-                      <span className="text-right font-medium text-foreground">{user.employeeName}</span>
-                      <span className="text-muted-foreground">Department</span>
-                      <span className="text-right font-medium text-foreground">{user.department ?? "-"}</span>
-                      <span className="text-muted-foreground">Role</span>
-                      <span className="text-right font-medium text-foreground">{getRoleLabel(user.employeeRole)}</span>
-                    </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64">
+            {user && (
+              <>
+                <div className="flex flex-col gap-2 px-3 py-2.5">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <IdCard className="h-4 w-4 text-muted-foreground" />
+                    Profile Info
                   </div>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem
-                onSelect={() => {
-                  // Let the menu close normally first, then open the dialog on the
-                  // next tick — opening it synchronously (or preventing the menu's
-                  // close) races Radix's body pointer-events lock between the two
-                  // overlays and leaves the page unclickable.
-                  setTimeout(() => setChangePasswordOpen(true), 0)
-                }}
-              >
-                <KeyRound className="h-4 w-4" />
-                Change Password
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={handleLogout}
-                className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:text-red-400 dark:focus:bg-red-950/40 dark:focus:text-red-400"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                    <span className="text-muted-foreground">Employee ID</span>
+                    <span className="text-right font-medium text-foreground">{user.employeeId}</span>
+                    <span className="text-muted-foreground">Name</span>
+                    <span className="text-right font-medium text-foreground">{user.employeeName}</span>
+                    <span className="text-muted-foreground">Department</span>
+                    <span className="text-right font-medium text-foreground">{user.department ?? "-"}</span>
+                    <span className="text-muted-foreground">Role</span>
+                    <span className="text-right font-medium text-foreground">{getRoleLabel(user.employeeRole)}</span>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem
+              onSelect={() => {
+                // Let the menu close normally first, then open the dialog on the
+                // next tick — opening it synchronously (or preventing the menu's
+                // close) races Radix's body pointer-events lock between the two
+                // overlays and leaves the page unclickable.
+                setTimeout(() => setChangePasswordOpen(true), 0)
+              }}
+            >
+              <KeyRound className="h-4 w-4" />
+              Change Password
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={handleLogout}
+              className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:text-red-400 dark:focus:bg-red-950/40 dark:focus:text-red-400"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ChangePasswordDialog

@@ -5,19 +5,14 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
   SUPERADMIN: 'Super Admin',
   MANAGER: 'Manager',
   SUPERVISOR: 'Supervisor',
+  OPERATOR: 'Operator',
 }
 
 export const getRoleLabel = (role: EmployeeRole): string => ROLE_LABELS[role]
 
 export type UserRole = 'admin' | 'operator'
 
-export interface OperatorUser {
-  employeeId: string
-  employeeName: string
-}
-
 const AUTH_USER_KEY = 'authUser'
-const OPERATOR_USER_KEY = 'operatorUser'
 const TOKEN_COOKIE = 'authToken'
 const TOKEN_EXPIRES_COOKIE = 'authTokenExpiresAt'
 
@@ -42,9 +37,8 @@ export const getRole = (): UserRole | null =>
 export const setRole = (role: UserRole) =>
   localStorage.setItem('role', role)
 
-/** Where an expired/unauthenticated session should be sent back to, based on the last known role. */
-export const getLoginPath = (): string =>
-  getRole() === 'operator' ? '/operator-login' : '/login'
+/** Where an expired/unauthenticated session should be sent back to. */
+export const getLoginPath = (): string => '/login'
 
 export const getToken = (): string | null => getCookie(TOKEN_COOKIE)
 
@@ -71,44 +65,27 @@ export const getAuthUser = (): AuthUserProfile | null => {
 }
 
 /**
- * Persists the logged-in employee and marks the legacy admin/operator nav split as 'admin' — SUPERADMIN, MANAGER and SUPERVISOR all use the admin-side layout.
- * The token itself is kept in a cookie (not localStorage) and expires alongside the server-issued `tokenExpiresAt`.
+ * Persists the logged-in employee and derives the admin/operator nav split from their role —
+ * SUPERADMIN, MANAGER and SUPERVISOR use the admin-side layout, OPERATOR gets the limited
+ * operator nav. The token itself is kept in a cookie (not localStorage) and expires alongside
+ * the server-issued `tokenExpiresAt`.
  */
 export const setAuthUser = (user: AuthUser) => {
   const { token, tokenExpiresAt, ...profile } = user
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(profile))
-  setRole('admin')
+  setRole(user.employeeRole === 'OPERATOR' ? 'operator' : 'admin')
   setCookie(TOKEN_COOKIE, token, tokenExpiresAt)
   setCookie(TOKEN_EXPIRES_COOKIE, tokenExpiresAt, tokenExpiresAt)
 }
 
 export const clearAuth = () => {
   localStorage.removeItem(AUTH_USER_KEY)
-  localStorage.removeItem(OPERATOR_USER_KEY)
   localStorage.removeItem('role')
   deleteCookie(TOKEN_COOKIE)
   deleteCookie(TOKEN_EXPIRES_COOKIE)
 }
 
-/** Persists the operator picked on the /operator-login screen (no password, identify-only) and marks the nav split as 'operator'. */
-export const setOperatorUser = (user: OperatorUser) => {
-  localStorage.setItem(OPERATOR_USER_KEY, JSON.stringify(user))
-  setRole('operator')
-}
-
-export const getOperatorUser = (): OperatorUser | null => {
-  const raw = localStorage.getItem(OPERATOR_USER_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as OperatorUser
-  } catch {
-    return null
-  }
-}
-
-/** The signed-in employee's ID regardless of role — admins live under `authUser`, operators under `operatorUser`. */
-export const getCurrentEmployeeId = (): string =>
-  (getRole() === 'operator' ? getOperatorUser()?.employeeId : getAuthUser()?.employeeId) ?? ''
+export const getCurrentEmployeeId = (): string => getAuthUser()?.employeeId ?? ''
 
 /**
  * Add/edit/toggle-active/delete/reset-password permissions per managed entity type:

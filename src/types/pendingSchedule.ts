@@ -72,6 +72,7 @@ export interface UpdatePendingScheduleRequest {
   targetQty: number
   targetDate: string
   priorityLevel: PriorityLevel
+  updatedByEmpId: string
 }
 
 export interface UpdatePriorityRequest {

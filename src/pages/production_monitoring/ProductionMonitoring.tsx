@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useState } from "react"
 import { Navigate } from "react-router-dom"
 import { ChevronLeft } from "lucide-react"
-import { getOperatorUser } from "@/utils/auth"
+import { getAuthUser } from "@/utils/auth"
 import { getApiErrorMessage } from "@/utils/apiError"
 import {
   useLazyGetOperatorSchedulesQuery,
@@ -26,7 +26,7 @@ import { StopDialog }          from "./StopDialog"
 import { PauseDialog }         from "./PauseDialog"
 
 export const ProductionMonitoring = () => {
-  const operatorUser = getOperatorUser()
+  const operatorUser = getAuthUser()
   const employeeId = operatorUser?.employeeId ?? ""
 
   const [state, dispatch] = useReducer(flowReducer, initialFlowState)
@@ -113,7 +113,7 @@ export const ProductionMonitoring = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!operatorUser) return <Navigate to="/operator-login" replace />
+  if (!operatorUser) return <Navigate to="/login" replace />
 
   const filteredSchedules = scheduleType === "rework" ? reworkSchedules : productionSchedules
   const availableTypes: ScheduleType[] = [
@@ -194,7 +194,7 @@ export const ProductionMonitoring = () => {
     }
   }
 
-  const handleStopSave = async ({ successQty, rejectedQty, remarks }: { successQty: string; rejectedQty: string; remarks: string }) => {
+  const handleStopSave = async ({ successQty, rejectedQty, remarks, reason }: { successQty: string; rejectedQty: string; remarks: string; reason: string }) => {
     if (!scheduleType) return
     try {
       await apiFor(scheduleType).action({
@@ -202,7 +202,7 @@ export const ProductionMonitoring = () => {
         action: "STOP",
         successfulQty: successQty ? Number(successQty) : 0,
         rejectedQty: rejectedQty ? Number(rejectedQty) : 0,
-        reason: "", remarks,
+        reason, remarks,
       }).unwrap()
     } catch (err) {
       // Re-thrown so StopDialog can show it inline and keep the dialog open for the user to correct.
@@ -227,10 +227,6 @@ export const ProductionMonitoring = () => {
           <ChevronLeft className="h-3.5 w-3.5" /> Back
         </button>
       )}
-
-      <p className="shrink-0 text-xs font-semibold text-red-500 mb-4">
-        {operatorUser.employeeName} - {operatorUser.employeeId}
-      </p>
 
       {/* flex-1 min-h-0 so whichever view is active (esp. "working", which fills and scrolls
           internally) is bounded by the remaining height instead of overflowing the page.

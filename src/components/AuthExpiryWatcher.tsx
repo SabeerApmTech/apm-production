@@ -1,19 +1,17 @@
 import { useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { clearAuth, getLoginPath, getRole, getTokenExpiresAt } from "@/utils/auth"
+import { clearAuth, getLoginPath, getTokenExpiresAt } from "@/utils/auth"
 
 /**
- * Schedules an automatic logout at the exact moment the current admin session's token expires,
- * so an idle tab doesn't stay "logged in" past its server-issued expiry. Operator sessions have
- * no token and are left alone. Re-armed on every route change so a fresh login (no full page
- * reload) picks up its new expiry immediately.
+ * Schedules an automatic logout at the exact moment the current session's token expires, so an
+ * idle tab doesn't stay "logged in" past its server-issued expiry. Re-armed on every route change
+ * so a fresh login (no full page reload) picks up its new expiry immediately.
  */
 export function AuthExpiryWatcher() {
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
-    if (getRole() !== "admin") return
     const expiresAt = getTokenExpiresAt()
     if (!expiresAt) return
 

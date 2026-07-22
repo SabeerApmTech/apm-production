@@ -34,8 +34,6 @@ export const Login = () => {
     <AuthLayout
       cardClassName="w-full max-w-4xl"
       leftClassName="flex flex-col justify-center px-8 py-8 sm:py-12 sm:px-12"
-      cornerLabel="Operator Login"
-      cornerTo="/operator-login"
     >
       <img
         src={companyLogo}

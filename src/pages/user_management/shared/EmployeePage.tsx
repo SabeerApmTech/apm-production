@@ -50,10 +50,8 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
   const [deleteRows, setDeleteRows] = useState<UserRecord[] | null>(null)
   const [togglingId, setTogglingId] = useState<number | null>(null)
 
-  // Add/Edit/Toggle-active/Delete permissions vary per managed role — see canManageRole.
+  // Add/Edit/Toggle-active/Delete/Reset-password permissions vary per managed role — see canManageRole.
   const canManage = canManageRole(role)
-  // Reset-password only applies to login-capable roles (Manager/Supervisor), not Operators.
-  const canResetPassword = canManage && role !== "OPERATOR"
 
   const openAdd = useCallback(() => {
     setFormError(null)
@@ -170,14 +168,14 @@ export function EmployeePage({ title, role }: EmployeePageProps) {
               cellRenderer: ActionCell,
               cellRendererParams: {
                 onEdit: openEdit,
-                onResetPassword: canResetPassword ? openResetPassword : undefined,
+                onResetPassword: openResetPassword,
               },
               sortable: false,
             } satisfies ColDef<UserRecord>,
           ]
         : []),
     ],
-    [openEdit, openResetPassword, canManage, canResetPassword, handleToggle, togglingId]
+    [openEdit, openResetPassword, canManage, handleToggle, togglingId]
   )
 
   return (

@@ -3,8 +3,8 @@
 /* Dark mode is class-driven (toggled via useTheme), never OS-driven — without this, Tailwind
    v4's dark: utilities default to @media (prefers-color-scheme: dark). */
 /* :not(.force-light, .force-light *) lets a subtree opt out of dark mode entirely (Login,
-   OperatorLogin) even though shared components like Input carry dark: utilities that would
-   otherwise react to the global .dark class on <html>. */
+   the operator-side dashboard layout) even though shared components like Input carry dark:
+   utilities that would otherwise react to the global .dark class on <html>. */
 @custom-variant dark (&:where(.dark, .dark *):not(.force-light, .force-light *));
 
 html,

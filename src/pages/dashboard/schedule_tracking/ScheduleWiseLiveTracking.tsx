@@ -33,11 +33,21 @@ export function ScheduleWiseLiveTracking() {
   const [searchParams] = useSearchParams()
   const [selectedScheduleId, setSelectedScheduleId] = useState(() => searchParams.get("scheduleId") ?? "")
 
-  const { data: schedules } = useGetDashboardSchedulesQuery()
+  // Polled so a schedule that gets completed while this page is open drops out of the list —
+  // otherwise `effectiveScheduleId` below would keep pointing at an id the backend no longer
+  // recognizes as active, and every tracking poll would 404 into a repeating error toast.
+  const { data: schedules } = useGetDashboardSchedulesQuery(undefined, {
+    pollingInterval: LIVE_TRACKING_POLL_INTERVAL_MS,
+  })
   const scheduleOptions = schedules ?? []
   const productionOptions = scheduleOptions.filter((s) => s.scheduleType === "PRODUCTION")
   const reworkOptions = scheduleOptions.filter((s) => s.scheduleType === "REWORK")
-  const effectiveScheduleId = selectedScheduleId || scheduleOptions[0]?.scheduleId || ""
+  // Fall back to the first still-active schedule once the selected one disappears from the
+  // list (e.g. it was just completed), rather than continuing to track a stale id.
+  const isSelectedStillActive = scheduleOptions.some((s) => s.scheduleId === selectedScheduleId)
+  const effectiveScheduleId = (selectedScheduleId && isSelectedStillActive)
+    ? selectedScheduleId
+    : scheduleOptions[0]?.scheduleId ?? ""
 
   const { data: tracking, isLoading } = useGetScheduleLiveTrackingQuery(effectiveScheduleId, {
     skip: !effectiveScheduleId,

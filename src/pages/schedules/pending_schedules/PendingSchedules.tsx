@@ -97,13 +97,15 @@ export function PendingSchedules() {
   }, [companies, createPendingSchedule])
 
   const handleEdit = useCallback(async (values: ScheduleFormValues) => {
-    if (!editSchedule) return
+    const user = getAuthUser()
+    if (!editSchedule || !user) return
     await updatePendingSchedule({
       scheduleId: editSchedule.scheduleId,
       scheduleDate: values.scheduleDate,
       targetQty: values.targetQty,
       targetDate: values.targetDate,
       priorityLevel: values.priorityLevel,
+      updatedByEmpId: user.employeeId,
     }).unwrap()
   }, [editSchedule, updatePendingSchedule])
 
@@ -141,6 +143,7 @@ export function PendingSchedules() {
       { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
       { field: "targetQty",      headerName: "Target Qty",       minWidth: 100 },
       { field: "producedQty",    headerName: "Produced Qty",     minWidth: 110 },
+      { field: "pendingQty",     headerName: "Pending Qty",      minWidth: 110, valueFormatter: (p) => p.value ?? "-" },
       { field: "targetDate",     headerName: "Target Date",      cellRenderer: TargetDateCell, minWidth: 110 },
       {
         headerName: "Created By",

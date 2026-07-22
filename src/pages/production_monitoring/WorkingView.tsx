@@ -117,14 +117,9 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                     </>
                   )}
                   {lastEvent === "PAUSE" && (
-                    <>
-                      <Button onClick={onStart} className="h-7 px-4 text-xs bg-green-500 hover:bg-green-600 text-white min-w-16">
-                        Resume
-                      </Button>
-                      <Button onClick={onStop} className="h-7 px-4 text-xs bg-red-500 hover:bg-red-600 text-white min-w-16">
-                        Stop
-                      </Button>
-                    </>
+                    <Button onClick={onStart} className="h-7 px-4 text-xs bg-green-500 hover:bg-green-600 text-white min-w-16">
+                      Resume
+                    </Button>
                   )}
                 </div>
                 )}

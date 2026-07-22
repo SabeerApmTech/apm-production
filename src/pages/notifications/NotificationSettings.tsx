@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
-  ChevronLeft, Building2, Package, Factory, CalendarClock, Users, Bell,
+  ChevronLeft, Building2, Package, Factory, CalendarClock, Users, Bell, Truck, RotateCcw, Recycle,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -16,11 +16,14 @@ import type { NotificationSetting } from "@/types/notification"
 type IconType = React.ComponentType<{ className?: string }>
 
 const CATEGORY_CFG: Record<string, { Icon: IconType; bg: string; text: string }> = {
-  Company:          { Icon: Building2,    bg: "bg-blue-100 dark:bg-blue-950/40",     text: "text-blue-500 dark:text-blue-400" },
-  Product:          { Icon: Package,      bg: "bg-indigo-100 dark:bg-indigo-950/40", text: "text-indigo-500 dark:text-indigo-400" },
-  Production:       { Icon: Factory,      bg: "bg-amber-100 dark:bg-amber-950/40",   text: "text-amber-500 dark:text-amber-400" },
-  Schedule:         { Icon: CalendarClock,bg: "bg-purple-100 dark:bg-purple-950/40", text: "text-purple-500 dark:text-purple-400" },
-  "User Management":{ Icon: Users,        bg: "bg-green-100 dark:bg-green-950/40",   text: "text-green-500 dark:text-green-400" },
+  Company:                     { Icon: Building2,     bg: "bg-blue-100 dark:bg-blue-950/40",     text: "text-blue-500 dark:text-blue-400" },
+  Product:                     { Icon: Package,       bg: "bg-indigo-100 dark:bg-indigo-950/40", text: "text-indigo-500 dark:text-indigo-400" },
+  Production:                  { Icon: Factory,       bg: "bg-amber-100 dark:bg-amber-950/40",   text: "text-amber-500 dark:text-amber-400" },
+  Schedule:                    { Icon: CalendarClock, bg: "bg-purple-100 dark:bg-purple-950/40", text: "text-purple-500 dark:text-purple-400" },
+  "User Management":           { Icon: Users,         bg: "bg-green-100 dark:bg-green-950/40",   text: "text-green-500 dark:text-green-400" },
+  "Handover To Store":         { Icon: Truck,         bg: "bg-teal-100 dark:bg-teal-950/40",     text: "text-teal-500 dark:text-teal-400" },
+  "Rework Schedule":           { Icon: RotateCcw,     bg: "bg-rose-100 dark:bg-rose-950/40",     text: "text-rose-500 dark:text-rose-400" },
+  "Rework Handover To Store":  { Icon: Recycle,       bg: "bg-pink-100 dark:bg-pink-950/40",     text: "text-pink-500 dark:text-pink-400" },
 }
 const DEFAULT_CATEGORY_CFG = { Icon: Bell, bg: "bg-gray-100 dark:bg-gray-800", text: "text-gray-500 dark:text-gray-400" }
 
@@ -46,9 +49,9 @@ function eventDescription(category: string, eventType: string): string {
 
 function SettingsSkeleton() {
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div className="columns-1 xl:columns-2 gap-6">
       {[0, 1, 2, 3].map((section) => (
-        <div key={section} className="rounded-xl border border-border overflow-hidden h-fit">
+        <div key={section} className="mb-6 break-inside-avoid-column rounded-xl border border-border overflow-hidden">
           <div className="flex items-center justify-between gap-2 bg-muted/50 px-4 py-3">
             <div className="flex items-center gap-2.5">
               <Skeleton className="h-9 w-9 rounded-full shrink-0" />
@@ -119,11 +122,11 @@ export function NotificationSettings() {
             <p className="text-sm text-muted-foreground">No notification settings found.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-6">
+          <div className="columns-1 xl:columns-2 gap-6 pb-6">
             {Array.from(groups.entries()).map(([category, settings]) => {
               const { Icon: CategoryIcon, bg, text } = CATEGORY_CFG[category] ?? DEFAULT_CATEGORY_CFG
               return (
-                <div key={category} className="flex flex-col rounded-xl border border-border bg-card shadow-sm overflow-hidden h-fit">
+                <div key={category} className="mb-6 flex flex-col break-inside-avoid-column rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                   <div className="flex items-center justify-between gap-2 bg-muted/50 px-4 py-3">
                     <div className="flex items-center gap-2.5">
                       <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", bg)}>
