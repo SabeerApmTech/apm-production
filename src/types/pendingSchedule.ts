@@ -78,3 +78,8 @@ export interface UpdatePriorityRequest {
   pendingScheduleId: number
   priorityNo: number
 }
+
+export interface DeletePendingScheduleRequest {
+  pendingScheduleId: number
+  deletedByEmpId: string
+}

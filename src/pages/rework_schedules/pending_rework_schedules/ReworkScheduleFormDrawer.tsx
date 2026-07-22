@@ -32,6 +32,11 @@ const MANAGER_REWORK_TYPES: { value: ReworkType; label: string }[] = [
 const NON_MANAGER_REWORK_TYPES: { value: ReworkType; label: string }[] = [
   { value: "InhouseRework", label: "Inhouse Rework" },
 ]
+// When editing, the field is disabled regardless of role (see `disabled` below) and just needs to
+// display whatever type the schedule actually has — restricting the option list by the *viewer's*
+// role here would leave the current value with no matching option to look up a label from,
+// rendering blank instead of e.g. "Rework From Store".
+const ALL_REWORK_TYPES = [...MANAGER_REWORK_TYPES, ...NON_MANAGER_REWORK_TYPES]
 
 /* ── Schema ─────────────────────────────────────────────── */
 const schema = z.object({
@@ -129,7 +134,7 @@ export function ReworkScheduleFormDrawer({
                   <SelectTrigger><SelectValue placeholder="Select rework type" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {(isManager ? MANAGER_REWORK_TYPES : NON_MANAGER_REWORK_TYPES).map((t) => (
+                  {(isEdit ? ALL_REWORK_TYPES : isManager ? MANAGER_REWORK_TYPES : NON_MANAGER_REWORK_TYPES).map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>

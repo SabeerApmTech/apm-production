@@ -85,6 +85,11 @@ export interface UpdateReworkPriorityRequest {
   priorityNo: number
 }
 
+export interface DeleteReworkPendingScheduleRequest {
+  reworkPendingScheduleId: number
+  deletedByEmpId: string
+}
+
 /** Wire shape from GET /api/ReworkCompletedSchedule — dates are ISO here, kept as-is for client-side date-range filtering. */
 export interface ReworkCompletedScheduleRecord {
   reworkScheduleDate: string

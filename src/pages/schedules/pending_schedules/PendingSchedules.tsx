@@ -111,8 +111,10 @@ export function PendingSchedules() {
 
   const handleDelete = useCallback(async () => {
     if (deleteId === null) return
+    const user = getAuthUser()
+    if (!user) return
     try {
-      await deletePendingSchedule(deleteId).unwrap()
+      await deletePendingSchedule({ pendingScheduleId: deleteId, deletedByEmpId: user.employeeId }).unwrap()
     } catch {
       // Toast middleware already surfaced the error; the list reflects the server's actual state on refetch.
     }

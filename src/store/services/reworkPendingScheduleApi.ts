@@ -2,6 +2,7 @@ import { api } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   CreateReworkPendingScheduleRequest,
+  DeleteReworkPendingScheduleRequest,
   RawReworkPendingScheduleRecord,
   ReworkPendingScheduleRecord,
   UpdateReworkPendingScheduleRequest,
@@ -30,11 +31,11 @@ export const reworkPendingScheduleApi = api.injectEndpoints({
       query: (body) => ({ url: "/ReworkPendingSchedule", method: "PUT", body }),
       invalidatesTags: [{ type: "ReworkSchedule", id: "LIST" }],
     }),
-    deleteReworkPendingSchedule: builder.mutation<ApiResponse<null>, number>({
-      query: (reworkPendingScheduleId) => ({
+    deleteReworkPendingSchedule: builder.mutation<ApiResponse<null>, DeleteReworkPendingScheduleRequest>({
+      query: (body) => ({
         url: "/ReworkPendingSchedule",
         method: "DELETE",
-        body: { reworkPendingScheduleId },
+        body,
       }),
       invalidatesTags: [{ type: "ReworkSchedule", id: "LIST" }],
     }),
