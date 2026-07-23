@@ -25,6 +25,7 @@ export interface OperationRecord {
   operationId: number
   sequenceNo: number
   operationName: string
+  processTeam: string
   targetQty: number
   producedQty: number
   pendingQty: number

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { formatLogDateTime } from "@/utils/date"
+import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { ScheduleSummary } from "./ScheduleSummary"
 import { StatusBadge } from "./StatusBadge"
 import type { Operation, Schedule } from "./types"
@@ -79,7 +80,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         <table className="min-w-full text-xs">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {["Step", "Operation", "Target Qty", "Produced Qty", "Pending Qty", "Status", "Actions"].map(h => (
+              {["Step", "Operation", "Process Team", "Target Qty", "Produced Qty", "Pending Qty", "Status", "Actions"].map(h => (
                 <th key={h} className="px-3 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -88,6 +89,13 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
             <tr className="text-gray-700">
               <td className="px-3 py-2.5">{operation.sequenceNo}</td>
               <td className="px-3 py-2.5 whitespace-nowrap">{operation.operationName}</td>
+              <td className="px-3 py-2.5 whitespace-nowrap">
+                {operation.processTeam && (
+                  <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", processTeamBadgeClasses(operation.processTeam))}>
+                    {operation.processTeam}
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2.5">{operation.targetQty}</td>
               <td className="px-3 py-2.5">{operation.producedQty}</td>
               <td className="px-3 py-2.5">{operation.pendingQty}</td>

@@ -6,6 +6,7 @@ export interface RawReworkTransactionLogRecord {
   productName: string
   sequenceNo: number
   operationName: string
+  processTeam: string
   employeeId: string
   employeeName: string
   status: string

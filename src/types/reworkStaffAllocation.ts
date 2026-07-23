@@ -4,6 +4,7 @@ export interface ReworkOperationStepRecord {
   sequenceNo: number
   operationName: string
   allocatedOperatorCount: number
+  processTeam: string
 }
 
 export interface ReworkLastTeamMember {

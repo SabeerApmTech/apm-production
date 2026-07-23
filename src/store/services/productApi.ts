@@ -43,22 +43,34 @@ export const productApi = api.injectEndpoints({
           id: (arg.operationType === "production" ? op.productionOperationId : op.reworkOperationId) ?? 0,
           sequenceNo: op.sequenceNo,
           operationName: op.operationName,
+          processTeam: op.processTeam,
         })),
       providesTags: (_result, _error, arg) => [operationTag(arg.productId, arg.operationType)],
     }),
     addOperation: builder.mutation<
       ApiResponse<null>,
-      { productId: number; operationType: OperationType; operationName: string }
+      { productId: number; operationType: OperationType; operationName: string; processTeam: string }
     >({
-      query: ({ productId, operationType, operationName }) => ({
+      query: ({ productId, operationType, operationName, processTeam }) => ({
         url: `/Product/${productId}/operations/${operationType}`,
         method: "POST",
-        body: { operationName },
+        body: { operationName, processTeam },
       }),
       invalidatesTags: (_result, _error, arg) => [
         operationTag(arg.productId, arg.operationType),
         { type: "Product", id: "LIST" },
       ],
+    }),
+    editOperation: builder.mutation<
+      ApiResponse<null>,
+      { productId: number; operationType: OperationType; operationId: number; operationName: string; processTeam: string }
+    >({
+      query: ({ productId, operationType, operationId, operationName, processTeam }) => ({
+        url: `/Product/${productId}/edit-operations/${operationType}/${operationId}`,
+        method: "PUT",
+        body: { operationName, processTeam },
+      }),
+      invalidatesTags: (_result, _error, arg) => [operationTag(arg.productId, arg.operationType)],
     }),
     deleteOperations: builder.mutation<
       ApiResponse<null>,
@@ -79,11 +91,11 @@ export const productApi = api.injectEndpoints({
       {
         productId: number
         operationType: OperationType
-        operations: { sequenceNo: number; operationName: string }[]
+        operations: { sequenceNo: number; operationName: string; processTeam: string }[]
       }
     >({
       query: ({ productId, operationType, operations }) => ({
-        url: `/Product/${productId}/operations/${operationType}/reorder`,
+        url: `/Product/${productId}/reorder-operations/${operationType}`,
         method: "PUT",
         body: { operations },
       }),
@@ -99,6 +111,7 @@ export const {
   useDeleteProductsMutation,
   useGetOperationsQuery,
   useAddOperationMutation,
+  useEditOperationMutation,
   useDeleteOperationsMutation,
   useReorderOperationsMutation,
 } = productApi

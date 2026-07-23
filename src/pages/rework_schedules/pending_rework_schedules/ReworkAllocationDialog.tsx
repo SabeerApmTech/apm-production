@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
 import { LoadingRow } from "@/shared/LoadingRow"
+import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import {
   useGetReworkOperationsByScheduleQuery,
@@ -257,9 +258,16 @@ export function ReworkAllocationDialog({ open, onClose, scheduleId }: ReworkAllo
                         Step {op.sequenceNo}
                       </p>
                       <p className="wrap-break-word text-sm font-semibold text-gray-900">{op.operationName}</p>
-                      <div className="mt-0.5 flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="text-xs text-gray-500">{op.allocatedOperatorCount} operators</span>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {op.processTeam && (
+                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", processTeamBadgeClasses(op.processTeam))}>
+                            {op.processTeam}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="text-xs text-gray-500">{op.allocatedOperatorCount} operators</span>
+                        </div>
                       </div>
                     </div>
                   </div>

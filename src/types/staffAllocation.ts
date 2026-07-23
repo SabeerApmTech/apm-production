@@ -4,6 +4,7 @@ export interface OperationStepRecord {
   sequenceNo: number
   operationName: string
   allocatedOperatorCount: number
+  processTeam: string
 }
 
 export interface LastTeamMember {

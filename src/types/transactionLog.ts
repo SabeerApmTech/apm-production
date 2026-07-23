@@ -8,6 +8,7 @@ export interface RawTransactionLogRecord {
   productName: string
   sequenceNo: number
   operationName: string
+  processTeam: string
   status: string
   logEvent: string
   successfulQty: number

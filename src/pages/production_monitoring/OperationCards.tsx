@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { ScheduleSummary } from "./ScheduleSummary"
 import type { Operation, Schedule } from "./types"
 
@@ -31,7 +33,14 @@ export function OperationCards({ schedule, operations, onSelect }: Props) {
             <div key={op.operationId} className="rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-blue-200">
                 <span className="text-xs font-medium text-gray-500">Step {op.sequenceNo}</span>
-                <span className="text-xs font-semibold text-[#1e3a5f]">{op.operationName}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-[#1e3a5f]">{op.operationName}</span>
+                  {op.processTeam && (
+                    <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", processTeamBadgeClasses(op.processTeam))}>
+                      {op.processTeam}
+                    </span>
+                  )}
+                </div>
               </div>
               <dl className="space-y-1.5">
                 {([

@@ -14,33 +14,124 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, X } from "lucide-react"
+import { GripVertical, Pencil, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { LoadingRow } from "@/shared/LoadingRow"
 import { DangerIconButton } from "@/shared/DangerIconButton"
 import { useSyncedState } from "@/hooks/useSyncedState"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
 import type { OperationRow, OperationType } from "@/types/product"
 import {
   useGetOperationsQuery,
   useAddOperationMutation,
+  useEditOperationMutation,
   useDeleteOperationsMutation,
   useReorderOperationsMutation,
 } from "@/store/services/productApi"
+import { useGetProcessTeamsQuery } from "@/store/services/processTeamApi"
 
 // Must be a stable reference, not an inline `?? []` — useSyncedState resets whenever its source
 // argument changes identity, and a fresh `[]` literal computed every render (while `data` is
 // still undefined) would look like a new source on every render, looping forever.
 const EMPTY_OPERATIONS: OperationRow[] = []
 
+/* ── Process team select — shared between the Add and Edit inline forms ── */
+interface ProcessTeamSelectProps {
+  value: string
+  onChange: (value: string) => void
+  options: { processTeamId: number; processTeamName: string }[]
+}
+
+function ProcessTeamSelect({ value, onChange, options }: ProcessTeamSelectProps) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-8 flex-1 text-sm">
+        <SelectValue placeholder="Select process team..." />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((pt) => (
+          <SelectItem key={pt.processTeamId} value={pt.processTeamName} className="text-sm">
+            {pt.processTeamName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+/* ── Inline add/edit form — same shape for both, just seeded differently ── */
+interface OperationFormRowProps {
+  seqNo: number
+  initialName: string
+  initialTeam: string
+  processTeamOptions: { processTeamId: number; processTeamName: string }[]
+  saving: boolean
+  onSave: (name: string, team: string) => void
+  onCancel: () => void
+  autoFocus?: boolean
+}
+
+function OperationFormRow({
+  seqNo, initialName, initialTeam, processTeamOptions, saving, onSave, onCancel, autoFocus,
+}: OperationFormRowProps) {
+  const [name, setName] = React.useState(initialName)
+  const [team, setTeam] = React.useState(initialTeam)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    if (autoFocus) inputRef.current?.focus()
+  }, [autoFocus])
+
+  const canSave = !!name.trim() && !!team && !saving
+
+  return (
+    <div className="flex flex-col gap-2 border-b border-dashed border-gray-200 bg-blue-50/40 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="w-12 shrink-0 text-center text-sm text-gray-400">{seqNo}</span>
+        <input
+          ref={inputRef}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") onCancel() }}
+          placeholder="Enter Operation..."
+          disabled={saving}
+          className="flex-1 rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+      <div className="flex items-center gap-2 pl-15">
+        <span className="shrink-0 text-xs font-medium text-gray-500">Process Team</span>
+        <ProcessTeamSelect value={team} onChange={setTeam} options={processTeamOptions} />
+        <button
+          onClick={() => onSave(name.trim(), team)}
+          disabled={!canSave}
+          className="shrink-0 rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={saving}
+          className="shrink-0 rounded px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface SortableRowProps {
   op: OperationRow
   seqNo: number
   selected: boolean
   onToggle: (id: number) => void
+  onEdit: (id: number) => void
 }
 
-function SortableRow({ op, seqNo, selected, onToggle }: SortableRowProps) {
+function SortableRow({ op, seqNo, selected, onToggle, onEdit }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: op.id })
 
@@ -71,7 +162,22 @@ function SortableRow({ op, seqNo, selected, onToggle }: SortableRowProps) {
         className="h-4 w-4 cursor-pointer accent-blue-500"
       />
       <span className="w-12 shrink-0 text-center text-gray-400">{seqNo}</span>
-      <span className="flex-1 text-gray-700">{op.operationName}</span>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-gray-700">{op.operationName}</p>
+        {op.processTeam && (
+          <p className="mt-0.5 truncate text-xs text-gray-400">
+            <span className="font-medium">Process Team:</span> {op.processTeam}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onEdit(op.id)}
+        aria-label="Edit operation"
+        className="shrink-0 text-gray-300 hover:text-blue-500 transition-colors"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 }
@@ -86,22 +192,20 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
   const [activeTab, setActiveTab] = React.useState<OperationType>("production")
   const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set())
   const [isAdding, setIsAdding] = React.useState(false)
-  const [newOpText, setNewOpText] = React.useState("")
+  const [editingId, setEditingId] = React.useState<number | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false)
-  const inputRef = React.useRef<HTMLInputElement>(null)
 
   const { data, isLoading } = useGetOperationsQuery({ productId, operationType: activeTab })
+  const { data: processTeams } = useGetProcessTeamsQuery()
+  const processTeamOptions = (processTeams ?? []).filter((pt) => pt.isActive)
   const [addOperation, { isLoading: isSaving }] = useAddOperationMutation()
+  const [editOperation, { isLoading: isEditSaving }] = useEditOperationMutation()
   const [deleteOperations] = useDeleteOperationsMutation()
   const [reorderOperations] = useReorderOperationsMutation()
 
   // Mirrors the fetched list but updates immediately on drag so reordering feels instant,
   // rather than waiting for the reorder request to round-trip before the row visually moves.
   const [operations, setLocalOperations] = useSyncedState(data ?? EMPTY_OPERATIONS)
-
-  React.useEffect(() => {
-    if (isAdding) inputRef.current?.focus()
-  }, [isAdding])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -118,7 +222,9 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
       await reorderOperations({
         productId,
         operationType: activeTab,
-        operations: reordered.map((op, i) => ({ sequenceNo: i + 1, operationName: op.operationName })),
+        operations: reordered.map((op, i) => ({
+          sequenceNo: i + 1, operationName: op.operationName, processTeam: op.processTeam,
+        })),
       }).unwrap()
     } catch {
       setLocalOperations(data ?? [])
@@ -150,21 +256,24 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
     }
   }
 
-  async function handleSave() {
-    const text = newOpText.trim()
-    if (!text) return
+  async function handleAddSave(name: string, team: string) {
     try {
-      await addOperation({ productId, operationType: activeTab, operationName: text }).unwrap()
-      setNewOpText("")
+      await addOperation({ productId, operationType: activeTab, operationName: name, processTeam: team }).unwrap()
       setIsAdding(false)
     } catch {
-      // Toast middleware already surfaced the error; keep the input open so the user can retry.
+      // Toast middleware already surfaced the error; keep the form open so the user can retry.
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") handleSave()
-    if (e.key === "Escape") { setIsAdding(false); setNewOpText("") }
+  async function handleEditSave(operationId: number, name: string, team: string) {
+    try {
+      await editOperation({
+        productId, operationType: activeTab, operationId, operationName: name, processTeam: team,
+      }).unwrap()
+      setEditingId(null)
+    } catch {
+      // Toast middleware already surfaced the error; keep the form open so the user can retry.
+    }
   }
 
   const allSelected = operations.length > 0 && selectedIds.size === operations.length
@@ -180,6 +289,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
               setActiveTab(tab)
               setSelectedIds(new Set())
               setIsAdding(false)
+              setEditingId(null)
             }}
             className={cn(
               "flex-1 py-3 text-sm font-medium transition-colors",
@@ -208,7 +318,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
         <DangerIconButton onClick={() => setDeleteConfirmOpen(true)} count={selectedIds.size} size="sm" />
         <div className="flex-1" />
         <button
-          onClick={() => setIsAdding(true)}
+          onClick={() => { setIsAdding(true); setEditingId(null) }}
           className="rounded-lg bg-blue-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
         >
           ADD
@@ -225,7 +335,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
           className="h-4 w-4 cursor-pointer accent-blue-500"
         />
         <span className="w-12 text-center">Seq. No</span>
-        <span className="flex-1">Operation</span>
+        <span className="flex-1">Operation &amp; Process Team</span>
       </div>
 
       {/* Sortable list */}
@@ -233,42 +343,44 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={operations.map((o) => o.id)} strategy={verticalListSortingStrategy}>
             {operations.map((op, i) => (
-              <SortableRow
-                key={op.id}
-                op={op}
-                seqNo={i + 1}
-                selected={selectedIds.has(op.id)}
-                onToggle={toggleSelect}
-              />
+              editingId === op.id ? (
+                <OperationFormRow
+                  key={op.id}
+                  seqNo={i + 1}
+                  initialName={op.operationName}
+                  initialTeam={op.processTeam}
+                  processTeamOptions={processTeamOptions}
+                  saving={isEditSaving}
+                  onSave={(name, team) => handleEditSave(op.id, name, team)}
+                  onCancel={() => setEditingId(null)}
+                  autoFocus
+                />
+              ) : (
+                <SortableRow
+                  key={op.id}
+                  op={op}
+                  seqNo={i + 1}
+                  selected={selectedIds.has(op.id)}
+                  onToggle={toggleSelect}
+                  onEdit={(id) => { setEditingId(id); setIsAdding(false) }}
+                />
+              )
             ))}
           </SortableContext>
         </DndContext>
 
         {/* Inline add row */}
         {isAdding && (
-          <div className="flex items-center gap-3 border-b border-dashed border-gray-200 px-4 py-2">
-            <span className="w-4" />
-            <input type="checkbox" disabled className="h-4 w-4 opacity-30 accent-blue-500" />
-            <span className="w-12 shrink-0 text-center text-sm text-gray-400">
-              {operations.length + 1}
-            </span>
-            <input
-              ref={inputRef}
-              value={newOpText}
-              onChange={(e) => setNewOpText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Enter Operation..."
-              disabled={isSaving}
-              className="flex-1 rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            />
-            <button
-              onClick={handleSave}
-              disabled={!newOpText.trim() || isSaving}
-              className="rounded bg-blue-500 px-3 py-1 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </button>
-          </div>
+          <OperationFormRow
+            seqNo={operations.length + 1}
+            initialName=""
+            initialTeam=""
+            processTeamOptions={processTeamOptions}
+            saving={isSaving}
+            onSave={handleAddSave}
+            onCancel={() => setIsAdding(false)}
+            autoFocus
+          />
         )}
 
         {isLoading && (

@@ -4,6 +4,7 @@ import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { StatusCell } from "@/shared/StatusCell"
 import { DeleteCell } from "@/shared/renderers/DeleteCell"
+import { ProcessTeamBadge } from "@/shared/renderers/ProcessTeamBadge"
 import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { formatLogDateTime, getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
@@ -121,6 +122,7 @@ export function TransactionLog() {
       { field: "productName",   headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
       { field: "sequenceNo",    headerName: "Seq No",         maxWidth: 90 },
       { field: "operationName", headerName: "Operation",      minWidth: 140 },
+      { field: "processTeam",   headerName: "Process Team",   cellRenderer: ProcessTeamBadge, minWidth: 130 },
       { field: "status",        headerName: "Status",         cellRenderer: StatusCell, minWidth: 110 },
       { field: "logEvent",      headerName: "Event",          minWidth: 100 },
       { field: "successfulQty", headerName: "Successful Qty", minWidth: 130 },

@@ -20,6 +20,7 @@ export interface OperationRow {
   id: number
   sequenceNo: number
   operationName: string
+  processTeam: string
 }
 
 /** Raw shape from GET .../operations/{operationType} — the id field name differs by operationType. */
@@ -28,4 +29,5 @@ export interface RawOperationRecord {
   reworkOperationId?: number
   sequenceNo: number
   operationName: string
+  processTeam: string
 }

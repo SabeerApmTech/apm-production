@@ -40,6 +40,6 @@ export const api = createApi({
   // the same records in the background. Refetch on every mount so revisiting a page always shows
   // current data; per-query `pollingInterval`s (live tracking, etc.) are unaffected by this.
   refetchOnMountOrArgChange: true,
-  tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ReworkTransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "ReworkMonitoringLog", "CompletedSchedule", "ReworkCompletedSchedule", "HandoverToStore", "ReworkHandoverToStore", "Store", "Notification", "NotificationSettings", "ReworkSchedule", "ReworkScheduleOperations"],
+  tagTypes: ["UserList", "Product", "ProductOperations", "Company", "PendingSchedule", "TransactionLog", "ReworkTransactionLog", "ScheduleOperations", "ProductionMonitoringLog", "ReworkMonitoringLog", "CompletedSchedule", "ReworkCompletedSchedule", "HandoverToStore", "ReworkHandoverToStore", "Store", "Notification", "NotificationSettings", "ReworkSchedule", "ReworkScheduleOperations", "ProcessTeam"],
   endpoints: () => ({}),
 })

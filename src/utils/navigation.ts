@@ -93,6 +93,7 @@ export const navItems: NavItem[] = [
       { label: "Products", path: "/master-data/products" },
       { label: "Company", path: "/master-data/company" },
       { label: "Store", path: "/master-data/store" },
+      { label: "Process Team", path: "/master-data/process-team" },
     ],
   },
   {
