@@ -138,7 +138,13 @@ export function PendingSchedules() {
       { field: "priorityLevel",  headerName: "Priority Level",   cellRenderer: PriorityBadge, sortable: false, minWidth: 120 },
       { field: "scheduleDate",   headerName: "Schedule Date",    minWidth: 120 },
       { field: "scheduleId",     headerName: "Schedule ID",      minWidth: 100 },
-      { field: "companyName",    headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      {
+        headerName: "Company",
+        valueGetter: (p: ValueGetterParams<PendingScheduleRecord>) =>
+          p.data ? `${p.data.companyName} - ${p.data.companyLocation}` : "",
+        cellStyle: { fontWeight: 600 },
+        minWidth: 160,
+      },
       { field: "productName",    headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 100 },
       { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
       { field: "targetQty",      headerName: "Target Qty",       minWidth: 100 },

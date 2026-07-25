@@ -118,7 +118,13 @@ export function TransactionLog() {
         minWidth: 150,
       },
       { field: "scheduleId",    headerName: "Schedule ID",    minWidth: 110 },
-      { field: "companyName",   headerName: "Company",        cellStyle: { fontWeight: 600 }, minWidth: 120 },
+      {
+        headerName: "Company",
+        valueGetter: (p: ValueGetterParams<TransactionLogRecord>) =>
+          p.data ? `${p.data.companyName} - ${p.data.companyLocation}` : "",
+        cellStyle: { fontWeight: 600 },
+        minWidth: 160,
+      },
       { field: "productName",   headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
       { field: "sequenceNo",    headerName: "Seq No",         maxWidth: 90 },
       { field: "operationName", headerName: "Operation",      minWidth: 140 },

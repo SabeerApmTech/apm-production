@@ -3,6 +3,7 @@ export interface RawReworkTransactionLogRecord {
   logTime: string
   reworkScheduleId: string
   companyName: string
+  companyLocation: string
   productName: string
   sequenceNo: number
   operationName: string

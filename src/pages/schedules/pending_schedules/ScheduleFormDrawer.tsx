@@ -114,7 +114,9 @@ export function ScheduleFormDrawer({
                   </FormControl>
                   <SelectContent>
                     {(companies ?? []).map((c) => (
-                      <SelectItem key={c.companyId} value={c.companyName}>{c.companyName}</SelectItem>
+                      <SelectItem key={c.companyId} value={c.companyName}>
+                        {c.companyName} - {c.companyLocation}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

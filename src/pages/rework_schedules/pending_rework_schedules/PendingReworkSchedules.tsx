@@ -156,7 +156,13 @@ export function PendingReworkSchedules() {
         field: "reworkType", headerName: "Rework Type", minWidth: 150,
         valueFormatter: (p) => REWORK_TYPE_LABELS[p.value as ReworkType] ?? p.value,
       },
-      { field: "companyName",         headerName: "Company",              cellStyle: { fontWeight: 600 }, minWidth: 110 },
+      {
+        headerName: "Company",
+        valueGetter: (p: ValueGetterParams<ReworkPendingScheduleRecord>) =>
+          p.data ? `${p.data.companyName} - ${p.data.companyLocation}` : "",
+        cellStyle: { fontWeight: 600 },
+        minWidth: 160,
+      },
       { field: "productName",         headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 100 },
       { field: "noOfOperations",      headerName: "No of Operations",     minWidth: 140 },
       { field: "targetQty",           headerName: "Target Qty",           minWidth: 100 },
