@@ -122,7 +122,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                   <span className="text-gray-400">—</span>
                 ) : (
                 <div className="flex items-center gap-1.5">
-                  {operation.isQrApplicable && (
+                  {operation.isQrApplicable && !isIdle && (
                     <button
                       onClick={() => setScanOpen(true)}
                       title="Scan"
