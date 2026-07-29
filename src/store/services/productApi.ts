@@ -55,13 +55,13 @@ export const productApi = api.injectEndpoints({
       query: ({ identifierTypeId, body }) => ({ url: `/Product/identifier/${identifierTypeId}`, method: "PUT", body }),
       invalidatesTags: [{ type: "Identifier", id: "LIST" }, { type: "Product", id: "LIST" }],
     }),
-    // The path already carries the id being deleted; the array body just mirrors the shape the
-    // backend expects (same as the productIds/operationIds bulk-delete bodies elsewhere).
+    // No id in the path — this is a bulk-delete endpoint, same shape as productIds/operationIds
+    // elsewhere, just always called here with a single-element array.
     deleteIdentifier: builder.mutation<ApiResponse<null>, number>({
       query: (identifierTypeId) => ({
-        url: `/Product/identifier/${identifierTypeId}`,
+        url: "/Product/identifier",
         method: "DELETE",
-        body: { identifierTypeId: [identifierTypeId] },
+        body: { identifierTypeIds: [identifierTypeId] },
       }),
       invalidatesTags: [{ type: "Identifier", id: "LIST" }],
     }),
