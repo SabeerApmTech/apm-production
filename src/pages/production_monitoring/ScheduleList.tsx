@@ -33,7 +33,8 @@ export function ScheduleList({ title, schedules, onSelect }: Props) {
               {([
                 ["Schedule ID",   s.scheduleId],
                 ["Schedule Date", s.scheduleDate],
-                ["Company",       s.companyName],
+                ["Company",       `${s.companyName} - ${s.companyLocation}`],
+                ["Delivery Location", s.deliveryLocation],
                 ["Product",       s.productName],
                 ["Target Date",   s.targetDate],
                 ["Target Qty",    s.targetQty],

@@ -4,6 +4,7 @@ export interface ProductRecord {
   productId: number
   itemCode: string
   productName: string
+  identifierName: string
   productionOperationCount: number
   reworkOperationCount: number
 }
@@ -11,9 +12,27 @@ export interface ProductRecord {
 export interface CreateProductRequest {
   itemCode: string
   productName: string
+  identifierTypeId: number
 }
 
 export type UpdateProductRequest = CreateProductRequest
+
+export interface IdentifierRecord {
+  identifierTypeId: number
+  identifierName: string
+  minLength: number
+  maxLength: number
+  isDigitsOnly: boolean
+}
+
+export interface CreateIdentifierRequest {
+  identifierName: string
+  minLength: number
+  maxLength: number
+  isDigitsOnly: boolean
+}
+
+export type UpdateIdentifierRequest = CreateIdentifierRequest
 
 /** Normalized operation row used throughout the UI, regardless of the id field name the API uses per type. */
 export interface OperationRow {
@@ -21,6 +40,7 @@ export interface OperationRow {
   sequenceNo: number
   operationName: string
   processTeam: string
+  isQrApplicable: boolean
 }
 
 /** Raw shape from GET .../operations/{operationType} — the id field name differs by operationType. */
@@ -30,4 +50,5 @@ export interface RawOperationRecord {
   sequenceNo: number
   operationName: string
   processTeam: string
+  isQrApplicable: boolean
 }

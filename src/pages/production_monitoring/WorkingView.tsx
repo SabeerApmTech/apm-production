@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react"
+import { Pause, Play, QrCode, Square } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { formatLogDateTime } from "@/utils/date"
 import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { ScheduleSummary } from "./ScheduleSummary"
 import { StatusBadge } from "./StatusBadge"
+import { ScanDialog } from "./ScanDialog"
 import type { Operation, Schedule } from "./types"
 import type { LogReportEntry } from "@/types/productionMonitoring"
+import type { IdentifierRecord } from "@/types/product"
 
 interface Props {
   schedule: Schedule
@@ -14,6 +16,10 @@ interface Props {
   logs: LogReportEntry[]
   activeHours: string
   idleHours: string
+  /** Used to resolve `operation.identifierTypeId` to a display name. */
+  identifiers?: IdentifierRecord[]
+  /** The signed-in operator — needed for the QR scan action. */
+  employeeId?: string
   onStart?: () => void
   onPause?: () => void
   onStop?: () => void
@@ -21,7 +27,10 @@ interface Props {
   readOnly?: boolean
 }
 
-export function WorkingView({ schedule, operation, logs, activeHours, idleHours, onStart, onPause, onStop, readOnly = false }: Props) {
+export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, onStart, onPause, onStop, readOnly = false }: Props) {
+  const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
+  const identifierName = identifierRecord?.identifierName
+  const [scanOpen, setScanOpen] = useState(false)
   const lastEvent = logs.length ? logs[logs.length - 1].logEvent : null
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
@@ -80,7 +89,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         <table className="min-w-full text-xs">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {["Step", "Operation", "Process Team", "Target Qty", "Produced Qty", "Pending Qty", "Status", "Actions"].map(h => (
+              {["Step", "Operation", "Process Team", "Identifier", "QR", "Target Qty", "Produced Qty", "Pending Qty", "Status", "Actions"].map(h => (
                 <th key={h} className="px-3 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -96,6 +105,14 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                   </span>
                 )}
               </td>
+              <td className="px-3 py-2.5 whitespace-nowrap">{identifierName ?? "-"}</td>
+              <td className="px-3 py-2.5">
+                {operation.isQrApplicable && (
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-500">
+                    QR
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2.5">{operation.targetQty}</td>
               <td className="px-3 py-2.5">{operation.producedQty}</td>
               <td className="px-3 py-2.5">{operation.pendingQty}</td>
@@ -104,30 +121,42 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                 {readOnly ? (
                   <span className="text-gray-400">—</span>
                 ) : (
-                <div className="flex flex-col gap-1 items-start">
+                <div className="flex items-center gap-1.5">
+                  {operation.isQrApplicable && (
+                    <button
+                      onClick={() => setScanOpen(true)}
+                      title="Scan"
+                      aria-label="Scan"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </button>
+                  )}
                   {isIdle && (
-                    <Button
+                    <button
                       onClick={onStart}
                       disabled={isComplete}
-                      className="h-7 px-4 text-xs bg-green-500 hover:bg-green-600 text-white min-w-16 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Start"
+                      aria-label="Start"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Start
-                    </Button>
+                      <Play className="h-4 w-4" />
+                    </button>
                   )}
                   {(lastEvent === "START" || lastEvent === "RESUME") && (
                     <>
-                      <Button onClick={onPause} className="h-7 px-4 text-xs bg-amber-400 hover:bg-amber-500 text-white min-w-16">
-                        Pause
-                      </Button>
-                      <Button onClick={onStop} className="h-7 px-4 text-xs bg-red-500 hover:bg-red-600 text-white min-w-16">
-                        Stop
-                      </Button>
+                      <button onClick={onPause} title="Pause" aria-label="Pause" className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-white hover:bg-amber-500 transition-colors">
+                        <Pause className="h-4 w-4" />
+                      </button>
+                      <button onClick={onStop} title="Stop" aria-label="Stop" className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
+                        <Square className="h-4 w-4" />
+                      </button>
                     </>
                   )}
                   {lastEvent === "PAUSE" && (
-                    <Button onClick={onStart} className="h-7 px-4 text-xs bg-green-500 hover:bg-green-600 text-white min-w-16">
-                      Resume
-                    </Button>
+                    <button onClick={onStart} title="Resume" aria-label="Resume" className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors">
+                      <Play className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
                 )}
@@ -197,6 +226,15 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
           )}
         </div>
       </div>
+
+      <ScanDialog
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        scheduleId={schedule.scheduleId}
+        employeeId={employeeId ?? ""}
+        scheduleOperationId={operation.operationId}
+        identifier={identifierRecord}
+      />
     </div>
   )
 }

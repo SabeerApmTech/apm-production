@@ -13,6 +13,7 @@ import {
   useGetOperatorReworkLogReportQuery,
   useOperatorReworkActionMutation,
 } from "@/store/services/reworkMonitoringApi"
+import { useGetIdentifiersQuery } from "@/store/services/productApi"
 import { WorkingView } from "@/pages/production_monitoring/WorkingView"
 import { StopDialog } from "@/pages/production_monitoring/StopDialog"
 import { PauseDialog } from "@/pages/production_monitoring/PauseDialog"
@@ -47,6 +48,8 @@ export function OperatorLogReport() {
 
   const [stopOpen, setStopOpen] = useState(false)
   const [pauseOpen, setPauseOpen] = useState(false)
+
+  const { data: identifiers } = useGetIdentifiersQuery()
 
   const { data: productionSchedules, isLoading: isProductionSchedulesLoading } = useGetOperatorSchedulesQuery(employeeId, {
     skip: !employeeId,
@@ -175,6 +178,8 @@ export function OperatorLogReport() {
             logs={logs}
             activeHours={report?.activeHours ?? "0.00"}
             idleHours={report?.idleHours ?? "0.00"}
+            identifiers={identifiers}
+            employeeId={employeeId}
             readOnly={!isOwnWork}
             onStart={handleStart}
             onPause={() => setPauseOpen(true)}
@@ -188,6 +193,8 @@ export function OperatorLogReport() {
         onOpenChange={setStopOpen}
         operation={operation ?? null}
         targetReached={schedule?.isTargetReached}
+        employeeId={employeeId}
+        scheduleId={scheduleId}
         onSave={handleStopSave}
       />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />

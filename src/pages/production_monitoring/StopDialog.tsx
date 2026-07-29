@@ -6,6 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useGetEmployeeScanCountQuery } from "@/store/services/operationQrScanApi"
 import { pad2, REJECTION_REASONS } from "./data"
 import type { Operation } from "./types"
 
@@ -22,13 +23,21 @@ interface Props {
   operation: Operation | null
   /** True when the schedule already hit its target — the backend rejects a non-zero Successful Qty in that case. */
   targetReached?: boolean
+  /** Needed to look up the QR scan count — only relevant when the operation is QR-applicable. */
+  employeeId?: string
+  scheduleId?: string
   onSave: (data: StopFormData) => Promise<void>
 }
 
-export function StopDialog({ open, onOpenChange, operation, targetReached, onSave }: Props) {
+export function StopDialog({ open, onOpenChange, operation, targetReached, employeeId, scheduleId, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
   const [submitting, setSubmitting] = useState(false)
   const hasRejection = Number(form.rejectedQty) > 0
+
+  const { data: scanCount } = useGetEmployeeScanCountQuery(
+    { employeeId: employeeId ?? "", scheduleId: scheduleId ?? "", scheduleOperationId: operation?.operationId ?? 0 },
+    { skip: !open || !operation?.isQrApplicable || !employeeId || !scheduleId }
+  )
 
   // Resets the form whenever the dialog (re)opens, without an effect — adjusting state during
   // render avoids the extra post-mount render pass a useEffect would cost here.
@@ -61,6 +70,12 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, onSav
           </DialogTitle>
         </DialogHeader>
         <p className="text-center text-xs font-semibold text-red-500 mb-4">Stopped</p>
+
+        {scanCount && (
+          <p className="text-center text-xs font-medium text-blue-600 mb-3">
+            Total Scanned Qty: {scanCount.totalScannedQty}
+          </p>
+        )}
 
         {targetReached && (
           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-3">

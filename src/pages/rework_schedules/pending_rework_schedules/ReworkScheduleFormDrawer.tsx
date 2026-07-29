@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
+import { DeliveryLocationField } from "@/shared/DeliveryLocationField"
 import { cn } from "@/lib/utils"
 import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
@@ -44,6 +45,7 @@ const schema = z.object({
     .refine((val) => !val || val >= getTodayIso(), "Rework schedule date cannot be in the past"),
   reworkType:     z.enum(["CustomerService", "ReworkFromStore", "InhouseRework"], { error: "Select a rework type" }),
   companyName:    z.string().min(1, "Company is required"),
+  deliveryLocation: z.string().min(1, "Delivery location is required"),
   productName:    z.string().min(1, "Product is required"),
   targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:     z.string().min(1, "Target date is required")
@@ -82,13 +84,14 @@ export function ReworkScheduleFormDrawer({
           reworkScheduleDate: toIsoDate(schedule.reworkScheduleDate),
           reworkType:         schedule.reworkType,
           companyName:        schedule.companyName,
+          deliveryLocation:   schedule.deliveryLocation,
           productName:        schedule.productName,
           targetQty:          schedule.targetQty,
           targetDate:         toIsoDate(schedule.targetDate),
           priorityLevel:      schedule.priorityLevel,
         }
       : {
-          reworkScheduleDate: "", companyName: "", productName: "",
+          reworkScheduleDate: "", companyName: "", deliveryLocation: "", productName: "",
           reworkType: isManager ? undefined : "InhouseRework",
           targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
@@ -185,6 +188,15 @@ export function ReworkScheduleFormDrawer({
               </FormItem>
             )} />
           </div>
+
+          {/* Delivery Location */}
+          <FormField control={form.control} name="deliveryLocation" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Delivery Location</FormLabel>
+              <DeliveryLocationField value={field.value} onChange={field.onChange} disabled={isEdit} />
+              <FormMessage />
+            </FormItem>
+          )} />
 
           {/* No of Operations + Target Qty */}
           <div className="grid grid-cols-2 gap-4">

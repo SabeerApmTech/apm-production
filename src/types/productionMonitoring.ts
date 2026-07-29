@@ -10,6 +10,8 @@ export interface OperatorSchedule {
   scheduleId: string
   scheduleDate: string
   companyName: string
+  companyLocation: string
+  deliveryLocation: string
   productName: string
   targetDate: string
   targetQty: number
@@ -20,7 +22,8 @@ export interface OperatorSchedule {
   sequenceNo?: number
 }
 
-/** Wire shape from GET /api/Production/operator-production-operations (or /api/Rework/operator-rework-operations) — sequenceNo represents the step number. */
+/** Wire shape from GET /api/Production/operator-production-operations (or /api/Rework/operator-rework-operations) — sequenceNo represents the step number.
+ *  isQrApplicable/identifierTypeId are optional since only the production endpoint returns them so far. */
 export interface OperationRecord {
   operationId: number
   sequenceNo: number
@@ -30,6 +33,8 @@ export interface OperationRecord {
   producedQty: number
   pendingQty: number
   rejectedQty: number
+  isQrApplicable?: boolean
+  identifierTypeId?: number
 }
 
 export interface LogReportEntry {
@@ -51,6 +56,22 @@ export interface LogReportResponse {
 
 /** The backend returns a bare `[]` (not the {activeHours, idleHours, logs} shape) when there are no logs yet. */
 export type RawLogReportResponse = LogReportResponse | []
+
+export interface OperationQrScanRequest {
+  scheduleId: string
+  employeeId: string
+  identifierName: string
+  identifierId: string
+  scheduleOperationId: number
+}
+
+/** Wire shape from GET /api/operation-qr-scan/employee-scan-count. */
+export interface EmployeeScanCount {
+  employeeId: string
+  scheduleId: string
+  scheduleOperationId: number
+  totalScannedQty: number
+}
 
 export interface OperatorActionRequest {
   action: "start" | "PAUSE" | "RESUME" | "STOP"

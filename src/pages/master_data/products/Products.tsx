@@ -1,9 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from "react"
 import type { ColDef, RowClickedEvent, ICellRendererParams } from "ag-grid-community"
+import { Tags } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Drawer } from "@/components/ui/drawer"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { AddProductDialog } from "./AddProductDialog"
+import { ManageIdentifiersDialog } from "./ManageIdentifiersDialog"
 import { OperationsPanel } from "./OperationsPanel"
 import { useDialogState } from "@/hooks/useDialogState"
 import { EditActionCell } from "@/shared/renderers"
@@ -55,6 +58,7 @@ export function Products() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const dialog = useDialogState<ProductRecord>()
   const [deleteRows, setDeleteRows] = useState<ProductRecord[] | null>(null)
+  const [manageIdentifiersOpen, setManageIdentifiersOpen] = useState(false)
 
   const selectedProduct = products.find((p) => p.productId === selectedId) ?? null
 
@@ -71,12 +75,12 @@ export function Products() {
     }
   }, [deleteRows, deleteProducts, selectedId])
 
-  const handleAdd = useCallback(async (product: { itemCode: string; productName: string }) => {
+  const handleAdd = useCallback(async (product: { itemCode: string; productName: string; identifierTypeId: number }) => {
     await createProduct(product).unwrap()
   }, [createProduct])
 
-  const handleEdit = useCallback(async (productId: number, itemCode: string, productName: string) => {
-    await updateProduct({ productId, body: { itemCode, productName } }).unwrap()
+  const handleEdit = useCallback(async (productId: number, itemCode: string, productName: string, identifierTypeId: number) => {
+    await updateProduct({ productId, body: { itemCode, productName, identifierTypeId } }).unwrap()
   }, [updateProduct])
 
   const onRowClicked = useCallback((e: RowClickedEvent<ProductRecord>) => {
@@ -91,6 +95,7 @@ export function Products() {
     () => [
       { field: "itemCode",     headerName: "Item Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
       { field: "productName",  headerName: "Product Name" },
+      { field: "identifierName", headerName: "Identifier" },
       { headerName: "Operations", cellRenderer: StagesCell, sortable: false },
       { headerName: "Action",  cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
     ],
@@ -114,6 +119,11 @@ export function Products() {
           cursor: "pointer",
           ...(p.data?.productId === selectedId ? { background: "#dbeafe" } : {}),
         })}
+        toolbarExtra={(
+          <Button type="button" variant="outline" onClick={() => setManageIdentifiersOpen(true)}>
+            <Tags className="h-4 w-4 mr-1.5" /> Manage Identifiers
+          </Button>
+        )}
       />
 
       {selectedProduct && !isMobile && (
@@ -146,6 +156,11 @@ export function Products() {
         product={dialog.editing}
         onAdd={handleAdd}
         onEdit={handleEdit}
+      />
+
+      <ManageIdentifiersDialog
+        open={manageIdentifiersOpen}
+        onClose={() => setManageIdentifiersOpen(false)}
       />
 
       <DeleteDialog

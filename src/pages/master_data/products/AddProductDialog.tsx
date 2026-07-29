@@ -1,15 +1,27 @@
 import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
 import { FormDialog } from "@/shared/FormDialog"
-import type { ProductRecord } from "@/types/product"
+import { useGetIdentifiersQuery } from "@/store/services/productApi"
+import type { IdentifierRecord, ProductRecord } from "@/types/product"
+
+// The GET /Product response only returns the identifier's name, not its id — resolve it back to
+// an id via the identifiers list so the edit form can preselect the right option.
+function resolveIdentifierTypeId(identifiers: IdentifierRecord[] | undefined, name: string | undefined) {
+  if (!name || !identifiers) return ""
+  const match = identifiers.find((i) => i.identifierName === name)
+  return match ? String(match.identifierTypeId) : ""
+}
 
 interface AddProductDialogProps {
   open: boolean
   onClose: () => void
   product?: ProductRecord
-  onAdd: (product: { itemCode: string; productName: string }) => Promise<void>
-  onEdit?: (productId: number, itemCode: string, productName: string) => Promise<void>
+  onAdd: (product: { itemCode: string; productName: string; identifierTypeId: number }) => Promise<void>
+  onEdit?: (productId: number, itemCode: string, productName: string, identifierTypeId: number) => Promise<void>
 }
 
 export function AddProductDialog({
@@ -20,9 +32,13 @@ export function AddProductDialog({
   onEdit,
 }: AddProductDialogProps) {
   const isEdit = Boolean(product)
+  const { data: identifiers } = useGetIdentifiersQuery()
 
   const [itemCode, setItemCode]       = React.useState(product?.itemCode ?? "")
   const [productName, setProductName] = React.useState(product?.productName ?? "")
+  const [identifierTypeId, setIdentifierTypeId] = React.useState(
+    () => resolveIdentifierTypeId(identifiers, product?.identifierName)
+  )
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   // Resets the form fields whenever the dialog (re)opens, without an effect — adjusting state
@@ -33,18 +49,30 @@ export function AddProductDialog({
     if (open) {
       setItemCode(product?.itemCode ?? "")
       setProductName(product?.productName ?? "")
+      setIdentifierTypeId(resolveIdentifierTypeId(identifiers, product?.identifierName))
+    }
+  }
+
+  // The identifiers list may still be loading when the dialog first mounts for edit — backfill
+  // the preselected value once it arrives, again without an effect.
+  const [prevIdentifiers, setPrevIdentifiers] = React.useState(identifiers)
+  if (identifiers !== prevIdentifiers) {
+    setPrevIdentifiers(identifiers)
+    if (product?.identifierName && !identifierTypeId) {
+      const resolved = resolveIdentifierTypeId(identifiers, product.identifierName)
+      if (resolved) setIdentifierTypeId(resolved)
     }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!itemCode.trim() || !productName.trim()) return
+    if (!itemCode.trim() || !productName.trim() || !identifierTypeId) return
     setIsSubmitting(true)
     try {
       if (isEdit && product) {
-        await onEdit?.(product.productId, itemCode.trim(), productName.trim())
+        await onEdit?.(product.productId, itemCode.trim(), productName.trim(), Number(identifierTypeId))
       } else {
-        await onAdd({ itemCode: itemCode.trim(), productName: productName.trim() })
+        await onAdd({ itemCode: itemCode.trim(), productName: productName.trim(), identifierTypeId: Number(identifierTypeId) })
       }
       onClose()
     } catch {
@@ -61,7 +89,7 @@ export function AddProductDialog({
       title={isEdit ? "Edit Product" : "Add Product"}
       onSubmit={handleSubmit}
       submitLabel={isSubmitting ? "Saving..." : isEdit ? "Update" : "Save"}
-      submitDisabled={isSubmitting || !itemCode.trim() || !productName.trim()}
+      submitDisabled={isSubmitting || !itemCode.trim() || !productName.trim() || !identifierTypeId}
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="itemCode">Item Code</Label>
@@ -82,6 +110,20 @@ export function AddProductDialog({
           value={productName}
           onChange={(e) => setProductName(e.target.value)}
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="identifierTypeId">Identifier</Label>
+        <Select value={identifierTypeId} onValueChange={setIdentifierTypeId}>
+          <SelectTrigger id="identifierTypeId"><SelectValue placeholder="Select identifier" /></SelectTrigger>
+          <SelectContent>
+            {(identifiers ?? []).map((i) => (
+              <SelectItem key={i.identifierTypeId} value={String(i.identifierTypeId)}>
+                {i.identifierName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </FormDialog>
   )

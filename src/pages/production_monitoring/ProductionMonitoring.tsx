@@ -15,6 +15,7 @@ import {
   useLazyGetOperatorReworkLogReportQuery,
   useOperatorReworkActionMutation,
 } from "@/store/services/reworkMonitoringApi"
+import { useGetIdentifiersQuery } from "@/store/services/productApi"
 import type { OperatorActionRequest } from "@/types/productionMonitoring"
 import type { Operation, Schedule, ScheduleType } from "./types"
 import { flowReducer, initialFlowState } from "./reducer"
@@ -37,6 +38,8 @@ export const ProductionMonitoring = () => {
 
   const [stopOpen,  setStopOpen]  = useState(false)
   const [pauseOpen, setPauseOpen] = useState(false)
+
+  const { data: identifiers } = useGetIdentifiersQuery()
 
   const [fetchProductionSchedules]  = useLazyGetOperatorSchedulesQuery()
   const [fetchProductionOperations] = useLazyGetOperatorOperationsQuery()
@@ -260,6 +263,7 @@ export const ProductionMonitoring = () => {
           <OperationCards
             schedule={selectedSchedule}
             operations={operations}
+            identifiers={identifiers}
             onSelect={op => selectOperation(selectedSchedule, op)}
           />
         )}
@@ -275,6 +279,8 @@ export const ProductionMonitoring = () => {
             logs={logs}
             activeHours={activeHours}
             idleHours={idleHours}
+            identifiers={identifiers}
+            employeeId={employeeId}
             onStart={handleStart}
             onPause={() => setPauseOpen(true)}
             onStop={() => setStopOpen(true)}
@@ -287,6 +293,8 @@ export const ProductionMonitoring = () => {
         onOpenChange={setStopOpen}
         operation={selectedOperation}
         targetReached={selectedSchedule?.isTargetReached}
+        employeeId={employeeId}
+        scheduleId={selectedSchedule?.scheduleId}
         onSave={handleStopSave}
       />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />

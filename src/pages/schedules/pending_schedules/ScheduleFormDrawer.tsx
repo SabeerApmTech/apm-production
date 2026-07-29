@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
+import { DeliveryLocationField } from "@/shared/DeliveryLocationField"
 import { cn } from "@/lib/utils"
 import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
 import { PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
@@ -27,6 +28,7 @@ const schema = z.object({
   scheduleDate:   z.string().min(1, "Schedule date is required")
     .refine((val) => !val || val >= getTodayIso(), "Schedule date cannot be in the past"),
   companyName:    z.string().min(1, "Company is required"),
+  deliveryLocation: z.string().min(1, "Delivery location is required"),
   productName:    z.string().min(1, "Product is required"),
   targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:     z.string().min(1, "Target date is required")
@@ -61,13 +63,14 @@ export function ScheduleFormDrawer({
       ? {
           scheduleDate:  toIsoDate(schedule.scheduleDate),
           companyName:   schedule.companyName,
+          deliveryLocation: schedule.deliveryLocation,
           productName:   schedule.productName,
           targetQty:     schedule.targetQty,
           targetDate:    toIsoDate(schedule.targetDate),
           priorityLevel: schedule.priorityLevel,
         }
       : {
-          scheduleDate: "", companyName: "", productName: "",
+          scheduleDate: "", companyName: "", deliveryLocation: "", productName: "",
           targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
         },
@@ -145,6 +148,15 @@ export function ScheduleFormDrawer({
               </FormItem>
             )} />
           </div>
+
+          {/* Delivery Location */}
+          <FormField control={form.control} name="deliveryLocation" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Delivery Location</FormLabel>
+              <DeliveryLocationField value={field.value} onChange={field.onChange} disabled={isEdit} />
+              <FormMessage />
+            </FormItem>
+          )} />
 
           {/* No of Operations + Target Qty */}
           <div className="grid grid-cols-2 gap-4">

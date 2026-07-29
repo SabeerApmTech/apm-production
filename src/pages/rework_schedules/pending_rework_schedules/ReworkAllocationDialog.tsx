@@ -247,7 +247,12 @@ export function ReworkAllocationDialog({ open, onClose, scheduleId }: ReworkAllo
               {!isLoading && (operations ?? []).map((op) => (
                 <div
                   key={op.reworkScheduleOperationId}
-                  className="flex items-start justify-between rounded-2xl bg-gray-100 px-4 py-3.5 gap-3"
+                  className={cn(
+                    "flex items-start justify-between rounded-2xl px-4 py-3.5 gap-3 border",
+                    op.allocatedOperatorCount === 0
+                      ? "bg-red-50 border-red-200"
+                      : "bg-green-50 border-green-200"
+                  )}
                 >
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900">

@@ -67,18 +67,20 @@ interface OperationFormRowProps {
   seqNo: number
   initialName: string
   initialTeam: string
+  initialQrApplicable: boolean
   processTeamOptions: { processTeamId: number; processTeamName: string }[]
   saving: boolean
-  onSave: (name: string, team: string) => void
+  onSave: (name: string, team: string, isQrApplicable: boolean) => void
   onCancel: () => void
   autoFocus?: boolean
 }
 
 function OperationFormRow({
-  seqNo, initialName, initialTeam, processTeamOptions, saving, onSave, onCancel, autoFocus,
+  seqNo, initialName, initialTeam, initialQrApplicable, processTeamOptions, saving, onSave, onCancel, autoFocus,
 }: OperationFormRowProps) {
   const [name, setName] = React.useState(initialName)
   const [team, setTeam] = React.useState(initialTeam)
+  const [isQrApplicable, setIsQrApplicable] = React.useState(initialQrApplicable)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
@@ -104,8 +106,20 @@ function OperationFormRow({
       <div className="flex items-center gap-2 pl-15">
         <span className="shrink-0 text-xs font-medium text-gray-500">Process Team</span>
         <ProcessTeamSelect value={team} onChange={setTeam} options={processTeamOptions} />
+      </div>
+      <label className="flex items-center gap-2 pl-15 text-xs font-medium text-gray-500 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isQrApplicable}
+          onChange={(e) => setIsQrApplicable(e.target.checked)}
+          disabled={saving}
+          className="h-4 w-4 cursor-pointer accent-blue-500"
+        />
+        QR Applicable
+      </label>
+      <div className="flex items-center gap-2 pl-15">
         <button
-          onClick={() => onSave(name.trim(), team)}
+          onClick={() => onSave(name.trim(), team, isQrApplicable)}
           disabled={!canSave}
           className="shrink-0 rounded bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
         >
@@ -170,13 +184,18 @@ function SortableRow({ op, seqNo, selected, onToggle, onEdit }: SortableRowProps
           </p>
         )}
       </div>
+      {op.isQrApplicable && (
+        <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-500">
+          QR
+        </span>
+      )}
       <button
         type="button"
         onClick={() => onEdit(op.id)}
         aria-label="Edit operation"
         className="shrink-0 text-gray-300 hover:text-blue-500 transition-colors"
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <Pencil className="h-4 w-4" />
       </button>
     </div>
   )
@@ -223,7 +242,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
         productId,
         operationType: activeTab,
         operations: reordered.map((op, i) => ({
-          sequenceNo: i + 1, operationName: op.operationName, processTeam: op.processTeam,
+          sequenceNo: i + 1, operationName: op.operationName, processTeam: op.processTeam, isQrApplicable: op.isQrApplicable,
         })),
       }).unwrap()
     } catch {
@@ -256,19 +275,19 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
     }
   }
 
-  async function handleAddSave(name: string, team: string) {
+  async function handleAddSave(name: string, team: string, isQrApplicable: boolean) {
     try {
-      await addOperation({ productId, operationType: activeTab, operationName: name, processTeam: team }).unwrap()
+      await addOperation({ productId, operationType: activeTab, operationName: name, processTeam: team, isQrApplicable }).unwrap()
       setIsAdding(false)
     } catch {
       // Toast middleware already surfaced the error; keep the form open so the user can retry.
     }
   }
 
-  async function handleEditSave(operationId: number, name: string, team: string) {
+  async function handleEditSave(operationId: number, name: string, team: string, isQrApplicable: boolean) {
     try {
       await editOperation({
-        productId, operationType: activeTab, operationId, operationName: name, processTeam: team,
+        productId, operationType: activeTab, operationId, operationName: name, processTeam: team, isQrApplicable,
       }).unwrap()
       setEditingId(null)
     } catch {
@@ -349,9 +368,10 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
                   seqNo={i + 1}
                   initialName={op.operationName}
                   initialTeam={op.processTeam}
+                  initialQrApplicable={op.isQrApplicable}
                   processTeamOptions={processTeamOptions}
                   saving={isEditSaving}
-                  onSave={(name, team) => handleEditSave(op.id, name, team)}
+                  onSave={(name, team, isQrApplicable) => handleEditSave(op.id, name, team, isQrApplicable)}
                   onCancel={() => setEditingId(null)}
                   autoFocus
                 />
@@ -375,6 +395,7 @@ export function OperationsPanel({ productId, className, onClose }: OperationsPan
             seqNo={operations.length + 1}
             initialName=""
             initialTeam=""
+            initialQrApplicable={false}
             processTeamOptions={processTeamOptions}
             saving={isSaving}
             onSave={handleAddSave}
