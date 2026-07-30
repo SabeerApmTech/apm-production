@@ -6,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useGetEmployeeScanCountQuery } from "@/store/services/operationQrScanApi"
+import { useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
 import { OTHERS_REASON, pad2, REJECTION_REASONS } from "./data"
 import type { Operation } from "./types"
 
@@ -40,7 +40,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
   const isOthers = reasonOption === OTHERS_REASON
   const effectiveReason = isOthers ? customReason.trim() : reasonOption
 
-  const { data: scanCount } = useGetEmployeeScanCountQuery(
+  const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
     { employeeId: employeeId ?? "", scheduleId: scheduleId ?? "", scheduleOperationId: operation?.operationId ?? 0 },
     { skip: !open || !operation?.isQrApplicable || !employeeId || !scheduleId }
   )
@@ -81,9 +81,9 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
         </DialogHeader>
         <p className="text-center text-xs font-semibold text-red-500 mb-4">Stopped</p>
 
-        {scanCount && (
+        {scanHistory && (
           <p className="text-center text-xs font-medium text-blue-600 mb-3">
-            Total Scanned Qty: {scanCount.totalScannedQty}
+            Total Scanned Qty: {scanHistory.totalScannedQty}
           </p>
         )}
 

@@ -13,23 +13,15 @@ export function ScheduleSummary({ schedule }: { schedule: Schedule }) {
   ]
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-x-auto mb-5">
-      <table className="min-w-full text-xs">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            {cols.map(([k]) => (
-              <th key={k} className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">{k}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {cols.map(([k, v]) => (
-              <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{v}</td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {cols.map(([k, v]) => (
+          <div key={k} className="min-w-0">
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">{k}</dt>
+            <dd className="wrap-break-word text-sm font-semibold text-gray-800">{v}</dd>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

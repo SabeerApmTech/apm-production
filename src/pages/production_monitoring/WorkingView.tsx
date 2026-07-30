@@ -6,6 +6,7 @@ import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { ScheduleSummary } from "./ScheduleSummary"
 import { StatusBadge } from "./StatusBadge"
 import { ScanDialog } from "./ScanDialog"
+import { useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
 import type { Operation, Schedule } from "./types"
 import type { LogReportEntry } from "@/types/productionMonitoring"
 import type { IdentifierRecord } from "@/types/product"
@@ -31,6 +32,10 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
   const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
   const identifierName = identifierRecord?.identifierName
   const [scanOpen, setScanOpen] = useState(false)
+  const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
+    { employeeId: employeeId ?? "", scheduleId: schedule.scheduleId, scheduleOperationId: operation.operationId },
+    { skip: !operation.isQrApplicable || !employeeId }
+  )
   const lastEvent = logs.length ? logs[logs.length - 1].logEvent : null
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
@@ -74,8 +79,84 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <div className="shrink-0">
+      <div className={cn("shrink-0 grid grid-cols-1 gap-4 mb-5", operation.isQrApplicable ? "md:grid-cols-3" : "md:grid-cols-2")}>
         <ScheduleSummary schedule={schedule} />
+
+        {/* Operation card — there's only ever one operation being worked at a time here */}
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="mb-3 pb-3 border-b border-gray-100">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Step {operation.sequenceNo}</p>
+
+            <div className="mt-0.5">
+              <p className="text-sm font-semibold text-gray-900">{operation.operationName}</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {operation.processTeam && (
+                  <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", processTeamBadgeClasses(operation.processTeam))}>
+                    {operation.processTeam}
+                  </span>
+                )}
+                {identifierName && (
+                  <span className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                    operation.isQrApplicable ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-600"
+                  )}>
+                    {operation.isQrApplicable && <QrCode className="h-3.5 w-3.5" />}
+                    {identifierName}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1.5">
+                <StatusBadge logEvent={lastEvent} />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3 mb-4">
+            <div className="min-w-0">
+              <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Target Qty</dt>
+              <dd className="text-sm font-semibold text-gray-800">{operation.targetQty}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Produced Qty</dt>
+              <dd className="text-sm font-semibold text-gray-800">{operation.producedQty}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Pending Qty</dt>
+              <dd className="text-sm font-semibold text-gray-800">{operation.pendingQty}</dd>
+            </div>
+            {operation.isQrApplicable && (
+              <div className="min-w-0">
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Scanned Qty</dt>
+                <dd className="text-sm font-semibold text-blue-600">{scanHistory?.totalScannedQty ?? "-"}</dd>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Scanned codes — only relevant for a QR-applicable operation */}
+        {operation.isQrApplicable && (
+          <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col">
+            <p className="text-sm font-semibold text-gray-900 mb-3 pb-3 border-b border-gray-100">
+              Scanned Codes ({scanHistory?.totalScannedQty ?? 0})
+            </p>
+            <div className="flex-1 min-h-0 max-h-40 overflow-y-auto">
+              {!scanHistory?.scannedData.length ? (
+                <p className="py-4 text-center text-xs text-gray-400">No codes scanned yet.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {scanHistory.scannedData.map((entry) => (
+                    <span
+                      key={entry.qrScanId}
+                      className="rounded-md bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-700"
+                    >
+                      {entry.identifierId}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {schedule.isTargetReached && (
@@ -84,91 +165,53 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         </p>
       )}
 
-      {/* Operations control table */}
-      <div className="shrink-0 rounded-xl border border-gray-200 overflow-x-auto mb-5">
-        <table className="min-w-full text-xs">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              {["Step", "Operation", "Process Team", "Identifier", "QR", "Target Qty", "Produced Qty", "Pending Qty", "Status", "Actions"].map(h => (
-                <th key={h} className="px-3 py-2.5 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="text-gray-700">
-              <td className="px-3 py-2.5">{operation.sequenceNo}</td>
-              <td className="px-3 py-2.5 whitespace-nowrap">{operation.operationName}</td>
-              <td className="px-3 py-2.5 whitespace-nowrap">
-                {operation.processTeam && (
-                  <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", processTeamBadgeClasses(operation.processTeam))}>
-                    {operation.processTeam}
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2.5 whitespace-nowrap">{identifierName ?? "-"}</td>
-              <td className="px-3 py-2.5">
-                {operation.isQrApplicable && (
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-500">
-                    QR
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2.5">{operation.targetQty}</td>
-              <td className="px-3 py-2.5">{operation.producedQty}</td>
-              <td className="px-3 py-2.5">{operation.pendingQty}</td>
-              <td className="px-3 py-2.5"><StatusBadge logEvent={lastEvent} /></td>
-              <td className="px-3 py-2.5">
-                {readOnly ? (
-                  <span className="text-gray-400">—</span>
-                ) : (
-                <div className="flex items-center gap-1.5">
-                  {operation.isQrApplicable && !isIdle && (
-                    <button
-                      onClick={() => setScanOpen(true)}
-                      title="Scan"
-                      aria-label="Scan"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-                    >
-                      <QrCode className="h-4 w-4" />
-                    </button>
-                  )}
-                  {isIdle && (
-                    <button
-                      onClick={onStart}
-                      disabled={isComplete}
-                      title="Start"
-                      aria-label="Start"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Play className="h-4 w-4" />
-                    </button>
-                  )}
-                  {(lastEvent === "START" || lastEvent === "RESUME") && (
-                    <>
-                      <button onClick={onPause} title="Pause" aria-label="Pause" className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-white hover:bg-amber-500 transition-colors">
-                        <Pause className="h-4 w-4" />
-                      </button>
-                      <button onClick={onStop} title="Stop" aria-label="Stop" className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
-                        <Square className="h-4 w-4" />
-                      </button>
-                    </>
-                  )}
-                  {lastEvent === "PAUSE" && (
-                    <button onClick={onStart} title="Resume" aria-label="Resume" className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors">
-                      <Play className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                )}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
       {/* Log Report — the only section allowed to grow/scroll; everything above is shrink-0 so
           this always fits within the page's fixed-height, non-scrolling main area (tablet kiosk layout). */}
-      <p className="shrink-0 text-sm font-semibold text-gray-800 mb-2.5">Log Report</p>
+      <div className="shrink-0 flex items-center justify-between gap-3 mb-2.5">
+        <p className="text-sm font-semibold text-gray-800">Log Report</p>
+        {readOnly ? (
+          <span className="text-xs text-gray-400">Read-only</span>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            {operation.isQrApplicable && !isIdle && (
+              <button
+                onClick={() => setScanOpen(true)}
+                title="Scan"
+                aria-label="Scan"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              >
+                <QrCode className="h-4 w-4" />
+              </button>
+            )}
+            {isIdle && (
+              <button
+                onClick={onStart}
+                disabled={isComplete}
+                title="Start"
+                aria-label="Start"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Play className="h-4 w-4" />
+              </button>
+            )}
+            {(lastEvent === "START" || lastEvent === "RESUME") && (
+              <>
+                <button onClick={onPause} title="Pause" aria-label="Pause" className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-white hover:bg-amber-500 transition-colors">
+                  <Pause className="h-4 w-4" />
+                </button>
+                <button onClick={onStop} title="Stop" aria-label="Stop" className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
+                  <Square className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            {lastEvent === "PAUSE" && (
+              <button onClick={onStart} title="Resume" aria-label="Resume" className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors">
+                <Play className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
       <div className="flex flex-1 min-h-0 flex-col rounded-xl border border-gray-200 overflow-hidden">
         <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
           <span className="text-xs font-medium text-green-500">Active Hours: {activeHours} Hrs</span>
@@ -234,6 +277,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         employeeId={employeeId ?? ""}
         scheduleOperationId={operation.operationId}
         identifier={identifierRecord}
+        reworkType={schedule.reworkType ?? null}
       />
     </div>
   )

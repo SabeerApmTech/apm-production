@@ -1,8 +1,11 @@
+import type { ReworkType } from "./reworkSchedule"
+
 /**
  * Wire shape from GET /api/Production/operator-production-schedules (and its Rework counterpart,
  * /api/Rework/operator-rework-schedules) — the operator's allotted pending schedules. `isWorking`
  * can only be true for one schedule across both endpoints combined; when it is, `sequenceNo`
- * identifies the operation currently in progress.
+ * identifies the operation currently in progress. `reworkType` is only present on the rework
+ * endpoint's response.
  */
 export interface OperatorSchedule {
   pendingScheduleId: number
@@ -17,6 +20,7 @@ export interface OperatorSchedule {
   targetQty: number
   producedQty?: number
   scheduleType?: "PRODUCTION" | "REWORK"
+  reworkType?: ReworkType
   isWorking?: boolean
   isTargetReached?: boolean
   sequenceNo?: number
@@ -57,20 +61,35 @@ export interface LogReportResponse {
 /** The backend returns a bare `[]` (not the {activeHours, idleHours, logs} shape) when there are no logs yet. */
 export type RawLogReportResponse = LogReportResponse | []
 
-export interface OperationQrScanRequest {
-  scheduleId: string
+/** Body for POST /api/operation-qr-scan/save-bulk — codes are accumulated client-side across
+ *  several scans and only sent once the operator clicks Save. `reworkType` is null for a
+ *  production operation, or the schedule's own rework type for a rework operation. */
+export interface OperationQrScanBulkRequest {
   employeeId: string
-  identifierName: string
-  identifierId: string
+  scheduleId: string
   scheduleOperationId: number
+  identifierName: string
+  reworkType: ReworkType | null
+  identifiers: string[]
 }
 
-/** Wire shape from GET /api/operation-qr-scan/employee-scan-count. */
-export interface EmployeeScanCount {
+export interface EmployeeScanHistoryEntry {
+  qrScanId: number
+  identifierName: string
+  identifierId: string
+  batchNumber: number
+  scannedAt: string
+}
+
+/** Wire shape from GET /api/operation-qr-scan/employee-scan-history. */
+export interface EmployeeScanHistory {
   employeeId: string
+  employeeName: string
   scheduleId: string
   scheduleOperationId: number
+  operationName: string
   totalScannedQty: number
+  scannedData: EmployeeScanHistoryEntry[]
 }
 
 export interface OperatorActionRequest {

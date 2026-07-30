@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-  useScanOperationQrMutation,
-  useGetEmployeeScanCountQuery,
-} from "@/store/services/operationQrScanApi"
+import { useSaveBulkOperationQrScanMutation, useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
 import type { IdentifierRecord } from "@/types/product"
+import type { ReworkType } from "@/types/reworkSchedule"
 
 interface Props {
   open: boolean
@@ -16,10 +15,12 @@ interface Props {
   employeeId: string
   scheduleOperationId: number
   identifier?: IdentifierRecord
+  /** Null for a production operation; the schedule's own rework type for a rework operation. */
+  reworkType: ReworkType | null
 }
 
 /** Checks the scanned value against the identifier's own length/digits-only rules before it's
- *  sent to the backend — returns an error message, or null if the value is valid. */
+ *  added to the pending batch — returns an error message, or null if the value is valid. */
 function validateIdentifierId(value: string, identifier: IdentifierRecord | undefined): string | null {
   if (!identifier) return null
   if (identifier.isDigitsOnly && !/^\d+$/.test(value)) return "Digits only"
@@ -29,29 +30,28 @@ function validateIdentifierId(value: string, identifier: IdentifierRecord | unde
 }
 
 /** A USB barcode scanner behaves like a keyboard — it just types the code into whichever field is
- *  focused and sends Enter, so this dialog isn't a scanner UI itself: it only has to keep the
- *  Identifier ID input focused and submit on Enter. */
-export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier }: Props) {
+ *  focused and sends Enter. Each scan is only staged into a local batch (never sent to the
+ *  backend on its own); the operator reviews the batch and clicks Save to submit it all at once
+ *  via /operation-qr-scan/save-bulk. */
+export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier, reworkType }: Props) {
   const identifierName = identifier?.identifierName ?? ""
   const [identifierId, setIdentifierId] = useState("")
+  const [pendingCodes, setPendingCodes] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const [scanOperationQr, { isLoading: isScanning }] = useScanOperationQrMutation()
-  // A ref, not state — the input is never disabled, so a second Enter can fire before the
-  // re-render carrying `isScanning: true` lands; this guards against that race synchronously.
-  const isSubmittingRef = useRef(false)
-  const { data: scanCount } = useGetEmployeeScanCountQuery(
+  const [saveBulkScan, { isLoading: isSaving }] = useSaveBulkOperationQrScanMutation()
+  const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
     { employeeId, scheduleId, scheduleOperationId },
     { skip: !open }
   )
 
-  // Resets the field whenever the dialog (re)opens, without an effect — adjusting state during
+  // Resets the batch whenever the dialog (re)opens, without an effect — adjusting state during
   // render avoids the extra post-mount render pass a useEffect would cost here.
   const [prevOpen, setPrevOpen] = useState(open)
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) { setIdentifierId(""); setError(null) }
+    if (open) { setIdentifierId(""); setPendingCodes([]); setError(null) }
   }
 
   // Keeping focus on the input is a genuine DOM concern (the scanner types into whatever has
@@ -61,16 +61,21 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   }, [open])
 
   // Focus is requested on the next frame, after this render has committed — calling it
-  // synchronously right after a scan can hit a DOM node that's still mid-transition (e.g. the
-  // input briefly disabled while the mutation was in flight) and silently no-op.
+  // synchronously right after a state update can hit a DOM node that's still mid-transition and
+  // silently no-op.
   function refocusInput() {
     requestAnimationFrame(() => inputRef.current?.focus())
   }
 
-  const handleScan = async () => {
-    if (isSubmittingRef.current) return
+  function handleScan() {
     const trimmed = identifierId.trim()
     if (!trimmed) return
+    if (pendingCodes.includes(trimmed)) {
+      setError("You have already scanned this code")
+      setIdentifierId("")
+      refocusInput()
+      return
+    }
     const validationError = validateIdentifierId(trimmed, identifier)
     if (validationError) {
       setError(validationError)
@@ -78,17 +83,27 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
       refocusInput()
       return
     }
-    isSubmittingRef.current = true
+    setPendingCodes((prev) => [...prev, trimmed])
+    setError(null)
+    setIdentifierId("")
+    refocusInput()
+  }
+
+  function removeCode(code: string) {
+    setPendingCodes((prev) => prev.filter((c) => c !== code))
+  }
+
+  async function handleSave() {
+    if (pendingCodes.length === 0) return
     try {
-      await scanOperationQr({
-        scheduleId, employeeId, identifierName, identifierId: trimmed, scheduleOperationId,
+      await saveBulkScan({
+        employeeId, scheduleId, scheduleOperationId, identifierName, reworkType, identifiers: pendingCodes,
       }).unwrap()
+      setPendingCodes([])
       setError(null)
     } catch {
-      // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
+      // Toast middleware already surfaced the error; keep the batch so the user can retry.
     } finally {
-      isSubmittingRef.current = false
-      setIdentifierId("")
       refocusInput()
     }
   }
@@ -100,9 +115,9 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
           <DialogTitle className="text-sm font-semibold text-gray-800">Scan</DialogTitle>
         </DialogHeader>
 
-        {scanCount && (
+        {scanHistory && (
           <p className="-mt-3 mb-3 text-xs font-medium text-blue-600">
-            Total Scanned Qty: {scanCount.totalScannedQty}
+            Total Scanned Qty: {scanHistory.totalScannedQty}
           </p>
         )}
 
@@ -131,6 +146,32 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
               </p>
             ) : null}
           </div>
+
+          {pendingCodes.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-600">
+                Scanned, not yet saved ({pendingCodes.length})
+              </Label>
+              <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200">
+                {pendingCodes.map((code) => (
+                  <div
+                    key={code}
+                    className="flex items-center justify-between gap-2 border-b border-dashed border-gray-100 px-2.5 py-1.5 text-xs last:border-b-0"
+                  >
+                    <span className="truncate text-gray-700">{code}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCode(code)}
+                      aria-label={`Remove ${code}`}
+                      className="shrink-0 text-gray-300 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 mt-4">
@@ -138,11 +179,11 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
             Close
           </Button>
           <Button
-            onClick={handleScan}
-            disabled={!identifierId.trim() || isScanning}
+            onClick={handleSave}
+            disabled={pendingCodes.length === 0 || isSaving}
             className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white"
           >
-            {isScanning ? "Saving..." : "Save"}
+            {isSaving ? "Saving..." : `Save${pendingCodes.length ? ` (${pendingCodes.length})` : ""}`}
           </Button>
         </div>
       </DialogContent>
