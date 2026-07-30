@@ -7,6 +7,11 @@ export const PAUSE_REASONS = [
 
 export const REJECTION_REASONS = [
   "Inf", "Dnr", "Sos", "Ign", "Power Issue", "Firmware Issue", "Gsm Low (Below 7)",
+  "Enclosure Thread Not Fix", "Glue Is Overflowed On The Enclosure",
 ]
+
+// Rendered as the last option in the Rejection Reason dropdown — picking it reveals a free-text
+// box, and the typed text (not the literal word "Others") is what's sent as the reason.
+export const OTHERS_REASON = "Others"
 
 export const pad2 = (n: number) => String(n).padStart(2, "0")

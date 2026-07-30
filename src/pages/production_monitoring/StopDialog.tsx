@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useGetEmployeeScanCountQuery } from "@/store/services/operationQrScanApi"
-import { pad2, REJECTION_REASONS } from "./data"
+import { OTHERS_REASON, pad2, REJECTION_REASONS } from "./data"
 import type { Operation } from "./types"
 
 const textareaClass =
@@ -31,8 +31,14 @@ interface Props {
 
 export function StopDialog({ open, onOpenChange, operation, targetReached, employeeId, scheduleId, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
+  // `reasonOption` drives the Select ("Others" included); `customReason` is only used when
+  // "Others" is picked. The actual value sent as `reason` is derived from these two below.
+  const [reasonOption, setReasonOption] = useState("")
+  const [customReason, setCustomReason] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const hasRejection = Number(form.rejectedQty) > 0
+  const isOthers = reasonOption === OTHERS_REASON
+  const effectiveReason = isOthers ? customReason.trim() : reasonOption
 
   const { data: scanCount } = useGetEmployeeScanCountQuery(
     { employeeId: employeeId ?? "", scheduleId: scheduleId ?? "", scheduleOperationId: operation?.operationId ?? 0 },
@@ -46,14 +52,18 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
     setPrevOpen(open)
     if (open) {
       setForm({ successQty: targetReached ? "0" : "", rejectedQty: "", remarks: "", reason: "" })
+      setReasonOption("")
+      setCustomReason("")
     }
   }
 
   const handleSave = async () => {
     setSubmitting(true)
     try {
-      await onSave(form)
+      await onSave({ ...form, reason: effectiveReason })
       setForm({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
+      setReasonOption("")
+      setCustomReason("")
     } catch {
       // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
     } finally {
@@ -98,14 +108,18 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
             <Input
               type="number" min={0}
               value={form.rejectedQty}
-              onChange={e => setForm(f => ({ ...f, rejectedQty: e.target.value, reason: "" }))}
+              onChange={e => {
+                setForm(f => ({ ...f, rejectedQty: e.target.value }))
+                setReasonOption("")
+                setCustomReason("")
+              }}
               className="h-8 text-sm"
             />
           </div>
           {hasRejection && (
             <div className="space-y-1">
               <Label className="text-xs text-gray-600">Rejection Reason <span className="text-red-500">*</span></Label>
-              <Select value={form.reason} onValueChange={v => setForm(f => ({ ...f, reason: v }))}>
+              <Select value={reasonOption} onValueChange={setReasonOption}>
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder="Select reason..." />
                 </SelectTrigger>
@@ -113,8 +127,17 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
                   {REJECTION_REASONS.map(r => (
                     <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>
                   ))}
+                  <SelectItem value={OTHERS_REASON} className="text-sm">{OTHERS_REASON}</SelectItem>
                 </SelectContent>
               </Select>
+              {isOthers && (
+                <Input
+                  value={customReason}
+                  onChange={e => setCustomReason(e.target.value)}
+                  placeholder="Enter reason..."
+                  className="h-8 text-sm mt-1.5"
+                />
+              )}
             </div>
           )}
           <div className="space-y-1">
@@ -131,7 +154,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
         <div className="flex gap-2 mt-4">
           <Button
             onClick={handleSave}
-            disabled={form.successQty === "" || (hasRejection && !form.reason) || submitting}
+            disabled={form.successQty === "" || (hasRejection && !effectiveReason) || submitting}
             className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white"
           >
             {submitting ? "Saving..." : "Save"}
