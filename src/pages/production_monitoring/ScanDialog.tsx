@@ -86,6 +86,12 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   function stageCurrentInput(currentPending: string[]): string[] | null {
     const trimmed = identifierId.trim()
     if (!trimmed) return currentPending
+    if (scanHistory?.scannedData.some((entry) => entry.identifierId === trimmed)) {
+      setError("This code has already been scanned and saved")
+      setIdentifierId("")
+      refocusInput()
+      return null
+    }
     if (currentPending.includes(trimmed)) {
       setError("You have already scanned this code")
       setIdentifierId("")
