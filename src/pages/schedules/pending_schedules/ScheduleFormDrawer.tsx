@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
-import { DeliveryLocationField } from "@/shared/DeliveryLocationField"
+import { StateField } from "@/shared/StateField"
 import { cn } from "@/lib/utils"
 import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
 import { PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
@@ -28,7 +28,7 @@ const schema = z.object({
   scheduleDate:   z.string().min(1, "Schedule date is required")
     .refine((val) => !val || val >= getTodayIso(), "Schedule date cannot be in the past"),
   companyName:    z.string().min(1, "Company is required"),
-  deliveryLocation: z.string().min(1, "Delivery location is required"),
+  state: z.string().min(1, "State is required"),
   productName:    z.string().min(1, "Product is required"),
   targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:     z.string().min(1, "Target date is required")
@@ -63,14 +63,14 @@ export function ScheduleFormDrawer({
       ? {
           scheduleDate:  toIsoDate(schedule.scheduleDate),
           companyName:   schedule.companyName,
-          deliveryLocation: schedule.deliveryLocation,
+          state: schedule.state,
           productName:   schedule.productName,
           targetQty:     schedule.targetQty,
           targetDate:    toIsoDate(schedule.targetDate),
           priorityLevel: schedule.priorityLevel,
         }
       : {
-          scheduleDate: "", companyName: "", deliveryLocation: "", productName: "",
+          scheduleDate: "", companyName: "", state: "", productName: "",
           targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
         },
@@ -149,11 +149,11 @@ export function ScheduleFormDrawer({
             )} />
           </div>
 
-          {/* Delivery Location */}
-          <FormField control={form.control} name="deliveryLocation" render={({ field }) => (
+          {/* State */}
+          <FormField control={form.control} name="state" render={({ field }) => (
             <FormItem>
-              <FormLabel>Delivery Location</FormLabel>
-              <DeliveryLocationField value={field.value} onChange={field.onChange} disabled={isEdit} />
+              <FormLabel>State</FormLabel>
+              <StateField value={field.value} onChange={field.onChange} disabled={isEdit} />
               <FormMessage />
             </FormItem>
           )} />

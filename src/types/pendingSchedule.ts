@@ -11,7 +11,7 @@ export interface RawPendingScheduleRecord {
   scheduleYear: number
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   noOfOperations: number
   targetQty: number
@@ -40,7 +40,7 @@ export interface PendingScheduleRecord {
   scheduleYear: number
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   noOfOperations: number
   targetQty: number
@@ -61,7 +61,7 @@ export interface CreatePendingScheduleRequest {
   scheduleDate: string
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   targetQty: number
   targetDate: string

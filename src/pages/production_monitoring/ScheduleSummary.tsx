@@ -6,7 +6,7 @@ export function ScheduleSummary({ schedule }: { schedule: Schedule }) {
     ["Schedule ID",   schedule.scheduleId],
     ["Schedule Date", schedule.scheduleDate],
     ["Company",       `${schedule.companyName} - ${schedule.companyLocation}`],
-    ["Delivery Location", schedule.deliveryLocation],
+    ["State",         schedule.state],
     ["Product",       schedule.productName],
     ["Target Date",   schedule.targetDate],
     ["Target Qty",    schedule.targetQty],

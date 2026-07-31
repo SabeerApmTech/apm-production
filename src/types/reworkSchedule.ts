@@ -14,7 +14,7 @@ export interface RawReworkPendingScheduleRecord {
   reworkType: ReworkType
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   noOfOperations: number
   targetQty: number
@@ -44,7 +44,7 @@ export interface ReworkPendingScheduleRecord {
   reworkType: ReworkType
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   noOfOperations: number
   targetQty: number
@@ -66,7 +66,7 @@ export interface CreateReworkPendingScheduleRequest {
   reworkType: ReworkType
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   targetQty: number
   targetDate: string

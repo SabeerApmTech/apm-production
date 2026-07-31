@@ -67,23 +67,32 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
     requestAnimationFrame(() => inputRef.current?.focus())
   }
 
-  function handleScan() {
+  // Shared by Enter-to-stage (scanner) and Save (manual typing without pressing Enter first) —
+  // folds whatever is currently typed into the batch, or returns null if it's empty/invalid
+  // (setting `error` as a side effect in the invalid case).
+  function stageCurrentInput(currentPending: string[]): string[] | null {
     const trimmed = identifierId.trim()
-    if (!trimmed) return
-    if (pendingCodes.includes(trimmed)) {
+    if (!trimmed) return currentPending
+    if (currentPending.includes(trimmed)) {
       setError("You have already scanned this code")
       setIdentifierId("")
       refocusInput()
-      return
+      return null
     }
     const validationError = validateIdentifierId(trimmed, identifier)
     if (validationError) {
       setError(validationError)
       setIdentifierId("")
       refocusInput()
-      return
+      return null
     }
-    setPendingCodes((prev) => [...prev, trimmed])
+    return [...currentPending, trimmed]
+  }
+
+  function handleScan() {
+    const next = stageCurrentInput(pendingCodes)
+    if (next === null) return
+    setPendingCodes(next)
     setError(null)
     setIdentifierId("")
     refocusInput()
@@ -94,15 +103,18 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   }
 
   async function handleSave() {
-    if (pendingCodes.length === 0) return
+    const codesToSave = stageCurrentInput(pendingCodes)
+    if (codesToSave === null || codesToSave.length === 0) return
+    setIdentifierId("")
+    setError(null)
     try {
       await saveBulkScan({
-        employeeId, scheduleId, scheduleOperationId, identifierName, reworkType, identifiers: pendingCodes,
+        employeeId, scheduleId, scheduleOperationId, identifierName, reworkType, identifiers: codesToSave,
       }).unwrap()
       setPendingCodes([])
-      setError(null)
     } catch {
       // Toast middleware already surfaced the error; keep the batch so the user can retry.
+      setPendingCodes(codesToSave)
     } finally {
       refocusInput()
     }
@@ -180,7 +192,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
           </Button>
           <Button
             onClick={handleSave}
-            disabled={pendingCodes.length === 0 || isSaving}
+            disabled={(pendingCodes.length === 0 && !identifierId.trim()) || isSaving}
             className="flex-1 h-8 text-xs bg-blue-500 hover:bg-blue-600 text-white"
           >
             {isSaving ? "Saving..." : `Save${pendingCodes.length ? ` (${pendingCodes.length})` : ""}`}

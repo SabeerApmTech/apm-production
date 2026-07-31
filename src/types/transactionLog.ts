@@ -6,7 +6,7 @@ export interface RawTransactionLogRecord {
   scheduleId: string
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   sequenceNo: number
   operationName: string

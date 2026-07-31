@@ -125,7 +125,7 @@ export function TransactionLog() {
         cellStyle: { fontWeight: 600 },
         minWidth: 160,
       },
-      { field: "deliveryLocation", headerName: "Delivery Location", minWidth: 140 },
+      { field: "state", headerName: "State", minWidth: 140 },
       { field: "productName",   headerName: "Product",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
       { field: "sequenceNo",    headerName: "Seq No",         maxWidth: 90 },
       { field: "operationName", headerName: "Operation",      minWidth: 140 },

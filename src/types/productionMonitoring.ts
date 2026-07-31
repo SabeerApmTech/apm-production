@@ -14,7 +14,7 @@ export interface OperatorSchedule {
   scheduleDate: string
   companyName: string
   companyLocation: string
-  deliveryLocation: string
+  state: string
   productName: string
   targetDate: string
   targetQty: number

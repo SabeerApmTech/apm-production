@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Drawer } from "@/components/ui/drawer"
-import { DeliveryLocationField } from "@/shared/DeliveryLocationField"
+import { StateField } from "@/shared/StateField"
 import { cn } from "@/lib/utils"
 import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
@@ -45,7 +45,7 @@ const schema = z.object({
     .refine((val) => !val || val >= getTodayIso(), "Rework schedule date cannot be in the past"),
   reworkType:     z.enum(["CustomerService", "ReworkFromStore", "InhouseRework"], { error: "Select a rework type" }),
   companyName:    z.string().min(1, "Company is required"),
-  deliveryLocation: z.string().min(1, "Delivery location is required"),
+  state: z.string().min(1, "State is required"),
   productName:    z.string().min(1, "Product is required"),
   targetQty:      z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:     z.string().min(1, "Target date is required")
@@ -84,14 +84,14 @@ export function ReworkScheduleFormDrawer({
           reworkScheduleDate: toIsoDate(schedule.reworkScheduleDate),
           reworkType:         schedule.reworkType,
           companyName:        schedule.companyName,
-          deliveryLocation:   schedule.deliveryLocation,
+          state:              schedule.state,
           productName:        schedule.productName,
           targetQty:          schedule.targetQty,
           targetDate:         toIsoDate(schedule.targetDate),
           priorityLevel:      schedule.priorityLevel,
         }
       : {
-          reworkScheduleDate: "", companyName: "", deliveryLocation: "", productName: "",
+          reworkScheduleDate: "", companyName: "", state: "", productName: "",
           reworkType: isManager ? undefined : "InhouseRework",
           targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
@@ -189,11 +189,11 @@ export function ReworkScheduleFormDrawer({
             )} />
           </div>
 
-          {/* Delivery Location */}
-          <FormField control={form.control} name="deliveryLocation" render={({ field }) => (
+          {/* State */}
+          <FormField control={form.control} name="state" render={({ field }) => (
             <FormItem>
-              <FormLabel>Delivery Location</FormLabel>
-              <DeliveryLocationField value={field.value} onChange={field.onChange} disabled={isEdit} />
+              <FormLabel>State</FormLabel>
+              <StateField value={field.value} onChange={field.onChange} disabled={isEdit} />
               <FormMessage />
             </FormItem>
           )} />
