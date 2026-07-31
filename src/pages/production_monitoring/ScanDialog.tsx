@@ -46,12 +46,25 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
     { skip: !open }
   )
 
-  // Resets the batch whenever the dialog (re)opens, without an effect — adjusting state during
-  // render avoids the extra post-mount render pass a useEffect would cost here.
+  // Resets the batch only when the underlying work context actually changes (a different
+  // operation), not just because the dialog closed and reopened — an accidental outside-click
+  // close must not lose scanned-but-unsaved codes or a partially typed ID.
+  const [prevContext, setPrevContext] = useState({ scheduleId, employeeId, scheduleOperationId })
+  if (
+    scheduleId !== prevContext.scheduleId ||
+    employeeId !== prevContext.employeeId ||
+    scheduleOperationId !== prevContext.scheduleOperationId
+  ) {
+    setPrevContext({ scheduleId, employeeId, scheduleOperationId })
+    setIdentifierId(""); setPendingCodes([]); setError(null)
+  }
+
+  // Only the transient error message is cleared on reopen, without an effect — adjusting state
+  // during render avoids the extra post-mount render pass a useEffect would cost here.
   const [prevOpen, setPrevOpen] = useState(open)
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (open) { setIdentifierId(""); setPendingCodes([]); setError(null) }
+    if (open) setError(null)
   }
 
   // Keeping focus on the input is a genuine DOM concern (the scanner types into whatever has
