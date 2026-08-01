@@ -6,6 +6,7 @@ import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { ScheduleSummary } from "./ScheduleSummary"
 import { StatusBadge } from "./StatusBadge"
 import { ScanDialog } from "./ScanDialog"
+import { SessionScansDialog } from "./SessionScansDialog"
 import { useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
 import type { Operation, Schedule } from "./types"
 import type { LogReportEntry } from "@/types/productionMonitoring"
@@ -32,11 +33,18 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
   const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
   const identifierName = identifierRecord?.identifierName
   const [scanOpen, setScanOpen] = useState(false)
+  const [sessionScansId, setSessionScansId] = useState<number | null>(null)
+  const reworkType = schedule.reworkType ?? null
   const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
-    { employeeId: employeeId ?? "", scheduleId: schedule.scheduleId, scheduleOperationId: operation.operationId },
+    { employeeId: employeeId ?? "", scheduleId: schedule.scheduleId, scheduleOperationId: operation.operationId, reworkType },
     { skip: !operation.isQrApplicable || !employeeId }
   )
-  const lastEvent = logs.length ? logs[logs.length - 1].logEvent : null
+  const lastLog = logs.length ? logs[logs.length - 1] : null
+  const lastEvent = lastLog?.logEvent ?? null
+  // Every log entry from START onward carries the same transactionLogId for that session, so the
+  // most recent entry's id is the currently open (or just-closed) session's id — this is what the
+  // Scan dialog uses to show a session-scoped scanned count instead of the operation's running total.
+  const currentTransactionLogId = lastLog?.transactionLogId ?? null
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
   const isComplete = operation.producedQty >= operation.targetQty
@@ -222,7 +230,10 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
             <table className="min-w-full text-xs">
               <thead ref={headerRef}>
                 <tr className="bg-sky-400 text-white">
-                  {["Date Time", "Log Event", "Successful Qty", "Rejected Qty", "Reason", "Remarks"].map(h => (
+                  {[
+                    "Date Time", "Log Event", "Successful Qty", "Rejected Qty", "Reason", "Remarks",
+                    ...(operation.isQrApplicable ? ["Scans"] : []),
+                  ].map(h => (
                     <th key={h} className="sticky top-0 z-10 bg-sky-400 px-3 py-2 text-left font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -230,7 +241,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
               <tbody>
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-5 text-center text-gray-400">
+                    <td colSpan={operation.isQrApplicable ? 7 : 6} className="px-3 py-5 text-center text-gray-400">
                       No log entries yet. Click Start to begin.
                     </td>
                   </tr>
@@ -249,6 +260,20 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                       <td className="px-3 py-2 text-gray-600">{entry.rejectedQty}</td>
                       <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{entry.reason ?? "—"}</td>
                       <td className="px-3 py-2 text-gray-600">{entry.remarks || "—"}</td>
+                      {operation.isQrApplicable && (
+                        <td className="px-3 py-2">
+                          {entry.transactionLogId != null ? (
+                            <button
+                              onClick={() => setSessionScansId(entry.transactionLogId!)}
+                              className="font-medium text-blue-500 hover:text-blue-600 hover:underline whitespace-nowrap"
+                            >
+                              View Scans
+                            </button>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -277,7 +302,15 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         employeeId={employeeId ?? ""}
         scheduleOperationId={operation.operationId}
         identifier={identifierRecord}
-        reworkType={schedule.reworkType ?? null}
+        reworkType={reworkType}
+        transactionLogId={currentTransactionLogId}
+      />
+
+      <SessionScansDialog
+        open={sessionScansId !== null}
+        onOpenChange={(open) => { if (!open) setSessionScansId(null) }}
+        transactionLogId={sessionScansId}
+        reworkType={reworkType}
       />
     </div>
   )

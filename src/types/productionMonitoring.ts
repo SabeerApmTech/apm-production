@@ -49,6 +49,9 @@ export interface LogReportEntry {
   rejectedQty: number
   reason: string | null
   remarks: string | null
+  /** Only present on the STOP row that closed out a session — the id to look up that
+   *  session's QR scans via GET /operation-qr-scan/current-session. */
+  transactionLogId?: number
 }
 
 /** Wire shape from GET /api/Production/operator-production-log-report (or /api/Rework/operator-rework-log-report). */
@@ -90,6 +93,39 @@ export interface EmployeeScanHistory {
   operationName: string
   totalScannedQty: number
   scannedData: EmployeeScanHistoryEntry[]
+}
+
+export interface CurrentSessionScanEntry {
+  qrScanId: number
+  identifierName: string
+  identifierId: string
+  scannedAt: string
+}
+
+/** Wire shape from GET /api/operation-qr-scan/current-session — the QR codes scanned during one
+ *  specific Start-to-Stop session, keyed by that session's resulting transactionLogId. */
+export interface CurrentSessionScans {
+  totalScanned: number
+  identifiers: CurrentSessionScanEntry[]
+}
+
+/** A single row from GET /api/operation-qr-scan/list. */
+export interface QrScanRecord {
+  scheduleId: string
+  productName: string
+  operationName: string
+  identifierName: string
+  uniqueIdentifier: string
+  companyName: string
+  employeeId: string
+}
+
+/** Wire shape from GET /api/operation-qr-scan/list. */
+export interface QrScanListResponse {
+  fromDate: string
+  toDate: string
+  totalRecords: number
+  records: QrScanRecord[]
 }
 
 export interface OperatorActionRequest {

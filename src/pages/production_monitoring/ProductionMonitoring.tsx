@@ -293,8 +293,8 @@ export const ProductionMonitoring = () => {
         onOpenChange={setStopOpen}
         operation={selectedOperation}
         targetReached={selectedSchedule?.isTargetReached}
-        employeeId={employeeId}
-        scheduleId={selectedSchedule?.scheduleId}
+        reworkType={selectedSchedule?.reworkType ?? null}
+        transactionLogId={logs.length ? logs[logs.length - 1].transactionLogId ?? null : null}
         onSave={handleStopSave}
       />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />

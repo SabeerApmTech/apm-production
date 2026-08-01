@@ -193,8 +193,8 @@ export function OperatorLogReport() {
         onOpenChange={setStopOpen}
         operation={operation ?? null}
         targetReached={schedule?.isTargetReached}
-        employeeId={employeeId}
-        scheduleId={scheduleId}
+        reworkType={schedule?.reworkType ?? null}
+        transactionLogId={logs.length ? logs[logs.length - 1].transactionLogId ?? null : null}
         onSave={handleStopSave}
       />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />

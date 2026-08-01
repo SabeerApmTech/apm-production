@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useSaveBulkOperationQrScanMutation, useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
+import {
+  useSaveBulkOperationQrScanMutation, useGetEmployeeScanHistoryQuery, useGetCurrentSessionScansQuery,
+} from "@/store/services/operationQrScanApi"
 import type { IdentifierRecord } from "@/types/product"
 import type { ReworkType } from "@/types/reworkSchedule"
 
@@ -17,6 +19,9 @@ interface Props {
   identifier?: IdentifierRecord
   /** Null for a production operation; the schedule's own rework type for a rework operation. */
   reworkType: ReworkType | null
+  /** The current (possibly still-open) session's id — drives the "Current Session Scanned Qty"
+   *  display. Null when the operation hasn't logged anything yet. */
+  transactionLogId: number | null
 }
 
 /** Checks the scanned value against the identifier's own length/digits-only rules before it's
@@ -33,7 +38,7 @@ function validateIdentifierId(value: string, identifier: IdentifierRecord | unde
  *  focused and sends Enter. Each scan is only staged into a local batch (never sent to the
  *  backend on its own); the operator reviews the batch and clicks Save to submit it all at once
  *  via /operation-qr-scan/save-bulk. */
-export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier, reworkType }: Props) {
+export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier, reworkType, transactionLogId }: Props) {
   const identifierName = identifier?.identifierName ?? ""
   const [identifierId, setIdentifierId] = useState("")
   const [pendingCodes, setPendingCodes] = useState<string[]>([])
@@ -41,9 +46,17 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [saveBulkScan, { isLoading: isSaving }] = useSaveBulkOperationQrScanMutation()
+  // Used only to check a scan against every code ever saved for this operation (not just this
+  // session) so an operator can't re-scan something already recorded in an earlier session.
   const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
-    { employeeId, scheduleId, scheduleOperationId },
+    { employeeId, scheduleId, scheduleOperationId, reworkType },
     { skip: !open }
+  )
+  // The dialog's own displayed count is scoped to just the current session, not the operation's
+  // running total.
+  const { data: currentSession } = useGetCurrentSessionScansQuery(
+    { transactionLogId: transactionLogId ?? 0, reworkType },
+    { skip: !open || transactionLogId == null }
   )
 
   // Resets the batch only when the underlying work context actually changes (a different
@@ -129,6 +142,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
     try {
       await saveBulkScan({
         employeeId, scheduleId, scheduleOperationId, identifierName, reworkType, identifiers: codesToSave,
+        currentTransactionLogId: transactionLogId ?? undefined,
       }).unwrap()
       setPendingCodes([])
     } catch {
@@ -146,9 +160,9 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
           <DialogTitle className="text-sm font-semibold text-gray-800">Scan</DialogTitle>
         </DialogHeader>
 
-        {scanHistory && (
+        {currentSession && (
           <p className="-mt-3 mb-3 text-xs font-medium text-blue-600">
-            Total Scanned Qty: {scanHistory.totalScannedQty}
+            Current Session Scanned Qty: {currentSession.totalScanned}
           </p>
         )}
 

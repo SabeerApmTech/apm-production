@@ -6,9 +6,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
+import { useGetCurrentSessionScansQuery } from "@/store/services/operationQrScanApi"
 import { OTHERS_REASON, pad2, REJECTION_REASONS } from "./data"
 import type { Operation } from "./types"
+import type { ReworkType } from "@/types/reworkSchedule"
 
 const textareaClass =
   "w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
@@ -23,13 +24,15 @@ interface Props {
   operation: Operation | null
   /** True when the schedule already hit its target — the backend rejects a non-zero Successful Qty in that case. */
   targetReached?: boolean
-  /** Needed to look up the QR scan count — only relevant when the operation is QR-applicable. */
-  employeeId?: string
-  scheduleId?: string
+  /** Null for a production operation; the schedule's own rework type for a rework operation. */
+  reworkType?: ReworkType | null
+  /** The session being closed out by this Stop — drives the "Current Session Scanned Qty" display,
+   *  only relevant when the operation is QR-applicable. */
+  transactionLogId?: number | null
   onSave: (data: StopFormData) => Promise<void>
 }
 
-export function StopDialog({ open, onOpenChange, operation, targetReached, employeeId, scheduleId, onSave }: Props) {
+export function StopDialog({ open, onOpenChange, operation, targetReached, reworkType = null, transactionLogId = null, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
   // `reasonOption` drives the Select ("Others" included); `customReason` is only used when
   // "Others" is picked. The actual value sent as `reason` is derived from these two below.
@@ -40,10 +43,12 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
   const isOthers = reasonOption === OTHERS_REASON
   const effectiveReason = isOthers ? customReason.trim() : reasonOption
 
-  const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
-    { employeeId: employeeId ?? "", scheduleId: scheduleId ?? "", scheduleOperationId: operation?.operationId ?? 0 },
-    { skip: !open || !operation?.isQrApplicable || !employeeId || !scheduleId }
+  const { data: currentSession } = useGetCurrentSessionScansQuery(
+    { transactionLogId: transactionLogId ?? 0, reworkType },
+    { skip: !open || !operation?.isQrApplicable || transactionLogId == null }
   )
+  const exceedsScannedQty =
+    currentSession != null && form.successQty !== "" && Number(form.successQty) > currentSession.totalScanned
 
   // Resets the form whenever the dialog (re)opens, without an effect — adjusting state during
   // render avoids the extra post-mount render pass a useEffect would cost here.
@@ -81,9 +86,9 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
         </DialogHeader>
         <p className="text-center text-xs font-semibold text-red-500 mb-4">Stopped</p>
 
-        {scanHistory && (
+        {currentSession && (
           <p className="text-center text-xs font-medium text-blue-600 mb-3">
-            Total Scanned Qty: {scanHistory.totalScannedQty}
+            Current Session Scanned Qty: {currentSession.totalScanned}
           </p>
         )}
 
@@ -102,6 +107,11 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, emplo
               onChange={e => setForm(f => ({ ...f, successQty: e.target.value }))}
               className="h-8 text-sm"
             />
+            {exceedsScannedQty && (
+              <p className="text-xs text-amber-600">
+                Exceeds this session's Scanned Qty ({currentSession!.totalScanned}).
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-gray-600">Rejected Qty</Label>

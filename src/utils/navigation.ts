@@ -50,6 +50,7 @@ export const navItems: NavItem[] = [
     children: [
       { label: "Transaction Log", path: "/production/log" },
       { label: "Production History", path: "/production/history" },
+      { label: "Produced Products", path: "/production/produced-products" },
     ],
   },
   {
