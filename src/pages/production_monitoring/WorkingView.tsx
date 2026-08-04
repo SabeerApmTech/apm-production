@@ -36,9 +36,15 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
   const [sessionScansId, setSessionScansId] = useState<number | null>(null)
   const reworkType = schedule.reworkType ?? null
   const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
-    { employeeId: employeeId ?? "", scheduleId: schedule.scheduleId, scheduleOperationId: operation.operationId, reworkType },
+    {
+      employeeId: employeeId ?? "", scheduleId: schedule.scheduleId,
+      scheduleOperationId: operation.operationId, operationName: operation.operationName, reworkType,
+    },
     { skip: !operation.isQrApplicable || !employeeId }
   )
+  // The backend omits `identifiers` entirely (rather than returning an empty array) when there's
+  // no history yet — normalize that here so callers only ever see one shape.
+  const scannedEntries = scanHistory?.identifiers ?? []
   const lastLog = logs.length ? logs[logs.length - 1] : null
   const lastEvent = lastLog?.logEvent ?? null
   // Every log entry from START onward carries the same transactionLogId for that session, so the
@@ -135,7 +141,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
             {operation.isQrApplicable && (
               <div className="min-w-0">
                 <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Scanned Qty</dt>
-                <dd className="text-sm font-semibold text-blue-600">{scanHistory?.totalScannedQty ?? "-"}</dd>
+                <dd className="text-sm font-semibold text-blue-600">{scanHistory?.scannedQty ?? "-"}</dd>
               </div>
             )}
           </div>
@@ -145,16 +151,16 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         {operation.isQrApplicable && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col">
             <p className="text-sm font-semibold text-gray-900 mb-3 pb-3 border-b border-gray-100">
-              Scanned Codes ({scanHistory?.totalScannedQty ?? 0})
+              Scanned Codes ({scanHistory?.scannedQty ?? 0})
             </p>
             <div className="flex-1 min-h-0 max-h-40 overflow-y-auto">
-              {!scanHistory?.scannedData.length ? (
+              {!scannedEntries.length ? (
                 <p className="py-4 text-center text-xs text-gray-400">No codes scanned yet.</p>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  {scanHistory.scannedData.map((entry) => (
+                  {scannedEntries.map((entry, i) => (
                     <span
-                      key={entry.qrScanId}
+                      key={`${entry.identifierId}-${i}`}
                       className="rounded-md bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-700"
                     >
                       {entry.identifierId}
@@ -301,6 +307,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         scheduleId={schedule.scheduleId}
         employeeId={employeeId ?? ""}
         scheduleOperationId={operation.operationId}
+        operationName={operation.operationName}
         identifier={identifierRecord}
         reworkType={reworkType}
         transactionLogId={currentTransactionLogId}

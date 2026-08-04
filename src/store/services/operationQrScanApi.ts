@@ -1,7 +1,6 @@
 import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
-  CurrentSessionScans,
   EmployeeScanHistory,
   OperationQrScanBulkRequest,
   ReworkQrScanBulkRequest,
@@ -60,11 +59,11 @@ export const operationQrScanApi = api.injectEndpoints({
     }),
     getEmployeeScanHistory: builder.query<
       EmployeeScanHistory,
-      { employeeId: string; scheduleId: string; scheduleOperationId: number; reworkType: ReworkType | null }
+      { employeeId: string; scheduleId: string; scheduleOperationId: number; operationName: string; reworkType: ReworkType | null }
     >({
-      query: ({ reworkType, ...rest }) => ({
+      query: ({ employeeId, scheduleId, operationName }) => ({
         url: "/operation-qr-scan/employee-scan-history",
-        params: { ...rest, reworkType: reworkType ?? undefined },
+        params: { employeeId, scheduleId, operationName },
       }),
       transformResponse: unwrap,
       providesTags: (_result, _error, arg) => [scanCountTag(arg)],
@@ -74,7 +73,7 @@ export const operationQrScanApi = api.injectEndpoints({
     // during that one Start-to-Stop session, as opposed to the schedule/operation's running total
     // from getEmployeeScanHistory.
     getCurrentSessionScans: builder.query<
-      CurrentSessionScans,
+      QrCurrentSessionDetail,
       { transactionLogId: number; reworkType: ReworkType | null }
     >({
       query: ({ transactionLogId, reworkType }) => ({

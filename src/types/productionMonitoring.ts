@@ -82,36 +82,22 @@ export interface ReworkQrScanBulkRequest {
 }
 
 export interface EmployeeScanHistoryEntry {
-  qrScanId: number
   identifierName: string
   identifierId: string
   batchNumber: number
   scannedAt: string
 }
 
-/** Wire shape from GET /api/operation-qr-scan/employee-scan-history. */
+/** Wire shape from GET /api/operation-qr-scan/employee-scan-history — the operation's running
+ *  scan total, as opposed to just the current session's from GET /api/operation-qr-scan/current-session
+ *  (see QrCurrentSessionDetail in @/types/qrScanRecords, which that endpoint's response now matches). */
 export interface EmployeeScanHistory {
   employeeId: string
   employeeName: string
   scheduleId: string
-  scheduleOperationId: number
   operationName: string
-  totalScannedQty: number
-  scannedData: EmployeeScanHistoryEntry[]
-}
-
-export interface CurrentSessionScanEntry {
-  qrScanId: number
-  identifierName: string
-  identifierId: string
-  scannedAt: string
-}
-
-/** Wire shape from GET /api/operation-qr-scan/current-session — the QR codes scanned during one
- *  specific Start-to-Stop session, keyed by that session's resulting transactionLogId. */
-export interface CurrentSessionScans {
-  totalScanned: number
-  identifiers: CurrentSessionScanEntry[]
+  scannedQty: number
+  identifiers?: EmployeeScanHistoryEntry[]
 }
 
 export interface OperatorActionRequest {

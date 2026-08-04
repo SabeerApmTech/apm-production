@@ -18,6 +18,7 @@ interface Props {
   scheduleId: string
   employeeId: string
   scheduleOperationId: number
+  operationName: string
   identifier?: IdentifierRecord
   /** Null for a production operation; the schedule's own rework type for a rework operation. */
   reworkType: ReworkType | null
@@ -40,7 +41,7 @@ function validateIdentifierId(value: string, identifier: IdentifierRecord | unde
  *  focused and sends Enter. Each scan is only staged into a local batch (never sent to the
  *  backend on its own); the operator reviews the batch and clicks Save to submit it all at once
  *  via /operation-qr-scan/save-bulk. */
-export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier, reworkType, transactionLogId }: Props) {
+export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, operationName, identifier, reworkType, transactionLogId }: Props) {
   const identifierName = identifier?.identifierName ?? ""
   const isRework = reworkType !== null
   const [identifierId, setIdentifierId] = useState("")
@@ -55,7 +56,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   // Used only to check a scan against every code ever saved for this operation (not just this
   // session) so an operator can't re-scan something already recorded in an earlier session.
   const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
-    { employeeId, scheduleId, scheduleOperationId, reworkType },
+    { employeeId, scheduleId, scheduleOperationId, operationName, reworkType },
     { skip: !open }
   )
   // The dialog's own displayed count is scoped to just the current session, not the operation's
@@ -105,7 +106,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   function stageCurrentInput(currentPending: string[]): string[] | null {
     const trimmed = identifierId.trim()
     if (!trimmed) return currentPending
-    if (scanHistory?.scannedData.some((entry) => entry.identifierId === trimmed)) {
+    if (scanHistory?.identifiers?.some((entry) => entry.identifierId === trimmed)) {
       setError("This code has already been scanned and saved")
       setIdentifierId("")
       refocusInput()
@@ -179,7 +180,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
 
         {currentSession && (
           <p className="-mt-3 mb-3 text-xs font-medium text-blue-600">
-            Current Session Scanned Qty: {currentSession.totalScanned}
+            Current Session Scanned Qty: {currentSession.totalScannedQty}
           </p>
         )}
 

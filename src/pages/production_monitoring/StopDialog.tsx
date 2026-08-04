@@ -48,7 +48,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, rewor
     { skip: !open || !operation?.isQrApplicable || transactionLogId == null }
   )
   const exceedsScannedQty =
-    currentSession != null && form.successQty !== "" && Number(form.successQty) > currentSession.totalScanned
+    currentSession != null && form.successQty !== "" && Number(form.successQty) > currentSession.totalScannedQty
 
   // Resets the form whenever the dialog (re)opens, without an effect — adjusting state during
   // render avoids the extra post-mount render pass a useEffect would cost here.
@@ -88,7 +88,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, rewor
 
         {currentSession && (
           <p className="text-center text-xs font-medium text-blue-600 mb-3">
-            Current Session Scanned Qty: {currentSession.totalScanned}
+            Current Session Scanned Qty: {currentSession.totalScannedQty}
           </p>
         )}
 
@@ -109,7 +109,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, rewor
             />
             {exceedsScannedQty && (
               <p className="text-xs text-amber-600">
-                Exceeds this session's Scanned Qty ({currentSession!.totalScanned}).
+                Exceeds this session's Scanned Qty ({currentSession!.totalScannedQty}).
               </p>
             )}
           </div>

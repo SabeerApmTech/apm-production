@@ -18,6 +18,7 @@ export function SessionScansDialog({ open, onOpenChange, transactionLogId, rewor
     { transactionLogId: transactionLogId ?? 0, reworkType },
     { skip: !open || transactionLogId == null }
   )
+  const scannedData = data?.scannedData ?? []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,19 +32,19 @@ export function SessionScansDialog({ open, onOpenChange, transactionLogId, rewor
         ) : (
           <>
             <p className="-mt-3 mb-3 text-xs font-medium text-blue-600">
-              Total Scanned: {data?.totalScanned ?? 0}
+              Total Scanned: {data?.totalScannedQty ?? 0}
             </p>
             <div className="max-h-72 overflow-y-auto rounded-lg border border-gray-200">
-              {!data?.identifiers.length ? (
+              {!scannedData.length ? (
                 <p className="py-4 text-center text-xs text-gray-400">No codes scanned in this session.</p>
               ) : (
-                data.identifiers.map((entry) => (
+                scannedData.map((entry) => (
                   <div
                     key={entry.qrScanId}
                     className="flex items-center justify-between gap-2 border-b border-dashed border-gray-100 px-3 py-2 text-xs last:border-b-0"
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-gray-700">{entry.identifierId}</p>
+                      <p className="truncate font-medium text-gray-700">{entry.identifier}</p>
                       <p className="text-[11px] text-gray-400">{entry.identifierName}</p>
                     </div>
                     <span className="shrink-0 whitespace-pre-line text-right text-[11px] text-gray-400">
