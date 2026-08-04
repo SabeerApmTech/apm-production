@@ -20,7 +20,7 @@ const CompletedSchedules     = lazy(() => import("./pages/schedules/completed_sc
 const HandoverToStore        = lazy(() => import("./pages/schedules/handover_to_store/HandoverToStore").then(m => ({ default: m.HandoverToStore })));
 const TransactionLog         = lazy(() => import("./pages/production_data/transaction_log/TransactionLog").then(m => ({ default: m.TransactionLog })));
 const ProductionHistory      = lazy(() => import("./pages/production_data/production_history/ProductionHistory").then(m => ({ default: m.ProductionHistory })));
-const ProducedProducts       = lazy(() => import("./pages/production_data/produced_products/ProducedProducts").then(m => ({ default: m.ProducedProducts })));
+const QrScanRecords          = lazy(() => import("./pages/production_data/qr_scan_records/QrScanRecords").then(m => ({ default: m.QrScanRecords })));
 const PendingReworkSchedules = lazy(() => import("./pages/rework_schedules/pending_rework_schedules/PendingReworkSchedules").then(m => ({ default: m.PendingReworkSchedules })));
 const CompletedReworkSchedules = lazy(() => import("./pages/rework_schedules/completed_rework_schedules/CompletedReworkSchedules").then(m => ({ default: m.CompletedReworkSchedules })));
 const ReworkHandoverToStore  = lazy(() => import("./pages/rework_schedules/handover_to_store/HandoverToStore").then(m => ({ default: m.ReworkHandoverToStore })));
@@ -100,7 +100,7 @@ function App() {
               <Route path="/handover-to-store" element={<HandoverToStore />} />
               <Route path="/production/log" element={<TransactionLog />} />
               <Route path="/production/history" element={<ProductionHistory />} />
-              <Route path="/production/produced-products" element={<ProducedProducts />} />
+              <Route path="/production/produced-products" element={<QrScanRecords />} />
               <Route path="/rework-schedules/pending" element={<PendingReworkSchedules />} />
               <Route path="/rework-schedules/completed" element={<CompletedReworkSchedules />} />
               <Route path="/rework-schedules/handover-to-store" element={<ReworkHandoverToStore />} />

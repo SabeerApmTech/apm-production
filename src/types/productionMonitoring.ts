@@ -65,15 +65,20 @@ export interface LogReportResponse {
 export type RawLogReportResponse = LogReportResponse | []
 
 /** Body for POST /api/operation-qr-scan/save-bulk — codes are accumulated client-side across
- *  several scans and only sent once the operator clicks Save. `reworkType` is null for a
- *  production operation, or the schedule's own rework type for a rework operation. */
+ *  several scans and only sent once the operator clicks Save. Production operations only; rework
+ *  operations save via POST /api/rework-qr-scan instead, see ReworkQrScanBulkRequest. */
 export interface OperationQrScanBulkRequest {
-  employeeId: string
-  scheduleId: string
-  scheduleOperationId: number
-  identifierName: string
-  reworkType: ReworkType | null
+  transactionLogId: number
   identifiers: string[]
+}
+
+/** Body for POST /api/rework-qr-scan — the rework counterpart of OperationQrScanBulkRequest.
+ *  `addToProductSummary` lets the operator choose whether these reworked units should also be
+ *  counted toward the product's overall production summary. */
+export interface ReworkQrScanBulkRequest {
+  reworkTransactionLogId: number
+  uniqueIdentifiers: string[]
+  addToProductSummary: boolean
 }
 
 export interface EmployeeScanHistoryEntry {
@@ -107,25 +112,6 @@ export interface CurrentSessionScanEntry {
 export interface CurrentSessionScans {
   totalScanned: number
   identifiers: CurrentSessionScanEntry[]
-}
-
-/** A single row from GET /api/operation-qr-scan/list. */
-export interface QrScanRecord {
-  scheduleId: string
-  productName: string
-  operationName: string
-  identifierName: string
-  uniqueIdentifier: string
-  companyName: string
-  employeeId: string
-}
-
-/** Wire shape from GET /api/operation-qr-scan/list. */
-export interface QrScanListResponse {
-  fromDate: string
-  toDate: string
-  totalRecords: number
-  records: QrScanRecord[]
 }
 
 export interface OperatorActionRequest {

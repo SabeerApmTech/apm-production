@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
-  useSaveBulkOperationQrScanMutation, useGetEmployeeScanHistoryQuery, useGetCurrentSessionScansQuery,
+  useSaveBulkOperationQrScanMutation, useSaveReworkQrScanMutation,
+  useGetEmployeeScanHistoryQuery, useGetCurrentSessionScansQuery,
 } from "@/store/services/operationQrScanApi"
 import type { IdentifierRecord } from "@/types/product"
 import type { ReworkType } from "@/types/reworkSchedule"
@@ -40,12 +42,16 @@ function validateIdentifierId(value: string, identifier: IdentifierRecord | unde
  *  via /operation-qr-scan/save-bulk. */
 export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier, reworkType, transactionLogId }: Props) {
   const identifierName = identifier?.identifierName ?? ""
+  const isRework = reworkType !== null
   const [identifierId, setIdentifierId] = useState("")
   const [pendingCodes, setPendingCodes] = useState<string[]>([])
+  const [addToProductSummary, setAddToProductSummary] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const [saveBulkScan, { isLoading: isSaving }] = useSaveBulkOperationQrScanMutation()
+  const [saveBulkScan, { isLoading: isSavingProduction }] = useSaveBulkOperationQrScanMutation()
+  const [saveReworkScan, { isLoading: isSavingRework }] = useSaveReworkQrScanMutation()
+  const isSaving = isSavingProduction || isSavingRework
   // Used only to check a scan against every code ever saved for this operation (not just this
   // session) so an operator can't re-scan something already recorded in an earlier session.
   const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
@@ -69,7 +75,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
     scheduleOperationId !== prevContext.scheduleOperationId
   ) {
     setPrevContext({ scheduleId, employeeId, scheduleOperationId })
-    setIdentifierId(""); setPendingCodes([]); setError(null)
+    setIdentifierId(""); setPendingCodes([]); setError(null); setAddToProductSummary(true)
   }
 
   // Only the transient error message is cleared on reopen, without an effect — adjusting state
@@ -137,13 +143,24 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   async function handleSave() {
     const codesToSave = stageCurrentInput(pendingCodes)
     if (codesToSave === null || codesToSave.length === 0) return
+    if (transactionLogId == null) {
+      setError("No active session to save against")
+      return
+    }
     setIdentifierId("")
     setError(null)
     try {
-      await saveBulkScan({
-        employeeId, scheduleId, scheduleOperationId, identifierName, reworkType, identifiers: codesToSave,
-        currentTransactionLogId: transactionLogId ?? undefined,
-      }).unwrap()
+      if (isRework) {
+        await saveReworkScan({
+          reworkTransactionLogId: transactionLogId, uniqueIdentifiers: codesToSave, addToProductSummary,
+          employeeId, scheduleId, scheduleOperationId, currentTransactionLogId: transactionLogId,
+        }).unwrap()
+      } else {
+        await saveBulkScan({
+          transactionLogId, identifiers: codesToSave,
+          employeeId, scheduleId, scheduleOperationId, currentTransactionLogId: transactionLogId,
+        }).unwrap()
+      }
       setPendingCodes([])
     } catch {
       // Toast middleware already surfaced the error; keep the batch so the user can retry.
@@ -215,6 +232,19 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {isRework && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="add-to-product-summary"
+                checked={addToProductSummary}
+                onCheckedChange={(next) => setAddToProductSummary(next === true)}
+              />
+              <Label htmlFor="add-to-product-summary" className="text-xs text-gray-600">
+                Add to Product Summary
+              </Label>
             </div>
           )}
         </div>
