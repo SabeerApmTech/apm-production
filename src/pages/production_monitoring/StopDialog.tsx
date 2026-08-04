@@ -6,10 +6,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useGetCurrentSessionScansQuery } from "@/store/services/operationQrScanApi"
+import { useCurrentSessionScans } from "./qrScanHooks"
 import { OTHERS_REASON, pad2, REJECTION_REASONS } from "./data"
 import type { Operation } from "./types"
-import type { ReworkType } from "@/types/reworkSchedule"
 
 const textareaClass =
   "w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
@@ -24,15 +23,15 @@ interface Props {
   operation: Operation | null
   /** True when the schedule already hit its target — the backend rejects a non-zero Successful Qty in that case. */
   targetReached?: boolean
-  /** Null for a production operation; the schedule's own rework type for a rework operation. */
-  reworkType?: ReworkType | null
+  /** Whether this is a rework operation — routes to the rework-specific current-session endpoint. */
+  isRework?: boolean
   /** The session being closed out by this Stop — drives the "Current Session Scanned Qty" display,
    *  only relevant when the operation is QR-applicable. */
   transactionLogId?: number | null
   onSave: (data: StopFormData) => Promise<void>
 }
 
-export function StopDialog({ open, onOpenChange, operation, targetReached, reworkType = null, transactionLogId = null, onSave }: Props) {
+export function StopDialog({ open, onOpenChange, operation, targetReached, isRework = false, transactionLogId = null, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
   // `reasonOption` drives the Select ("Others" included); `customReason` is only used when
   // "Others" is picked. The actual value sent as `reason` is derived from these two below.
@@ -43,12 +42,11 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, rewor
   const isOthers = reasonOption === OTHERS_REASON
   const effectiveReason = isOthers ? customReason.trim() : reasonOption
 
-  const { data: currentSession } = useGetCurrentSessionScansQuery(
-    { transactionLogId: transactionLogId ?? 0, reworkType },
-    { skip: !open || !operation?.isQrApplicable || transactionLogId == null }
-  )
+  const { totalScannedQty, hasData: hasCurrentSession } = useCurrentSessionScans({
+    transactionLogId, isRework, skip: !open || !operation?.isQrApplicable,
+  })
   const exceedsScannedQty =
-    currentSession != null && form.successQty !== "" && Number(form.successQty) > currentSession.totalScannedQty
+    hasCurrentSession && form.successQty !== "" && Number(form.successQty) > totalScannedQty
 
   // Resets the form whenever the dialog (re)opens, without an effect — adjusting state during
   // render avoids the extra post-mount render pass a useEffect would cost here.
@@ -86,9 +84,9 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, rewor
         </DialogHeader>
         <p className="text-center text-xs font-semibold text-red-500 mb-4">Stopped</p>
 
-        {currentSession && (
+        {hasCurrentSession && (
           <p className="text-center text-xs font-medium text-blue-600 mb-3">
-            Current Session Scanned Qty: {currentSession.totalScannedQty}
+            Current Session Scanned Qty: {totalScannedQty}
           </p>
         )}
 
@@ -109,7 +107,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, rewor
             />
             {exceedsScannedQty && (
               <p className="text-xs text-amber-600">
-                Exceeds this session's Scanned Qty ({currentSession!.totalScannedQty}).
+                Exceeds this session's Scanned Qty ({totalScannedQty}).
               </p>
             )}
           </div>

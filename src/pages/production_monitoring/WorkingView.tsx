@@ -7,7 +7,8 @@ import { ScheduleSummary } from "./ScheduleSummary"
 import { StatusBadge } from "./StatusBadge"
 import { ScanDialog } from "./ScanDialog"
 import { SessionScansDialog } from "./SessionScansDialog"
-import { useGetEmployeeScanHistoryQuery } from "@/store/services/operationQrScanApi"
+import { useScanHistory } from "./qrScanHooks"
+import { getCurrentSessionLogId } from "./sessionLogId"
 import type { Operation, Schedule } from "./types"
 import type { LogReportEntry } from "@/types/productionMonitoring"
 import type { IdentifierRecord } from "@/types/product"
@@ -22,6 +23,10 @@ interface Props {
   identifiers?: IdentifierRecord[]
   /** The signed-in operator — needed for the QR scan action. */
   employeeId?: string
+  /** Whether `schedule`/`operation` came from the rework flow — the schedule's own `reworkType`
+   *  field isn't reliably populated by the backend, so the caller (which knows which schedule
+   *  list/endpoint this came from) passes this explicitly rather than us inferring it here. */
+  isRework?: boolean
   onStart?: () => void
   onPause?: () => void
   onStop?: () => void
@@ -29,28 +34,24 @@ interface Props {
   readOnly?: boolean
 }
 
-export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, onStart, onPause, onStop, readOnly = false }: Props) {
+export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, isRework = false, onStart, onPause, onStop, readOnly = false }: Props) {
   const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
   const identifierName = identifierRecord?.identifierName
   const [scanOpen, setScanOpen] = useState(false)
   const [sessionScansId, setSessionScansId] = useState<number | null>(null)
-  const reworkType = schedule.reworkType ?? null
-  const { data: scanHistory } = useGetEmployeeScanHistoryQuery(
-    {
-      employeeId: employeeId ?? "", scheduleId: schedule.scheduleId,
-      scheduleOperationId: operation.operationId, operationName: operation.operationName, reworkType,
-    },
-    { skip: !operation.isQrApplicable || !employeeId }
-  )
-  // The backend omits `identifiers` entirely (rather than returning an empty array) when there's
-  // no history yet — normalize that here so callers only ever see one shape.
-  const scannedEntries = scanHistory?.identifiers ?? []
+  const { scannedQty, entries: scannedEntries } = useScanHistory({
+    employeeId: employeeId ?? "", scheduleId: schedule.scheduleId,
+    scheduleOperationId: operation.operationId, operationName: operation.operationName, isRework,
+    // No point calling this before the operation has logged anything — there's nothing to have scanned yet.
+    skip: !operation.isQrApplicable || !employeeId || logs.length === 0,
+  })
   const lastLog = logs.length ? logs[logs.length - 1] : null
   const lastEvent = lastLog?.logEvent ?? null
-  // Every log entry from START onward carries the same transactionLogId for that session, so the
-  // most recent entry's id is the currently open (or just-closed) session's id — this is what the
-  // Scan dialog uses to show a session-scoped scanned count instead of the operation's running total.
-  const currentTransactionLogId = lastLog?.transactionLogId ?? null
+  // The most recent START row's id — not just the last log row's, since each row gets its own
+  // distinct id and a PAUSE/RESUME/STOP row logged after START carries a different one. This is
+  // what the Scan dialog uses to show a session-scoped scanned count instead of the operation's
+  // running total.
+  const currentTransactionLogId = getCurrentSessionLogId(logs)
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
   const isComplete = operation.producedQty >= operation.targetQty
@@ -141,7 +142,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
             {operation.isQrApplicable && (
               <div className="min-w-0">
                 <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Scanned Qty</dt>
-                <dd className="text-sm font-semibold text-blue-600">{scanHistory?.scannedQty ?? "-"}</dd>
+                <dd className="text-sm font-semibold text-blue-600">{scannedQty ?? "-"}</dd>
               </div>
             )}
           </div>
@@ -151,7 +152,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         {operation.isQrApplicable && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col">
             <p className="text-sm font-semibold text-gray-900 mb-3 pb-3 border-b border-gray-100">
-              Scanned Codes ({scanHistory?.scannedQty ?? 0})
+              Scanned Codes ({scannedQty ?? 0})
             </p>
             <div className="flex-1 min-h-0 max-h-40 overflow-y-auto">
               {!scannedEntries.length ? (
@@ -160,10 +161,10 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                 <div className="flex flex-col gap-1.5">
                   {scannedEntries.map((entry, i) => (
                     <span
-                      key={`${entry.identifierId}-${i}`}
+                      key={`${entry.identifier}-${i}`}
                       className="rounded-md bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-700"
                     >
-                      {entry.identifierId}
+                      {entry.identifier}
                     </span>
                   ))}
                 </div>
@@ -187,7 +188,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
           <span className="text-xs text-gray-400">Read-only</span>
         ) : (
           <div className="flex items-center gap-1.5">
-            {operation.isQrApplicable && !isIdle && (
+            {operation.isQrApplicable && (lastEvent === "START" || lastEvent === "RESUME") && (
               <button
                 onClick={() => setScanOpen(true)}
                 title="Scan"
@@ -268,9 +269,9 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                       <td className="px-3 py-2 text-gray-600">{entry.remarks || "—"}</td>
                       {operation.isQrApplicable && (
                         <td className="px-3 py-2">
-                          {entry.transactionLogId != null ? (
+                          {entry.logEvent === "START" && (entry.transactionLogId != null || entry.reworkTransactionLogId != null) ? (
                             <button
-                              onClick={() => setSessionScansId(entry.transactionLogId!)}
+                              onClick={() => setSessionScansId(entry.transactionLogId ?? entry.reworkTransactionLogId!)}
                               className="font-medium text-blue-500 hover:text-blue-600 hover:underline whitespace-nowrap"
                             >
                               View Scans
@@ -309,7 +310,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         scheduleOperationId={operation.operationId}
         operationName={operation.operationName}
         identifier={identifierRecord}
-        reworkType={reworkType}
+        isRework={isRework}
         transactionLogId={currentTransactionLogId}
       />
 
@@ -317,7 +318,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         open={sessionScansId !== null}
         onOpenChange={(open) => { if (!open) setSessionScansId(null) }}
         transactionLogId={sessionScansId}
-        reworkType={reworkType}
+        isRework={isRework}
       />
     </div>
   )

@@ -25,6 +25,7 @@ import { OperationCards }      from "./OperationCards"
 import { WorkingView }         from "./WorkingView"
 import { StopDialog }          from "./StopDialog"
 import { PauseDialog }         from "./PauseDialog"
+import { getCurrentSessionLogId } from "./sessionLogId"
 
 export const ProductionMonitoring = () => {
   const operatorUser = getAuthUser()
@@ -281,6 +282,7 @@ export const ProductionMonitoring = () => {
             idleHours={idleHours}
             identifiers={identifiers}
             employeeId={employeeId}
+            isRework={scheduleType === "rework"}
             onStart={handleStart}
             onPause={() => setPauseOpen(true)}
             onStop={() => setStopOpen(true)}
@@ -293,8 +295,8 @@ export const ProductionMonitoring = () => {
         onOpenChange={setStopOpen}
         operation={selectedOperation}
         targetReached={selectedSchedule?.isTargetReached}
-        reworkType={selectedSchedule?.reworkType ?? null}
-        transactionLogId={logs.length ? logs[logs.length - 1].transactionLogId ?? null : null}
+        isRework={scheduleType === "rework"}
+        transactionLogId={getCurrentSessionLogId(logs)}
         onSave={handleStopSave}
       />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />

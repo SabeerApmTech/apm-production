@@ -50,8 +50,12 @@ export interface LogReportEntry {
   reason: string | null
   remarks: string | null
   /** Only present on the STOP row that closed out a session — the id to look up that
-   *  session's QR scans via GET /operation-qr-scan/current-session. */
+   *  session's QR scans via GET /operation-qr-scan/current-session. Only present on a production
+   *  log entry; a rework log entry carries the equivalent id under `reworkTransactionLogId` instead. */
   transactionLogId?: number
+  /** The rework counterpart of `transactionLogId` above — the id to look up a rework session's QR
+   *  scans via GET /rework-qr-scan/current-session/{id}. Only present on a rework log entry. */
+  reworkTransactionLogId?: number
 }
 
 /** Wire shape from GET /api/Production/operator-production-log-report (or /api/Rework/operator-rework-log-report). */
@@ -72,13 +76,10 @@ export interface OperationQrScanBulkRequest {
   identifiers: string[]
 }
 
-/** Body for POST /api/rework-qr-scan — the rework counterpart of OperationQrScanBulkRequest.
- *  `addToProductSummary` lets the operator choose whether these reworked units should also be
- *  counted toward the product's overall production summary. */
+/** Body for POST /api/rework-qr-scan — the rework counterpart of OperationQrScanBulkRequest. */
 export interface ReworkQrScanBulkRequest {
   reworkTransactionLogId: number
   uniqueIdentifiers: string[]
-  addToProductSummary: boolean
 }
 
 export interface EmployeeScanHistoryEntry {
@@ -90,7 +91,9 @@ export interface EmployeeScanHistoryEntry {
 
 /** Wire shape from GET /api/operation-qr-scan/employee-scan-history — the operation's running
  *  scan total, as opposed to just the current session's from GET /api/operation-qr-scan/current-session
- *  (see QrCurrentSessionDetail in @/types/qrScanRecords, which that endpoint's response now matches). */
+ *  (see QrCurrentSessionDetail in @/types/qrScanRecords, which that endpoint's response now matches).
+ *  Rework operations use the same-purpose but differently-shaped GET /api/rework-qr-scan/employee-scan-history
+ *  instead, see ReworkScanHistoryEntry. */
 export interface EmployeeScanHistory {
   employeeId: string
   employeeName: string
@@ -98,6 +101,30 @@ export interface EmployeeScanHistory {
   operationName: string
   scannedQty: number
   identifiers?: EmployeeScanHistoryEntry[]
+}
+
+/** Wire shape from GET /api/rework-qr-scan/employee-scan-history — the response is a bare array
+ *  (no wrapping object, no running total field), unlike the production EmployeeScanHistory. */
+export interface ReworkScanHistoryEntry {
+  batchNumber: number
+  uniqueIdentifierName: string
+  uniqueIdentifier: string
+  scannedAt: string
+}
+
+export interface ReworkCurrentSessionScan {
+  qrScanId: number
+  batchNumber: number
+  uniqueIdentifierName: string
+  uniqueIdentifier: string
+  scannedAt: string
+}
+
+/** Wire shape from GET /api/rework-qr-scan/current-session/{reworkTransactionLogId} — the rework
+ *  counterpart of QrCurrentSessionDetail (see @/types/qrScanRecords). */
+export interface ReworkCurrentSessionDetail {
+  totalCount: number
+  scannedQrCodes: ReworkCurrentSessionScan[]
 }
 
 export interface OperatorActionRequest {

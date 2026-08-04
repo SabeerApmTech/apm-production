@@ -3,7 +3,6 @@ import type { ApiResponse } from "@/types/auth"
 import type {
   EmployeeScanHistory,
   OperationQrScanBulkRequest,
-  ReworkQrScanBulkRequest,
 } from "@/types/productionMonitoring"
 import type { ReworkType } from "@/types/reworkSchedule"
 import type {
@@ -34,23 +33,6 @@ export const operationQrScanApi = api.injectEndpoints({
         url: "/operation-qr-scan/save-bulk",
         method: "POST",
         body: { transactionLogId, identifiers },
-      }),
-      invalidatesTags: (_result, _error, arg) => [
-        scanCountTag(arg),
-        ...(arg.currentTransactionLogId != null ? [sessionScanTag(arg.currentTransactionLogId)] : []),
-      ],
-    }),
-    saveReworkQrScan: builder.mutation<
-      ApiResponse<null>,
-      ReworkQrScanBulkRequest & {
-        /** Client-side only — not sent to the backend, just used to invalidate the scan count/session tags below. */
-        employeeId: string; scheduleId: string; scheduleOperationId: number; currentTransactionLogId?: number
-      }
-    >({
-      query: ({ reworkTransactionLogId, uniqueIdentifiers, addToProductSummary }) => ({
-        url: "/rework-qr-scan",
-        method: "POST",
-        body: { reworkTransactionLogId, uniqueIdentifiers, addToProductSummary },
       }),
       invalidatesTags: (_result, _error, arg) => [
         scanCountTag(arg),
@@ -107,7 +89,6 @@ export const operationQrScanApi = api.injectEndpoints({
 
 export const {
   useSaveBulkOperationQrScanMutation,
-  useSaveReworkQrScanMutation,
   useGetEmployeeScanHistoryQuery,
   useGetCurrentSessionScansQuery,
   useGetQrScheduleListQuery,

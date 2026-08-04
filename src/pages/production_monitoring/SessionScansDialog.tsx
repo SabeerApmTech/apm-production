@@ -1,24 +1,21 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { formatLogDateTime } from "@/utils/date"
-import { useGetCurrentSessionScansQuery } from "@/store/services/operationQrScanApi"
-import type { ReworkType } from "@/types/reworkSchedule"
+import { useCurrentSessionScans } from "./qrScanHooks"
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Null while no row is selected — the query is skipped until a STOP row's id is passed in. */
   transactionLogId: number | null
-  reworkType: ReworkType | null
+  isRework: boolean
 }
 
 /** Read-only view of the QR codes scanned during one specific Start-to-Stop session, opened via
  *  the "View Scans" action on a STOP row in the Log Report table. */
-export function SessionScansDialog({ open, onOpenChange, transactionLogId, reworkType }: Props) {
-  const { data, isFetching } = useGetCurrentSessionScansQuery(
-    { transactionLogId: transactionLogId ?? 0, reworkType },
-    { skip: !open || transactionLogId == null }
-  )
-  const scannedData = data?.scannedData ?? []
+export function SessionScansDialog({ open, onOpenChange, transactionLogId, isRework }: Props) {
+  const { totalScannedQty, entries: scannedData, isFetching } = useCurrentSessionScans({
+    transactionLogId, isRework, skip: !open,
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,7 +29,7 @@ export function SessionScansDialog({ open, onOpenChange, transactionLogId, rewor
         ) : (
           <>
             <p className="-mt-3 mb-3 text-xs font-medium text-blue-600">
-              Total Scanned: {data?.totalScannedQty ?? 0}
+              Total Scanned: {totalScannedQty}
             </p>
             <div className="max-h-72 overflow-y-auto rounded-lg border border-gray-200">
               {!scannedData.length ? (

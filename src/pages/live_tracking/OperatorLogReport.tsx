@@ -17,6 +17,7 @@ import { useGetIdentifiersQuery } from "@/store/services/productApi"
 import { WorkingView } from "@/pages/production_monitoring/WorkingView"
 import { StopDialog } from "@/pages/production_monitoring/StopDialog"
 import { PauseDialog } from "@/pages/production_monitoring/PauseDialog"
+import { getCurrentSessionLogId } from "@/pages/production_monitoring/sessionLogId"
 import { LoadingRow } from "@/shared/LoadingRow"
 import { getCurrentEmployeeId } from "@/utils/auth"
 import { getApiErrorMessage } from "@/utils/apiError"
@@ -180,6 +181,7 @@ export function OperatorLogReport() {
             idleHours={report?.idleHours ?? "0.00"}
             identifiers={identifiers}
             employeeId={employeeId}
+            isRework={isRework}
             readOnly={!isOwnWork}
             onStart={handleStart}
             onPause={() => setPauseOpen(true)}
@@ -193,8 +195,8 @@ export function OperatorLogReport() {
         onOpenChange={setStopOpen}
         operation={operation ?? null}
         targetReached={schedule?.isTargetReached}
-        reworkType={schedule?.reworkType ?? null}
-        transactionLogId={logs.length ? logs[logs.length - 1].transactionLogId ?? null : null}
+        isRework={isRework}
+        transactionLogId={getCurrentSessionLogId(logs)}
         onSave={handleStopSave}
       />
       <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} onSubmit={handlePauseSubmit} />
