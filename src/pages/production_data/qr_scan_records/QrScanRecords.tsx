@@ -1,24 +1,24 @@
 import { useState } from "react"
 import { TabSwitcher, type TabItem } from "@/shared/TabSwitcher"
-import { ScheduleWiseTab } from "./ScheduleWiseTab"
-import { ProducedProductsTab } from "./ProducedProductsTab"
+import { ScannedRecordsTab } from "./ScannedRecordsTab"
+import { ProductSearchTab } from "./ProductSearchTab"
 
-type ViewTab = "schedule-wise" | "produced-products"
+type ViewTab = "scanned-records" | "product-search"
 
 const VIEW_TABS: TabItem<ViewTab>[] = [
-  { key: "schedule-wise", label: "Schedule Wise" },
-  { key: "produced-products", label: "Produced Products" },
+  { key: "scanned-records", label: "Scanned Records" },
+  { key: "product-search", label: "Product Search" },
 ]
 
 export function QrScanRecords() {
-  const [activeTab, setActiveTab] = useState<ViewTab>("schedule-wise")
+  const [activeTab, setActiveTab] = useState<ViewTab>("scanned-records")
 
   return (
     <div className="flex flex-1 min-h-0 flex-col gap-4">
       <TabSwitcher tabs={VIEW_TABS} active={activeTab} onChange={setActiveTab} />
 
       <div className="flex flex-1 min-h-0 flex-col">
-        {activeTab === "schedule-wise" ? <ScheduleWiseTab /> : <ProducedProductsTab />}
+        {activeTab === "scanned-records" ? <ScannedRecordsTab /> : <ProductSearchTab />}
       </div>
     </div>
   )

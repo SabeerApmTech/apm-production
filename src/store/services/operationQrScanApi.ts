@@ -8,8 +8,8 @@ import type { ReworkType } from "@/types/reworkSchedule"
 import type {
   ProducedProductsResponse,
   QrCurrentSessionDetail,
-  QrScheduleListResponse,
-  QrScheduleTransactionsResponse,
+  ScannedRecordDetail,
+  ScannedRecordsResponse,
 } from "@/types/qrScanRecords"
 
 function scanCountTag(params: { employeeId: string; scheduleId: string; scheduleOperationId: number }) {
@@ -65,23 +65,34 @@ export const operationQrScanApi = api.injectEndpoints({
       transformResponse: unwrap,
       providesTags: (_result, _error, arg) => [sessionScanTag(arg.transactionLogId)],
     }),
-    getQrScheduleList: builder.query<QrScheduleListResponse, void>({
-      query: () => "/operation-qr-scan/schedule-list",
+    getProducedProducts: builder.query<ProducedProductsResponse, void>({
+      query: () => "/operation-qr-scan/scanned-products",
       transformResponse: unwrap,
     }),
-    getQrScheduleTransactions: builder.query<QrScheduleTransactionsResponse, string>({
-      query: (scheduleId) => `/operation-qr-scan/schedule/${scheduleId}/transactions`,
-      transformResponse: unwrap,
-    }),
-    getQrCurrentSessionDetail: builder.query<QrCurrentSessionDetail, number>({
-      query: (transactionLogId) => ({
-        url: "/operation-qr-scan/current-session",
-        params: { transactionLogId },
+    getScannedRecords: builder.query<ScannedRecordsResponse, { fromDate: string; toDate: string }>({
+      query: ({ fromDate, toDate }) => ({
+        url: "/operation-qr-scan/scanned-records",
+        params: { fromDate, toDate },
       }),
       transformResponse: unwrap,
     }),
-    getProducedProducts: builder.query<ProducedProductsResponse, void>({
-      query: () => "/operation-qr-scan/scanned-products",
+    getScannedRecordsFilter: builder.query<
+      ScannedRecordsResponse,
+      { companyName?: string; productName?: string; operationName?: string; employeeId?: string }
+    >({
+      query: ({ companyName, productName, operationName, employeeId }) => ({
+        url: "/operation-qr-scan/scanned-records-filter",
+        params: {
+          CompanyName: companyName,
+          ProductName: productName,
+          OperationName: operationName,
+          EmployeeId: employeeId,
+        },
+      }),
+      transformResponse: unwrap,
+    }),
+    getScannedRecordDetails: builder.query<ScannedRecordDetail, number>({
+      query: (transactionLogId) => `/operation-qr-scan/scanned-record-details/${transactionLogId}`,
       transformResponse: unwrap,
     }),
   }),
@@ -91,8 +102,8 @@ export const {
   useSaveBulkOperationQrScanMutation,
   useGetEmployeeScanHistoryQuery,
   useGetCurrentSessionScansQuery,
-  useGetQrScheduleListQuery,
-  useGetQrScheduleTransactionsQuery,
-  useGetQrCurrentSessionDetailQuery,
   useGetProducedProductsQuery,
+  useGetScannedRecordsQuery,
+  useGetScannedRecordsFilterQuery,
+  useGetScannedRecordDetailsQuery,
 } = operationQrScanApi

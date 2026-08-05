@@ -1,36 +1,3 @@
-/** A single row from GET /api/operation-qr-scan/schedule-list. */
-export interface QrScheduleRecord {
-  scheduleId: string
-  companyName: string
-  companyLocation: string
-  state: string
-  productName: string
-  targetQty: number
-}
-
-/** Wire shape from GET /api/operation-qr-scan/schedule-list. */
-export interface QrScheduleListResponse {
-  totalSchedules: number
-  schedules: QrScheduleRecord[]
-}
-
-/** A single row from GET /api/operation-qr-scan/schedule/{scheduleId}/transactions. */
-export interface QrScheduleTransaction {
-  transactionLogId: number
-  sequenceNo: number
-  operationName: string
-  employeeId: string
-  employeeName: string
-  logTime: string
-}
-
-/** Wire shape from GET /api/operation-qr-scan/schedule/{scheduleId}/transactions. */
-export interface QrScheduleTransactionsResponse {
-  scheduleId: string
-  totalTransactions: number
-  transactions: QrScheduleTransaction[]
-}
-
 export interface QrCurrentSessionScan {
   qrScanId: number
   identifierName: string
@@ -51,7 +18,7 @@ export interface QrCurrentSessionDetail {
   scannedData: QrCurrentSessionScan[]
 }
 
-/** A single row from GET /api/operation-qr-scan/produced-products. */
+/** A single row from GET /api/operation-qr-scan/scanned-products. */
 export interface ProducedProductRecord {
   qrScanId: number
   transactionLogId: number
@@ -70,8 +37,44 @@ export interface ProducedProductRecord {
   scannedAt: string
 }
 
-/** Wire shape from GET /api/operation-qr-scan/produced-products. */
+/** Wire shape from GET /api/operation-qr-scan/scanned-products. */
 export interface ProducedProductsResponse {
   count: number
   records: ProducedProductRecord[]
+}
+
+/** A single row from GET /api/operation-qr-scan/scanned-records (or its filtered counterpart,
+ *  GET /api/operation-qr-scan/scanned-records-filter). */
+export interface ScannedRecord {
+  transactionLogId: number
+  scheduleId: string
+  companyName: string
+  companyLocation: string
+  state: string
+  productName: string
+  targetQty: number
+  employeeId: string
+  employeeName: string
+  operationName: string
+  identifierName: string
+  startedAt: string
+}
+
+/** Wire shape from GET /api/operation-qr-scan/scanned-records (or scanned-records-filter). */
+export interface ScannedRecordsResponse {
+  totalRecords: number
+  records: ScannedRecord[]
+}
+
+export interface ScannedRecordDetailEntry {
+  batchNumber: number
+  uniqueIdentifier: string
+  scannedAt: string
+}
+
+/** Wire shape from GET /api/operation-qr-scan/scanned-record-details/{transactionLogId}. */
+export interface ScannedRecordDetail {
+  transactionLogId: number
+  totalScannedQty: number
+  records: ScannedRecordDetailEntry[]
 }
