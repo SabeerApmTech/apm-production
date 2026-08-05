@@ -5,13 +5,15 @@ import { useGetScannedRecordDetailsQuery } from "@/store/services/operationQrSca
 import { formatLogDateTime } from "@/utils/date"
 
 interface ScannedRecordDetailPanelProps {
-  transactionLogId: number
+  scheduleId: string
+  employeeId: string
+  operationName: string
   className?: string
   onClose?: () => void
 }
 
-export function ScannedRecordDetailPanel({ transactionLogId, className, onClose }: ScannedRecordDetailPanelProps) {
-  const { data, isLoading } = useGetScannedRecordDetailsQuery(transactionLogId)
+export function ScannedRecordDetailPanel({ scheduleId, employeeId, operationName, className, onClose }: ScannedRecordDetailPanelProps) {
+  const { data, isLoading } = useGetScannedRecordDetailsQuery({ scheduleId, employeeId, operationName })
   const records = data?.records ?? []
 
   return (
