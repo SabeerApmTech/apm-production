@@ -153,6 +153,7 @@ export function DataTable<T>({
   const toolbarRef   = useRef<HTMLDivElement>(null)
   const [search, setSearch]               = useState("")
   const [selectedCount, setSelectedCount] = useState(0)
+  const [displayedCount, setDisplayedCount] = useState(rowData.length)
   const [gridHeight, setGridHeight]       = useState(400)
   const [fromDate, setFromDate]           = useState(defaultFromDate ?? (defaultToToday ? getTodayIso() : ""))
   const [toDate,   setToDate]             = useState(defaultToDate ?? (defaultToToday ? getTodayIso() : ""))
@@ -198,6 +199,14 @@ export function DataTable<T>({
   const onGridReady = useCallback((e: GridReadyEvent<T>) => {
     gridApiRef.current = e.api
     e.api.sizeColumnsToFit()
+    setDisplayedCount(e.api.getDisplayedRowCount())
+  }, [])
+
+  // Fires whenever the displayed row set changes for any reason — quick filter (the search box),
+  // column filters, or the data itself — so the footer count always matches what's actually
+  // shown instead of the unfiltered `rowData.length`.
+  const onModelUpdated = useCallback(() => {
+    if (gridApiRef.current) setDisplayedCount(gridApiRef.current.getDisplayedRowCount())
   }, [])
 
   const onGridSizeChanged = useCallback(() => {
@@ -332,6 +341,7 @@ export function DataTable<T>({
             selectionColumnDef={selectionColumnDef}
             quickFilterText={search}
             onGridReady={onGridReady}
+            onModelUpdated={onModelUpdated}
             onGridSizeChanged={onGridSizeChanged}
             onSelectionChanged={onSelectionChanged}
             onRowClicked={onRowClicked}
@@ -352,7 +362,7 @@ export function DataTable<T>({
           />
         </div>
         <div className="shrink-0 border-t border-border bg-card px-4 py-2">
-          <span className="text-sm font-semibold text-muted-foreground">Count: {rowData.length}</span>
+          <span className="text-sm font-semibold text-muted-foreground">Count: {displayedCount}</span>
         </div>
       </div>
     </div>

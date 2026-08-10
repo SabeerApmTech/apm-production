@@ -91,13 +91,10 @@ export const operationQrScanApi = api.injectEndpoints({
       }),
       transformResponse: unwrap,
     }),
-    getScannedRecordDetails: builder.query<
-      ScannedRecordDetail,
-      { scheduleId: string; employeeId: string; operationName: string }
-    >({
-      query: (params) => ({
+    getScannedRecordDetails: builder.query<ScannedRecordDetail, number>({
+      query: (transactionLogId) => ({
         url: "/operation-qr-scan/scanned-record-details",
-        params,
+        params: { transactionLogId },
       }),
       transformResponse: unwrap,
     }),

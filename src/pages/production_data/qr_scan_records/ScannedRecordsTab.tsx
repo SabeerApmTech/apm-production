@@ -9,12 +9,6 @@ import { useGetScannedRecordsQuery, useGetScannedRecordsFilterQuery } from "@/st
 import { ScannedRecordDetailPanel } from "./ScannedRecordDetailPanel"
 import type { ScannedRecord } from "@/types/qrScanRecords"
 
-// Rows have no id of their own — this triple is both what uniquely identifies a row and what
-// GET /operation-qr-scan/scanned-record-details keys its lookup by.
-function rowKey(r: ScannedRecord): string {
-  return `${r.scheduleId}|${r.employeeId}|${r.operationName}`
-}
-
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   useEffect(() => {
@@ -33,7 +27,7 @@ export function ScannedRecordsTab() {
   const [productName, setProductName] = useState(ALL)
   const [operationName, setOperationName] = useState(ALL)
   const [employeeId, setEmployeeId] = useState(ALL)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const hasFilter = companyName !== ALL || productName !== ALL || operationName !== ALL || employeeId !== ALL
 
@@ -67,7 +61,7 @@ export function ScannedRecordsTab() {
     })
   }, [optionSource])
 
-  const selectedRecord = rows.find((r) => rowKey(r) === selectedId) ?? null
+  const selectedRecord = rows.find((r) => r.transactionLogId === selectedId) ?? null
 
   // Compares against `selectedId` captured from this render's closure, not the live value inside
   // a functional setState updater — ag-grid can fire onRowClicked twice for a single physical
@@ -77,7 +71,7 @@ export function ScannedRecordsTab() {
   // idempotent no matter which row was previously selected.
   const onRowClicked = useCallback((e: RowClickedEvent<ScannedRecord>) => {
     if (!e.data) return
-    const clickedId = rowKey(e.data)
+    const clickedId = e.data.transactionLogId
     setSelectedId(clickedId === selectedId ? null : clickedId)
   }, [selectedId])
 
@@ -154,7 +148,7 @@ export function ScannedRecordsTab() {
           onRowClicked={onRowClicked}
           getRowStyle={(p) => ({
             cursor: "pointer",
-            ...(p.data && rowKey(p.data) === selectedId ? { background: "#dbeafe" } : {}),
+            ...(p.data?.transactionLogId === selectedId ? { background: "#dbeafe" } : {}),
           })}
           showDateFilter
           defaultFromDate={getMonthStartIso()}
@@ -164,10 +158,8 @@ export function ScannedRecordsTab() {
 
         {selectedRecord && !isMobile && (
           <ScannedRecordDetailPanel
-            key={rowKey(selectedRecord)}
-            scheduleId={selectedRecord.scheduleId}
-            employeeId={selectedRecord.employeeId}
-            operationName={selectedRecord.operationName}
+            key={selectedRecord.transactionLogId}
+            transactionLogId={selectedRecord.transactionLogId}
             onClose={() => setSelectedId(null)}
           />
         )}
@@ -177,10 +169,8 @@ export function ScannedRecordsTab() {
         <Drawer open={selectedId !== null} onClose={() => setSelectedId(null)} title="Scan Details">
           {selectedRecord && (
             <ScannedRecordDetailPanel
-              key={rowKey(selectedRecord)}
-              scheduleId={selectedRecord.scheduleId}
-              employeeId={selectedRecord.employeeId}
-              operationName={selectedRecord.operationName}
+              key={selectedRecord.transactionLogId}
+              transactionLogId={selectedRecord.transactionLogId}
               className="w-full self-auto max-h-none border-0 shadow-none rounded-none"
             />
           )}

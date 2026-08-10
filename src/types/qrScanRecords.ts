@@ -44,10 +44,9 @@ export interface ProducedProductsResponse {
 }
 
 /** A single row from GET /api/operation-qr-scan/scanned-records (or its filtered counterpart,
- *  GET /api/operation-qr-scan/scanned-records-filter). No id field of its own — a row is uniquely
- *  identified by (scheduleId, employeeId, operationName), the same triple GET
- *  /operation-qr-scan/scanned-record-details keys its lookup by. */
+ *  GET /api/operation-qr-scan/scanned-records-filter). */
 export interface ScannedRecord {
+  transactionLogId: number
   scheduleId: string
   companyName: string
   companyLocation: string
@@ -74,10 +73,12 @@ export interface ScannedRecordDetailEntry {
   scannedAt: string
 }
 
-/** Wire shape from GET /api/operation-qr-scan/scanned-record-details. */
+/** Wire shape from GET /api/operation-qr-scan/scanned-record-details?transactionLogId=. */
 export interface ScannedRecordDetail {
+  transactionLogId: number
   scheduleId: string
   employeeId: string
+  employeeName: string
   operationName: string
   totalScannedQty: number
   records: ScannedRecordDetailEntry[]

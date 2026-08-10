@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { Clock, Layers, Search, User, Wrench } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
@@ -11,29 +11,40 @@ import { formatLogDateTime } from "@/utils/date"
 
 function ProductCard({ record }: { record: ProducedProductRecord }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-2 border-b border-border pb-3">
-        <p className="truncate text-sm font-semibold text-foreground">{record.uniqueIdentifier}</p>
-        <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+    <div className="rounded-lg border border-border bg-card p-3.5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-mono text-sm font-semibold text-foreground" title={record.uniqueIdentifier}>
+            {record.uniqueIdentifier}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {record.productName} <span aria-hidden>·</span> {record.companyName}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
           {record.uniqueIdentifierName}
         </span>
       </div>
-      <dl className="grid grid-cols-2 gap-y-2 text-xs">
-        <dt className="text-muted-foreground">Product</dt>
-        <dd className="text-right font-medium text-foreground">{record.productName}</dd>
-        <dt className="text-muted-foreground">Company</dt>
-        <dd className="text-right font-medium text-foreground">{record.companyName}</dd>
-        <dt className="text-muted-foreground">Operation</dt>
-        <dd className="text-right font-medium text-foreground">{record.operationName}</dd>
-        <dt className="text-muted-foreground">Batch No</dt>
-        <dd className="text-right font-medium text-foreground">{record.batchNumber}</dd>
-        <dt className="text-muted-foreground">Employee</dt>
-        <dd className="text-right font-medium text-foreground">
-          {record.employeeId} : {record.employeeName}
-        </dd>
-        <dt className="text-muted-foreground">Scanned At</dt>
-        <dd className="whitespace-pre-line text-right font-medium text-foreground">{formatLogDateTime(record.scannedAt)}</dd>
-      </dl>
+
+      <div className="mt-3 space-y-1.5 border-t border-border pt-2.5 text-xs">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Wrench className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate text-foreground" title={record.operationName}>{record.operationName}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <User className="h-3.5 w-3.5 shrink-0" />
+          <span className="text-foreground">{record.employeeId} · {record.employeeName}</span>
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Layers className="h-3 w-3" /> Batch {record.batchNumber}
+        </span>
+        <span className="flex items-center gap-1 whitespace-nowrap">
+          <Clock className="h-3 w-3" /> {formatLogDateTime(record.scannedAt).replace("\n", " ")}
+        </span>
+      </div>
     </div>
   )
 }
@@ -114,7 +125,7 @@ export function ProductSearchTab() {
             No scanned products found.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {results.map((r) => (
               <ProductCard key={r.qrScanId} record={r} />
             ))}
