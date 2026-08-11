@@ -14,6 +14,7 @@ import { getAuthUser } from "@/utils/auth"
 import { useSyncedState } from "@/hooks/useSyncedState"
 import { STAFF_ALLOCATION_BUTTON_STYLES, type StaffAllocationStatus } from "@/shared/constants"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import { useGetProductsQuery } from "@/store/services/productApi"
 import type { PendingScheduleRecord } from "@/types/pendingSchedule"
 import {
   useGetPendingSchedulesQuery,
@@ -34,6 +35,7 @@ export function PendingSchedules() {
   const { data, isLoading, isFetching, refetch: refetchSchedules } = useGetPendingSchedulesQuery()
   const schedules = data ?? EMPTY_SCHEDULES
   const { data: companies } = useGetCompaniesQuery()
+  const { data: products } = useGetProductsQuery()
 
   const [createPendingSchedule] = useCreatePendingScheduleMutation()
   const [updatePendingSchedule] = useUpdatePendingScheduleMutation()
@@ -64,11 +66,13 @@ export function PendingSchedules() {
   }, [localSchedules])
 
   const handleConfirmPriority = useCallback(async () => {
-    if (newOrder) {
+    const user = getAuthUser()
+    if (newOrder && user) {
       try {
-        await updatePendingSchedulePriority(
-          newOrder.map((s, i) => ({ pendingScheduleId: s.pendingScheduleId, priorityNo: i + 1 }))
-        ).unwrap()
+        await updatePendingSchedulePriority({
+          updatedByEmpId: user.employeeId,
+          schedules: newOrder.map((s, i) => ({ pendingScheduleId: s.pendingScheduleId, priorityNo: i + 1 })),
+        }).unwrap()
         setLocalSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
         setNewOrder(null)
         setIsDirty(false)
@@ -84,18 +88,20 @@ export function PendingSchedules() {
     const user = getAuthUser()
     if (!user) return
     const companyLocation = companies?.find((c) => c.companyName === values.companyName)?.companyLocation ?? ""
+    const itemCode = products?.find((p) => p.productName === values.productName)?.itemCode ?? ""
     await createPendingSchedule({
       scheduleDate: values.scheduleDate,
       companyName: values.companyName,
       companyLocation,
       state: values.state,
       productName: values.productName,
+      itemCode,
       targetQty: values.targetQty,
       targetDate: values.targetDate,
       priorityLevel: values.priorityLevel,
       createdByEmpId: user.employeeId,
     }).unwrap()
-  }, [companies, createPendingSchedule])
+  }, [companies, products, createPendingSchedule])
 
   const handleEdit = useCallback(async (values: ScheduleFormValues) => {
     const user = getAuthUser()
@@ -130,8 +136,9 @@ export function PendingSchedules() {
 
   // Only Supervisors can allocate staff — Super Admin and Manager see the action disabled.
   const canAllocate = getAuthUser()?.employeeRole === "SUPERVISOR"
-  // Only Managers can add/edit/delete schedules — Super Admin and Supervisor are read-only here.
-  const canManageSchedule = getAuthUser()?.employeeRole === "MANAGER"
+  // Managers and Supervisors can add/edit/delete schedules — Super Admin is read-only here.
+  const employeeRole = getAuthUser()?.employeeRole
+  const canManageSchedule = employeeRole === "MANAGER" || employeeRole === "SUPERVISOR"
 
   const columnDefs = useMemo<ColDef<PendingScheduleRecord>[]>(
     () => [
@@ -148,6 +155,7 @@ export function PendingSchedules() {
       },
       { field: "state", headerName: "State", minWidth: 140 },
       { field: "productName",    headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 100 },
+      { field: "itemCode",       headerName: "Item Code",        minWidth: 110 },
       { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
       { field: "targetQty",      headerName: "Target Qty",       minWidth: 100 },
       { field: "producedQty",    headerName: "Produced Qty",     minWidth: 110 },

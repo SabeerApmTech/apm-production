@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useSaveBulkOperationQrScanMutation } from "@/store/services/operationQrScanApi"
 import { useSaveReworkQrScanMutation } from "@/store/services/reworkQrScanApi"
 import { useCurrentSessionScans } from "./qrScanHooks"
+import { getMissingIdentifiers } from "@/utils/apiError"
+import { cn } from "@/lib/utils"
 import type { IdentifierRecord } from "@/types/product"
 
 interface Props {
@@ -42,6 +44,9 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   const identifierName = identifier?.identifierName ?? ""
   const [identifierId, setIdentifierId] = useState("")
   const [pendingCodes, setPendingCodes] = useState<string[]>([])
+  // Codes the backend rejected as not present in the Product List — highlighted red in the
+  // pending list below until the operator removes them.
+  const [invalidCodes, setInvalidCodes] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -65,7 +70,7 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
     scheduleOperationId !== prevContext.scheduleOperationId
   ) {
     setPrevContext({ scheduleId, employeeId, scheduleOperationId })
-    setIdentifierId(""); setPendingCodes([]); setError(null)
+    setIdentifierId(""); setPendingCodes([]); setInvalidCodes(new Set()); setError(null)
   }
 
   // Only the transient error message is cleared on reopen, without an effect — adjusting state
@@ -128,6 +133,12 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
 
   function removeCode(code: string) {
     setPendingCodes((prev) => prev.filter((c) => c !== code))
+    setInvalidCodes((prev) => {
+      if (!prev.has(code)) return prev
+      const next = new Set(prev)
+      next.delete(code)
+      return next
+    })
   }
 
   async function handleSave() {
@@ -152,9 +163,14 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
         }).unwrap()
       }
       setPendingCodes([])
-    } catch {
+      setInvalidCodes(new Set())
+    } catch (err) {
       // Toast middleware already surfaced the error; keep the batch so the user can retry.
       setPendingCodes(codesToSave)
+      const missing = getMissingIdentifiers(err)
+      if (missing.length > 0) {
+        setInvalidCodes(new Set(missing))
+      }
     } finally {
       refocusInput()
     }
@@ -222,23 +238,39 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
               <Label className="text-xs text-gray-600">
                 Scanned, not yet saved ({pendingCodes.length})
               </Label>
+              {invalidCodes.size > 0 && (
+                <p className="text-xs text-red-500">
+                  Not in Product List — remove the identifier{invalidCodes.size > 1 ? "s" : ""} highlighted in red below
+                </p>
+              )}
               <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200">
-                {pendingCodes.map((code) => (
-                  <div
-                    key={code}
-                    className="flex items-center justify-between gap-2 border-b border-dashed border-gray-100 px-2.5 py-1.5 text-xs last:border-b-0"
-                  >
-                    <span className="truncate text-gray-700">{code}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeCode(code)}
-                      aria-label={`Remove ${code}`}
-                      className="shrink-0 text-gray-300 hover:text-red-500 transition-colors"
+                {pendingCodes.map((code) => {
+                  const isInvalid = invalidCodes.has(code)
+                  return (
+                    <div
+                      key={code}
+                      className={cn(
+                        "flex items-center justify-between gap-2 border-b border-dashed px-2.5 py-1.5 text-xs last:border-b-0",
+                        isInvalid ? "border-red-100 bg-red-50" : "border-gray-100"
+                      )}
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <span className={cn("truncate", isInvalid ? "font-medium text-red-600" : "text-gray-700")}>
+                        {code}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeCode(code)}
+                        aria-label={`Remove ${code}`}
+                        className={cn(
+                          "shrink-0 transition-colors",
+                          isInvalid ? "text-red-400 hover:text-red-600" : "text-gray-300 hover:text-red-500"
+                        )}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

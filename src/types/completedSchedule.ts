@@ -5,6 +5,7 @@ export interface CompletedScheduleRecord {
   scheduleYear: number
   companyName: string
   productName: string
+  itemCode: string
   noOfOperations: number
   targetQty: number
   targetDate: string

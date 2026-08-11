@@ -13,6 +13,7 @@ export interface RawPendingScheduleRecord {
   companyLocation: string
   state: string
   productName: string
+  itemCode: string
   noOfOperations: number
   targetQty: number
   producedQty: number
@@ -42,6 +43,7 @@ export interface PendingScheduleRecord {
   companyLocation: string
   state: string
   productName: string
+  itemCode: string
   noOfOperations: number
   targetQty: number
   producedQty: number
@@ -63,6 +65,7 @@ export interface CreatePendingScheduleRequest {
   companyLocation: string
   state: string
   productName: string
+  itemCode: string
   targetQty: number
   targetDate: string
   priorityLevel: PriorityLevel
@@ -81,6 +84,11 @@ export interface UpdatePendingScheduleRequest {
 export interface UpdatePriorityRequest {
   pendingScheduleId: number
   priorityNo: number
+}
+
+export interface UpdatePendingSchedulePriorityRequest {
+  updatedByEmpId: string
+  schedules: UpdatePriorityRequest[]
 }
 
 export interface DeletePendingScheduleRequest {

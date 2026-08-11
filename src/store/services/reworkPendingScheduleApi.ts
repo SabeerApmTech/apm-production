@@ -6,7 +6,7 @@ import type {
   RawReworkPendingScheduleRecord,
   ReworkPendingScheduleRecord,
   UpdateReworkPendingScheduleRequest,
-  UpdateReworkPriorityRequest,
+  UpdateReworkPendingSchedulePriorityRequest,
 } from "@/types/reworkSchedule"
 import { fromIsoDate } from "@/utils/date"
 
@@ -39,7 +39,7 @@ export const reworkPendingScheduleApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: "ReworkSchedule", id: "LIST" }],
     }),
-    updateReworkPendingSchedulePriority: builder.mutation<ApiResponse<null>, UpdateReworkPriorityRequest[]>({
+    updateReworkPendingSchedulePriority: builder.mutation<ApiResponse<null>, UpdateReworkPendingSchedulePriorityRequest>({
       query: (body) => ({ url: "/ReworkPendingSchedule/update-priority", method: "PUT", body }),
       invalidatesTags: [{ type: "ReworkSchedule", id: "LIST" }],
     }),

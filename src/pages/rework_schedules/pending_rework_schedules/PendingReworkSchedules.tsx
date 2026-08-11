@@ -14,6 +14,7 @@ import { getAuthUser } from "@/utils/auth"
 import { useSyncedState } from "@/hooks/useSyncedState"
 import { STAFF_ALLOCATION_BUTTON_STYLES, type StaffAllocationStatus } from "@/shared/constants"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
+import { useGetProductsQuery } from "@/store/services/productApi"
 import type { ReworkPendingScheduleRecord, ReworkType } from "@/types/reworkSchedule"
 import {
   useGetReworkPendingSchedulesQuery,
@@ -40,6 +41,7 @@ export function PendingReworkSchedules() {
   const { data, isLoading, isFetching, refetch: refetchSchedules } = useGetReworkPendingSchedulesQuery()
   const schedules = data ?? EMPTY_SCHEDULES
   const { data: companies } = useGetCompaniesQuery()
+  const { data: products } = useGetProductsQuery()
 
   const [createReworkPendingSchedule] = useCreateReworkPendingScheduleMutation()
   const [updateReworkPendingSchedule] = useUpdateReworkPendingScheduleMutation()
@@ -70,11 +72,13 @@ export function PendingReworkSchedules() {
   }, [localSchedules])
 
   const handleConfirmPriority = useCallback(async () => {
-    if (newOrder) {
+    const user = getAuthUser()
+    if (newOrder && user) {
       try {
-        await updateReworkPendingSchedulePriority(
-          newOrder.map((s, i) => ({ reworkPendingScheduleId: s.reworkPendingScheduleId, priorityNo: i + 1 }))
-        ).unwrap()
+        await updateReworkPendingSchedulePriority({
+          updatedByEmpId: user.employeeId,
+          schedules: newOrder.map((s, i) => ({ reworkPendingScheduleId: s.reworkPendingScheduleId, priorityNo: i + 1 })),
+        }).unwrap()
         setLocalSchedules(newOrder.map((s, i) => ({ ...s, priorityNo: i + 1 })))
         setNewOrder(null)
         setIsDirty(false)
@@ -90,6 +94,7 @@ export function PendingReworkSchedules() {
     const user = getAuthUser()
     if (!user) return
     const companyLocation = companies?.find((c) => c.companyName === values.companyName)?.companyLocation ?? ""
+    const itemCode = products?.find((p) => p.productName === values.productName)?.itemCode ?? ""
     await createReworkPendingSchedule({
       reworkScheduleDate: values.reworkScheduleDate,
       reworkType: values.reworkType,
@@ -97,12 +102,13 @@ export function PendingReworkSchedules() {
       companyLocation,
       state: values.state,
       productName: values.productName,
+      itemCode,
       targetQty: values.targetQty,
       targetDate: values.targetDate,
       priorityLevel: values.priorityLevel,
       createdByEmpId: user.employeeId,
     }).unwrap()
-  }, [companies, createReworkPendingSchedule])
+  }, [companies, products, createReworkPendingSchedule])
 
   const handleEdit = useCallback(async (values: ReworkScheduleFormValues) => {
     const user = getAuthUser()
@@ -137,15 +143,9 @@ export function PendingReworkSchedules() {
 
   // Only Supervisors can allocate staff — Super Admin and Manager see the action disabled.
   const canAllocate = getAuthUser()?.employeeRole === "SUPERVISOR"
-  // Managers and Supervisors can add rework schedules and see the Actions column — which of them
-  // can actually edit/delete a given row is further narrowed per-row below; Super Admin is read-only.
+  // Managers and Supervisors can add/edit/delete rework schedules; Super Admin is read-only here.
   const employeeRole = getAuthUser()?.employeeRole
   const canManageSchedule = employeeRole === "MANAGER" || employeeRole === "SUPERVISOR"
-  // Each role only manages the rework types it's allowed to raise: Supervisors can edit/delete only
-  // Inhouse Rework rows, Managers only Customer Service / Rework From Store rows — neither role can
-  // touch the other's rows, enforced per-row below rather than by hiding the whole Actions column.
-  const isSupervisor = employeeRole === "SUPERVISOR"
-  const isManagerRole = employeeRole === "MANAGER"
 
   const columnDefs = useMemo<ColDef<ReworkPendingScheduleRecord>[]>(
     () => [
@@ -166,6 +166,7 @@ export function PendingReworkSchedules() {
       },
       { field: "state",               headerName: "State",                minWidth: 140 },
       { field: "productName",         headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 100 },
+      { field: "itemCode",            headerName: "Item Code",            minWidth: 110 },
       { field: "noOfOperations",      headerName: "No of Operations",     minWidth: 140 },
       { field: "targetQty",           headerName: "Target Qty",           minWidth: 100 },
       { field: "producedQty",         headerName: "Produced Qty",         minWidth: 120 },
@@ -193,23 +194,14 @@ export function PendingReworkSchedules() {
             {
               headerName: "Actions",
               cellRenderer: EditDeleteCell,
-              cellRendererParams: {
-                onEdit: openEdit,
-                onDelete: openDelete,
-                isEditDisabled: (data: ReworkPendingScheduleRecord) =>
-                  (isSupervisor && data.reworkType !== "InhouseRework") ||
-                  (isManagerRole && data.reworkType === "InhouseRework"),
-                isDeleteDisabled: (data: ReworkPendingScheduleRecord) =>
-                  (isManagerRole && data.reworkType === "InhouseRework") ||
-                  (isSupervisor && data.reworkType !== "InhouseRework"),
-              },
+              cellRendererParams: { onEdit: openEdit, onDelete: openDelete },
               sortable: false,
               maxWidth: 90,
             } satisfies ColDef<ReworkPendingScheduleRecord>,
           ]
         : []),
     ],
-    [openEdit, openDelete, openAlloc, canAllocate, canManageSchedule, isSupervisor, isManagerRole]
+    [openEdit, openDelete, openAlloc, canAllocate, canManageSchedule]
   )
 
   const updatePriorityButton = isDirty ? (

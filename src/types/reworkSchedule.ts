@@ -16,6 +16,7 @@ export interface RawReworkPendingScheduleRecord {
   companyLocation: string
   state: string
   productName: string
+  itemCode: string
   noOfOperations: number
   targetQty: number
   producedQty: number
@@ -46,6 +47,7 @@ export interface ReworkPendingScheduleRecord {
   companyLocation: string
   state: string
   productName: string
+  itemCode: string
   noOfOperations: number
   targetQty: number
   producedQty: number
@@ -68,6 +70,7 @@ export interface CreateReworkPendingScheduleRequest {
   companyLocation: string
   state: string
   productName: string
+  itemCode: string
   targetQty: number
   targetDate: string
   priorityLevel: PriorityLevel
@@ -88,6 +91,11 @@ export interface UpdateReworkPriorityRequest {
   priorityNo: number
 }
 
+export interface UpdateReworkPendingSchedulePriorityRequest {
+  updatedByEmpId: string
+  schedules: UpdateReworkPriorityRequest[]
+}
+
 export interface DeleteReworkPendingScheduleRequest {
   reworkPendingScheduleId: number
   deletedByEmpId: string
@@ -101,6 +109,7 @@ export interface ReworkCompletedScheduleRecord {
   reworkType: ReworkType
   companyName: string
   productName: string
+  itemCode: string
   noOfOperations: number
   targetQty: number
   targetDate: string

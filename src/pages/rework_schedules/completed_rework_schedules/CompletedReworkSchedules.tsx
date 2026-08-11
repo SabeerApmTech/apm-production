@@ -17,6 +17,7 @@ const columnDefs: ColDef<ReworkCompletedScheduleRecord>[] = [
   { field: "reworkType",         headerName: "Rework Type",          minWidth: 140 },
   { field: "companyName",        headerName: "Company",              cellStyle: { fontWeight: 600 }, minWidth: 120 },
   { field: "productName",        headerName: "Product",              cellStyle: { fontWeight: 600 }, minWidth: 110 },
+  { field: "itemCode",           headerName: "Item Code",            minWidth: 110 },
   { field: "noOfOperations",     headerName: "No of Operations",     minWidth: 150 },
   { field: "targetQty",          headerName: "Target Qty",           minWidth: 110 },
   { field: "targetDate",         headerName: "Target Date",          valueFormatter: (p) => formatDisplay(p.value), minWidth: 120 },

@@ -18,26 +18,16 @@ import { Drawer } from "@/components/ui/drawer"
 import { StateField } from "@/shared/StateField"
 import { cn } from "@/lib/utils"
 import { toIsoDate, getTodayIso, startOfToday } from "@/utils/date"
-import { getAuthUser } from "@/utils/auth"
 import { PRIORITY_LEVELS, PRIORITY_TEXT_STYLES } from "@/shared/constants"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductsQuery } from "@/store/services/productApi"
 import type { ReworkPendingScheduleRecord, ReworkType } from "@/types/reworkSchedule"
 
-// Managers raise Customer Service / Rework From Store; every other role that can reach this
-// drawer (Supervisor) is locked to Inhouse Rework — the two lists are mutually exclusive.
-const MANAGER_REWORK_TYPES: { value: ReworkType; label: string }[] = [
+const ALL_REWORK_TYPES: { value: ReworkType; label: string }[] = [
   { value: "CustomerService", label: "Customer Service" },
   { value: "ReworkFromStore", label: "Rework From Store" },
-]
-const NON_MANAGER_REWORK_TYPES: { value: ReworkType; label: string }[] = [
   { value: "InhouseRework", label: "Inhouse Rework" },
 ]
-// When editing, the field is disabled regardless of role (see `disabled` below) and just needs to
-// display whatever type the schedule actually has — restricting the option list by the *viewer's*
-// role here would leave the current value with no matching option to look up a label from,
-// rendering blank instead of e.g. "Rework From Store".
-const ALL_REWORK_TYPES = [...MANAGER_REWORK_TYPES, ...NON_MANAGER_REWORK_TYPES]
 
 /* ── Schema ─────────────────────────────────────────────── */
 const schema = z.object({
@@ -70,9 +60,6 @@ export function ReworkScheduleFormDrawer({
   onSubmit: onExternalSubmit,
 }: ReworkScheduleFormDrawerProps) {
   const isEdit = Boolean(schedule)
-  // Only Managers may raise Customer Service / Rework From Store — every other role that can
-  // reach this drawer (Supervisor) is locked to Inhouse Rework.
-  const isManager = getAuthUser()?.employeeRole === "MANAGER"
 
   const { data: companies } = useGetCompaniesQuery()
   const { data: products } = useGetProductsQuery()
@@ -92,7 +79,7 @@ export function ReworkScheduleFormDrawer({
         }
       : {
           reworkScheduleDate: "", companyName: "", state: "", productName: "",
-          reworkType: isManager ? undefined : "InhouseRework",
+          reworkType: undefined,
           targetQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
         },
@@ -128,16 +115,16 @@ export function ReworkScheduleFormDrawer({
             </FormItem>
           )} />
 
-          {/* Rework Type — only Managers may pick Customer Service / Rework From Store; every other role is locked to Inhouse Rework */}
+          {/* Rework Type */}
           <FormField control={form.control} name="reworkType" render={({ field }) => (
             <FormItem>
               <FormLabel>Rework Type</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange} disabled={isEdit || !isManager}>
+              <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
                 <FormControl>
                   <SelectTrigger><SelectValue placeholder="Select rework type" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {(isEdit ? ALL_REWORK_TYPES : isManager ? MANAGER_REWORK_TYPES : NON_MANAGER_REWORK_TYPES).map((t) => (
+                  {ALL_REWORK_TYPES.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
