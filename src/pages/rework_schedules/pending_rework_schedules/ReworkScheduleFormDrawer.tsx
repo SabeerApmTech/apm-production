@@ -167,7 +167,9 @@ export function ReworkScheduleFormDrawer({
                   </FormControl>
                   <SelectContent>
                     {(products ?? []).map((p) => (
-                      <SelectItem key={p.productId} value={p.productName}>{p.productName}</SelectItem>
+                      <SelectItem key={p.productId} value={p.productName}>
+                        {p.itemCode} - {p.productName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
