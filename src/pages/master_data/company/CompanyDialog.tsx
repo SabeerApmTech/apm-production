@@ -8,8 +8,8 @@ interface CompanyDialogProps {
   open: boolean
   onClose: () => void
   company?: CompanyRecord
-  onAdd: (company: { companyName: string; companyLocation: string }) => Promise<void>
-  onEdit?: (companyId: number, companyName: string, companyLocation: string) => Promise<void>
+  onAdd: (company: { companyCode: string; companyName: string; location: string }) => Promise<void>
+  onEdit?: (companyId: number, companyCode: string, companyName: string, location: string) => Promise<void>
 }
 
 export function CompanyDialog({
@@ -21,9 +21,10 @@ export function CompanyDialog({
 }: CompanyDialogProps) {
   const isEdit = Boolean(company)
 
-  const [companyName, setCompanyName]         = React.useState(company?.companyName ?? "")
-  const [companyLocation, setCompanyLocation] = React.useState(company?.companyLocation ?? "")
-  const [isSubmitting, setIsSubmitting]       = React.useState(false)
+  const [companyCode, setCompanyCode] = React.useState(company?.companyCode ?? "")
+  const [companyName, setCompanyName] = React.useState(company?.companyName ?? "")
+  const [location, setLocation]       = React.useState(company?.location ?? "")
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   // Resets the form fields whenever the dialog (re)opens, without an effect — adjusting state
   // during render avoids the extra post-mount render pass a useEffect would cost here.
@@ -31,20 +32,21 @@ export function CompanyDialog({
   if (open !== prevOpen) {
     setPrevOpen(open)
     if (open) {
+      setCompanyCode(company?.companyCode ?? "")
       setCompanyName(company?.companyName ?? "")
-      setCompanyLocation(company?.companyLocation ?? "")
+      setLocation(company?.location ?? "")
     }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!companyName.trim() || !companyLocation.trim()) return
+    if (!companyCode.trim() || !companyName.trim() || !location.trim()) return
     setIsSubmitting(true)
     try {
       if (isEdit && company) {
-        await onEdit?.(company.companyId, companyName.trim(), companyLocation.trim())
+        await onEdit?.(company.companyId, companyCode.trim(), companyName.trim(), location.trim())
       } else {
-        await onAdd({ companyName: companyName.trim(), companyLocation: companyLocation.trim() })
+        await onAdd({ companyCode: companyCode.trim(), companyName: companyName.trim(), location: location.trim() })
       }
       onClose()
     } catch {
@@ -61,8 +63,19 @@ export function CompanyDialog({
       title={isEdit ? "Edit Company" : "Add Company"}
       onSubmit={handleSubmit}
       submitLabel={isSubmitting ? "Saving..." : isEdit ? "Update" : "Save"}
-      submitDisabled={isSubmitting || !companyName.trim() || !companyLocation.trim()}
+      submitDisabled={isSubmitting || !companyCode.trim() || !companyName.trim() || !location.trim()}
     >
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="companyCode">Company Code</Label>
+        <Input
+          id="companyCode"
+          placeholder="Enter company code"
+          value={companyCode}
+          onChange={(e) => setCompanyCode(e.target.value)}
+          autoFocus
+        />
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="companyName">Company Name</Label>
         <Input
@@ -70,17 +83,16 @@ export function CompanyDialog({
           placeholder="Enter company name"
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
-          autoFocus
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="companyLocation">Company Location</Label>
+        <Label htmlFor="location">Location</Label>
         <Input
-          id="companyLocation"
-          placeholder="Enter company location"
-          value={companyLocation}
-          onChange={(e) => setCompanyLocation(e.target.value)}
+          id="location"
+          placeholder="Enter location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
         />
       </div>
     </FormDialog>

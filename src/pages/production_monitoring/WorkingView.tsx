@@ -36,7 +36,7 @@ interface Props {
 
 export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, isRework = false, onStart, onPause, onStop, readOnly = false }: Props) {
   const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
-  const identifierName = identifierRecord?.identifierName
+  const identifierName = identifierRecord?.uniqueIdentifierName
   const [scanOpen, setScanOpen] = useState(false)
   const [sessionScansId, setSessionScansId] = useState<number | null>(null)
   const { scannedQty, entries: scannedEntries } = useScanHistory({

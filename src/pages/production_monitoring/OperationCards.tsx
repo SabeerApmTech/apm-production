@@ -33,7 +33,7 @@ export function OperationCards({ schedule, operations, identifiers, onSelect }: 
       <div className="overflow-y-auto max-h-[calc(100vh-18rem)] pr-0.5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {operations.map(op => {
-            const identifierName = identifiers?.find((i) => i.identifierTypeId === op.identifierTypeId)?.identifierName
+            const identifierName = identifiers?.find((i) => i.identifierTypeId === op.identifierTypeId)?.uniqueIdentifierName
             return (
             <div key={op.operationId} className="rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-start justify-between gap-2 mb-3 pb-2.5 border-b border-blue-200">

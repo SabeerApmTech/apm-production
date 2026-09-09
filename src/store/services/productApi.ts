@@ -19,7 +19,7 @@ function operationTag(productId: number, operationType: OperationType) {
 export const productApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getProducts: builder.query<ProductRecord[], void>({
-      query: () => "/Product",
+      query: () => "/master/product",
       transformResponse: unwrap,
       providesTags: [{ type: "Product", id: "LIST" }],
     }),
@@ -40,29 +40,23 @@ export const productApi = api.injectEndpoints({
     }),
 
     getIdentifiers: builder.query<IdentifierRecord[], void>({
-      query: () => "/Product/identifier",
+      query: () => "/master/product-identifier",
       transformResponse: unwrap,
       providesTags: [{ type: "Identifier", id: "LIST" }],
     }),
     createIdentifier: builder.mutation<ApiResponse<IdentifierRecord>, CreateIdentifierRequest>({
-      query: (body) => ({ url: "/Product/identifier", method: "POST", body }),
+      query: (body) => ({ url: "/master/product-identifier", method: "POST", body }),
       invalidatesTags: [{ type: "Identifier", id: "LIST" }],
     }),
     updateIdentifier: builder.mutation<
       ApiResponse<IdentifierRecord>,
       { identifierTypeId: number; body: UpdateIdentifierRequest }
     >({
-      query: ({ identifierTypeId, body }) => ({ url: `/Product/identifier/${identifierTypeId}`, method: "PUT", body }),
-      invalidatesTags: [{ type: "Identifier", id: "LIST" }, { type: "Product", id: "LIST" }],
+      query: ({ identifierTypeId, body }) => ({ url: `/master/product-identifier/${identifierTypeId}`, method: "PUT", body }),
+      invalidatesTags: [{ type: "Identifier", id: "LIST" }, { type: "Product", id: "LIST" }, { type: "ProductionItem", id: "LIST" }],
     }),
-    // No id in the path — this is a bulk-delete endpoint, same shape as productIds/operationIds
-    // elsewhere, just always called here with a single-element array.
     deleteIdentifier: builder.mutation<ApiResponse<null>, number>({
-      query: (identifierTypeId) => ({
-        url: "/Product/identifier",
-        method: "DELETE",
-        body: { identifierTypeIds: [identifierTypeId] },
-      }),
+      query: (identifierTypeId) => ({ url: `/master/product-identifier/${identifierTypeId}`, method: "DELETE" }),
       invalidatesTags: [{ type: "Identifier", id: "LIST" }],
     }),
 

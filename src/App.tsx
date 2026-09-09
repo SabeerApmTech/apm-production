@@ -11,12 +11,14 @@ const Manager                = lazy(() => import("./pages/user_management/manage
 const Supervisor             = lazy(() => import("./pages/user_management/supervisor/Supervisor").then(m => ({ default: m.Supervisor })));
 const Operator               = lazy(() => import("./pages/user_management/operator/Operator").then(m => ({ default: m.Operator })));
 const Department             = lazy(() => import("./pages/department/Department").then(m => ({ default: m.Department })));
+const ProductionItems = lazy(() => import("./pages/master_data/production_items/ProductionItems").then(m => ({ default: m.ProductionItems })));
 const Products               = lazy(() => import("./pages/master_data/products/Products").then(m => ({ default: m.Products })));
 const Company                = lazy(() => import("./pages/master_data/company/Company").then(m => ({ default: m.Company })));
 const Store                  = lazy(() => import("./pages/master_data/store/Store").then(m => ({ default: m.Store })));
 const ProcessTeam            = lazy(() => import("./pages/master_data/process_team/ProcessTeam").then(m => ({ default: m.ProcessTeam })));
-const PendingSchedules       = lazy(() => import("./pages/schedules/pending_schedules/PendingSchedules").then(m => ({ default: m.PendingSchedules })));
-const CompletedSchedules     = lazy(() => import("./pages/schedules/completed_schedules/CompletedSchedules").then(m => ({ default: m.CompletedSchedules })));
+const OpenSchedules          = lazy(() => import("./pages/schedules/open_schedules/OpenSchedules").then(m => ({ default: m.OpenSchedules })));
+const ClosedSchedules        = lazy(() => import("./pages/schedules/closed_schedules/ClosedSchedules").then(m => ({ default: m.ClosedSchedules })));
+const StockData              = lazy(() => import("./pages/schedules/stock_data/StockData").then(m => ({ default: m.StockData })));
 const HandoverToStore        = lazy(() => import("./pages/schedules/handover_to_store/HandoverToStore").then(m => ({ default: m.HandoverToStore })));
 const TransactionLog         = lazy(() => import("./pages/production_data/transaction_log/TransactionLog").then(m => ({ default: m.TransactionLog })));
 const ProductionHistory      = lazy(() => import("./pages/production_data/production_history/ProductionHistory").then(m => ({ default: m.ProductionHistory })));
@@ -91,13 +93,15 @@ function App() {
               <Route path="/user-management/supervisor" element={<Supervisor />} />
               <Route path="/user-management/operator" element={<Operator />} />
               <Route path="/department" element={<Department />} />
+              <Route path="/master-data/production-items" element={<ProductionItems />} />
               <Route path="/master-data/products" element={<Products />} />
               <Route path="/master-data/company" element={<Company />} />
               <Route path="/master-data/store" element={<Store />} />
               <Route path="/master-data/process-team" element={<ProcessTeam />} />
-              <Route path="/pending-schedules" element={<PendingSchedules />} />
-              <Route path="/completed-schedules" element={<CompletedSchedules />} />
-              <Route path="/handover-to-store" element={<HandoverToStore />} />
+              <Route path="/schedules/open" element={<OpenSchedules />} />
+              <Route path="/schedules/closed" element={<ClosedSchedules />} />
+              <Route path="/schedules/stock-data" element={<StockData />} />
+              <Route path="/schedules/handover-to-store" element={<HandoverToStore />} />
               <Route path="/production/log" element={<TransactionLog />} />
               <Route path="/production/history" element={<ProductionHistory />} />
               <Route path="/production/produced-products" element={<QrScanRecords />} />

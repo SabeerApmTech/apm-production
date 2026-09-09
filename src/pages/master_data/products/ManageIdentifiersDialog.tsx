@@ -14,7 +14,8 @@ import {
 } from "@/store/services/productApi"
 
 interface IdentifierFormValues {
-  identifierName: string
+  uniqueIdentifierName: string
+  isActive: boolean
   minLength: number
   maxLength: number
   isDigitsOnly: boolean
@@ -30,10 +31,11 @@ interface IdentifierRowFormProps {
 }
 
 function IdentifierRowForm({ initial, saving, onSave, onCancel, autoFocus }: IdentifierRowFormProps) {
-  const [name, setName] = React.useState(initial.identifierName)
+  const [name, setName] = React.useState(initial.uniqueIdentifierName)
   const [minLength, setMinLength] = React.useState(String(initial.minLength))
   const [maxLength, setMaxLength] = React.useState(String(initial.maxLength))
   const [isDigitsOnly, setIsDigitsOnly] = React.useState(initial.isDigitsOnly)
+  const [isActive, setIsActive] = React.useState(initial.isActive)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
@@ -44,7 +46,7 @@ function IdentifierRowForm({ initial, saving, onSave, onCancel, autoFocus }: Ide
 
   function handleSave() {
     if (!canSave) return
-    onSave({ identifierName: name.trim(), minLength: Number(minLength), maxLength: Number(maxLength), isDigitsOnly })
+    onSave({ uniqueIdentifierName: name.trim(), isActive, minLength: Number(minLength), maxLength: Number(maxLength), isDigitsOnly })
   }
 
   return (
@@ -86,6 +88,16 @@ function IdentifierRowForm({ initial, saving, onSave, onCancel, autoFocus }: Ide
             className="h-4 w-4 cursor-pointer accent-blue-500"
           />
           Digits Only
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            disabled={saving}
+            className="h-4 w-4 cursor-pointer accent-blue-500"
+          />
+          Active
         </label>
       </div>
       <div className="flex items-center gap-2">
@@ -176,7 +188,7 @@ export function ManageIdentifiersDialog({ open, onClose }: ManageIdentifiersDial
             <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200">
               {isAdding && (
                 <IdentifierRowForm
-                  initial={{ identifierName: "", minLength: 0, maxLength: 0, isDigitsOnly: false }}
+                  initial={{ uniqueIdentifierName: "", isActive: true, minLength: 0, maxLength: 0, isDigitsOnly: false }}
                   saving={isCreating}
                   onSave={handleAddSave}
                   onCancel={() => setIsAdding(false)}
@@ -200,7 +212,14 @@ export function ManageIdentifiersDialog({ open, onClose }: ManageIdentifiersDial
                     className="flex items-center gap-3 border-b border-dashed border-gray-200 px-4 py-2.5 text-sm last:border-b-0 hover:bg-gray-50"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="truncate text-gray-700">{identifier.identifierName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-gray-700">{identifier.uniqueIdentifierName}</p>
+                        {!identifier.isActive && (
+                          <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-0.5 truncate text-xs text-gray-400">
                         Length {identifier.minLength}-{identifier.maxLength}
                         {identifier.isDigitsOnly ? " · Digits only" : ""}
@@ -210,17 +229,17 @@ export function ManageIdentifiersDialog({ open, onClose }: ManageIdentifiersDial
                       type="button"
                       onClick={() => { setEditingId(identifier.identifierTypeId); setIsAdding(false) }}
                       aria-label="Edit identifier"
-                      className="shrink-0 text-gray-300 hover:text-blue-500 transition-colors"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-500"
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeleteId(identifier.identifierTypeId)}
                       aria-label="Delete identifier"
-                      className="shrink-0 text-gray-300 hover:text-red-500 transition-colors"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 )

@@ -41,7 +41,7 @@ function validateIdentifierId(value: string, identifier: IdentifierRecord | unde
  *  backend on its own); the operator reviews the batch and clicks Save to submit it all at once
  *  via /operation-qr-scan/save-bulk. */
 export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, operationName, identifier, isRework, transactionLogId }: Props) {
-  const identifierName = identifier?.identifierName ?? ""
+  const identifierName = identifier?.uniqueIdentifierName ?? ""
   const [identifierId, setIdentifierId] = useState("")
   const [pendingCodes, setPendingCodes] = useState<string[]>([])
   // Codes the backend rejected as not present in the Product List — highlighted red in the

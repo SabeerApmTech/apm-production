@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { createPortal } from "react-dom"
 import { useLocation, useNavigate } from "react-router-dom"
 import { Bell, ChevronDown, IdCard, KeyRound, Loader2, LogOut, Menu, Moon, Sun, UserCircle2 } from "lucide-react"
 import { navItems, operatorNavItems } from "@/utils/navigation"
-import { getRole, getAuthUser, getRoleLabel, clearAuth, getCurrentEmployeeId } from "@/utils/auth"
+import { getRole, getAuthUser, getRoleLabel, clearAuth } from "@/utils/auth"
 import { useTheme } from "@/hooks/useTheme"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
@@ -15,10 +15,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChangePasswordDialog } from "@/layout/ChangePasswordDialog"
 import { useLogoutMutation } from "@/store/services/authApi"
-import { useGetNotificationCountsQuery } from "@/store/services/notificationApi"
-import bellNotificationSound from "@/assets/sounds/bell_notification.wav"
+// Notification API disabled for now — see the commented-out query/effect below.
+// import { useEffect } from "react"
+// import { getCurrentEmployeeId } from "@/utils/auth"
+// import { useGetNotificationCountsQuery } from "@/store/services/notificationApi"
+// import bellNotificationSound from "@/assets/sounds/bell_notification.wav"
 
-const NOTIFICATION_COUNTS_POLL_MS = 10000
+// Notification API disabled for now — restore alongside the useGetNotificationCountsQuery call below.
+// const NOTIFICATION_COUNTS_POLL_MS = 10000
 
 const EXTRA_TITLES: Record<string, string> = {
   "/notifications": "Notifications",
@@ -44,24 +48,27 @@ export function Header() {
   const title = getPageTitle(pathname)
   const role = getRole()
   const user = getAuthUser()
-  const employeeId = getCurrentEmployeeId()
+  // Notification API disabled for now — `employeeId` only fed the query below.
+  // const employeeId = getCurrentEmployeeId()
   const [logout, { isLoading: loggingOut }] = useLogoutMutation()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
-  const { data: notificationCounts } = useGetNotificationCountsQuery(employeeId, {
-    skip: !employeeId,
-    pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
-  })
-  const unreadCount = notificationCounts?.unread ?? 0
-  const previousUnreadCount = useRef<number | null>(null)
+  // const { data: notificationCounts } = useGetNotificationCountsQuery(employeeId, {
+  //   skip: !employeeId,
+  //   pollingInterval: NOTIFICATION_COUNTS_POLL_MS,
+  // })
+  const unreadCount = 0
+  // const previousUnreadCount = useRef<number | null>(null)
 
-  useEffect(() => {
-    if (!notificationCounts) return
-    if (previousUnreadCount.current !== null && unreadCount > previousUnreadCount.current) {
-      new Audio(bellNotificationSound).play().catch(() => {})
-    }
-    previousUnreadCount.current = unreadCount
-  }, [notificationCounts, unreadCount])
+  // Sound-on-new-notification effect disabled along with the query above — nothing ever updates
+  // unreadCount while it's hardcoded, so this would never fire, but kept in place to restore easily.
+  // useEffect(() => {
+  //   if (!notificationCounts) return
+  //   if (previousUnreadCount.current !== null && unreadCount > previousUnreadCount.current) {
+  //     new Audio(bellNotificationSound).play().catch(() => {})
+  //   }
+  //   previousUnreadCount.current = unreadCount
+  // }, [notificationCounts, unreadCount])
 
   const handleLogout = async () => {
     try {

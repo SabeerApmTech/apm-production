@@ -11,6 +11,7 @@ import {
   FileChartColumn,
   RotateCcw,
   Recycle,
+  Warehouse,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -39,9 +40,9 @@ export const navItems: NavItem[] = [
     label: "Schedules",
     icon: CalendarRange,
     children: [
-      { label: "Pending Schedules", path: "/pending-schedules" },
-      { label: "Completed Schedules", path: "/completed-schedules" },
-      { label: "Handover To Store", path: "/handover-to-store" },
+      { label: "Open Schedule", path: "/schedules/open" },
+      { label: "Closed Schedule", path: "/schedules/closed" },
+      { label: "Stock Data", path: "/schedules/stock-data" },
     ],
   },
   {
@@ -67,10 +68,17 @@ export const navItems: NavItem[] = [
     children: [
       { label: "Pending Rework Schedules", path: "/rework-schedules/pending" },
       { label: "Completed Rework Schedules", path: "/rework-schedules/completed" },
-      { label: "Handover To Store", path: "/rework-schedules/handover-to-store" },
     ],
   },
-  
+  {
+    label: "Handover To Store",
+    icon: Warehouse,
+    children: [
+      { label: "Schedule", path: "/schedules/handover-to-store" },
+      { label: "Rework Schedule", path: "/rework-schedules/handover-to-store" },
+    ],
+  },
+
   {
     label: "Rework Data",
     icon: Recycle,
@@ -91,10 +99,10 @@ export const navItems: NavItem[] = [
     label: "Master Data",
     icon: Database,
     children: [
+      { label: "Production Items", path: "/master-data/production-items" },
       { label: "Products", path: "/master-data/products" },
       { label: "Company", path: "/master-data/company" },
       { label: "Store", path: "/master-data/store" },
-      { label: "Process Team", path: "/master-data/process-team" },
     ],
   },
   {

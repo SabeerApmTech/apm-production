@@ -93,6 +93,7 @@ export interface DataTableProps<T> {
   onRefresh?: () => void
   refreshing?: boolean
   onAdd?: () => void
+  addLabel?: string
   onDelete?: (rows: T[]) => void
   checkbox?: boolean
   onRowClicked?: (event: RowClickedEvent<T>) => void
@@ -127,6 +128,7 @@ export function DataTable<T>({
   onRefresh,
   refreshing = false,
   onAdd,
+  addLabel,
   onDelete,
   checkbox = false,
   onRowClicked,
@@ -309,7 +311,7 @@ export function DataTable<T>({
             className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 active:bg-blue-700"
           >
             <Plus className="h-4 w-4" />
-            Add {title}
+            {addLabel ?? `Add ${title}`}
           </button>
         )}
       </div>

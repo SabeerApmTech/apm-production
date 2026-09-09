@@ -145,7 +145,7 @@ export function ReworkScheduleFormDrawer({
                   <SelectContent>
                     {(companies ?? []).map((c) => (
                       <SelectItem key={c.companyId} value={c.companyName}>
-                        {c.companyName} - {c.companyLocation}
+                        {c.companyName} - {c.location}
                       </SelectItem>
                     ))}
                   </SelectContent>

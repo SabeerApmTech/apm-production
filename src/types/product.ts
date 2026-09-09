@@ -19,14 +19,16 @@ export type UpdateProductRequest = CreateProductRequest
 
 export interface IdentifierRecord {
   identifierTypeId: number
-  identifierName: string
+  uniqueIdentifierName: string
+  isActive: boolean
   minLength: number
   maxLength: number
   isDigitsOnly: boolean
 }
 
 export interface CreateIdentifierRequest {
-  identifierName: string
+  uniqueIdentifierName: string
+  isActive: boolean
   minLength: number
   maxLength: number
   isDigitsOnly: boolean

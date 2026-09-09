@@ -36,18 +36,19 @@ export function Company() {
     }
   }, [deleteRows, deleteCompanies])
 
-  const handleAdd = useCallback(async (company: { companyName: string; companyLocation: string }) => {
+  const handleAdd = useCallback(async (company: { companyCode: string; companyName: string; location: string }) => {
     await createCompany(company).unwrap()
   }, [createCompany])
 
-  const handleEdit = useCallback(async (companyId: number, companyName: string, companyLocation: string) => {
-    await updateCompany({ companyId, body: { companyName, companyLocation } }).unwrap()
+  const handleEdit = useCallback(async (companyId: number, companyCode: string, companyName: string, location: string) => {
+    await updateCompany({ companyId, body: { companyCode, companyName, location } }).unwrap()
   }, [updateCompany])
 
-  const columnDefs = useMemo<ColDef<CompanyRecord>[]>(
-    () => [
-      { field: "companyName", headerName: "Company Name", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
-      { field: "companyLocation", headerName: "Location" },
+  const columnDefs = useMemo(
+    (): ColDef<CompanyRecord>[] => [
+      { field: "companyCode", headerName: "Company Code", maxWidth: 130, cellStyle: { color: "#3b82f6", fontWeight: 500 } },
+      { field: "companyName", headerName: "Company Name", cellStyle: { fontWeight: 600 } },
+      { field: "location",    headerName: "Location" },
       { headerName: "Action", cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
     ],
     [dialog]

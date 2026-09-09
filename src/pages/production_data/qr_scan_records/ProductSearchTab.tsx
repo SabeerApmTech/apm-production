@@ -92,7 +92,7 @@ export function ProductSearchTab() {
             value={identifierName}
             onValueChange={setIdentifierName}
             allLabel="All Identifiers"
-            options={identifierOptions.map((i) => ({ value: i.identifierName, label: i.identifierName }))}
+            options={identifierOptions.map((i) => ({ value: i.uniqueIdentifierName, label: i.uniqueIdentifierName }))}
           />
 
           <div className="flex w-64 flex-col gap-1">

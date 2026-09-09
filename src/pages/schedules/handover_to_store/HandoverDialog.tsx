@@ -9,10 +9,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { useGetStoresQuery } from "@/store/services/storeApi"
-import type { HandoverPendingRecord } from "@/types/handoverToStore"
+import { useGetPendingHandoverDetailQuery } from "@/store/services/handoverToStoreApi"
+import type { PendingHandoverRecord } from "@/types/handoverToStore"
 
 export interface HandoverFormData {
-  storeName: string
+  storeLocation: string
   receivedBy: string
   handoverQty: number
   remarks: string
@@ -21,19 +22,24 @@ export interface HandoverFormData {
 interface HandoverDialogProps {
   open: boolean
   onClose: () => void
-  row: HandoverPendingRecord | null
+  row: PendingHandoverRecord | null
   onConfirm: (data: HandoverFormData) => Promise<void>
 }
 
 export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialogProps) {
+  // Refetches this one schedule right before confirming, so the qty the user hands over against
+  // is current rather than whatever the list happened to show when it was last fetched.
+  const { data: detail } = useGetPendingHandoverDetailQuery(row?.scheduleId ?? "", { skip: !open || !row })
+  const current = detail ?? row
+
   const { data: storesData } = useGetStoresQuery()
   const stores = useMemo(() => (storesData ?? []).filter((s) => s.isActive), [storesData])
 
-  const [storeName, setStoreName]     = useState("")
-  const [receivedBy, setReceivedBy]   = useState("")
-  const [handoverQty, setHandoverQty] = useState("")
-  const [remarks, setRemarks]         = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [storeLocation, setStoreLocation] = useState("")
+  const [receivedBy, setReceivedBy]       = useState("")
+  const [handoverQty, setHandoverQty]     = useState("")
+  const [remarks, setRemarks]             = useState("")
+  const [isSubmitting, setIsSubmitting]   = useState(false)
 
   // Reset the form whenever the dialog opens (covers both reopening after a Cancel and
   // reopening for a different pending row), without an effect — adjusting state during render
@@ -42,7 +48,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
   if (open !== prevOpen) {
     setPrevOpen(open)
     if (open) {
-      setStoreName("")
+      setStoreLocation("")
       setReceivedBy("")
       setHandoverQty("")
       setRemarks("")
@@ -51,17 +57,17 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
 
   // Defaults to the first active store once the list loads, until the user picks one explicitly —
   // derived at render time instead of synced into state via an effect.
-  const effectiveStoreName = storeName || stores[0]?.storeName || ""
+  const effectiveStoreLocation = storeLocation || stores[0]?.storeName || ""
 
   const qty = Number(handoverQty)
-  const qtyExceedsReady = handoverQty !== "" && row !== null && qty > row.readyToMove
-  const isValid = effectiveStoreName.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
+  const qtyExceedsReady = handoverQty !== "" && current !== null && qty > current.readyToMove
+  const isValid = effectiveStoreLocation.trim() !== "" && receivedBy.trim() !== "" && handoverQty !== "" && qty > 0 && !qtyExceedsReady
 
   async function handleConfirm() {
-    if (!row || !isValid) return
+    if (!current || !isValid) return
     setIsSubmitting(true)
     try {
-      await onConfirm({ storeName: effectiveStoreName, receivedBy, handoverQty: Number(handoverQty), remarks })
+      await onConfirm({ storeLocation: effectiveStoreLocation, receivedBy, handoverQty: qty, remarks })
       onClose()
     } catch {
       // Toast middleware already surfaced the error; keep the dialog open so the user can retry.
@@ -70,7 +76,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
     }
   }
 
-  if (!row) return null
+  if (!current) return null
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
@@ -83,23 +89,23 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
         <div className="grid grid-cols-3 rounded-xl bg-gray-100 px-4 py-3 text-sm gap-2">
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Schedule Id</p>
-            <p className="font-semibold text-gray-800">{row.scheduleId}</p>
+            <p className="font-semibold text-gray-800">{current.scheduleId}</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Product</p>
-            <p className="font-semibold text-gray-800">{row.productName}</p>
+            <p className="font-semibold text-gray-800">{current.productName}</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Ready To Move Qty</p>
-            <p className="font-semibold text-gray-800">{row.readyToMove}</p>
+            <p className="font-semibold text-gray-800">{current.readyToMove}</p>
           </div>
         </div>
 
         {/* Form fields */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-sm font-semibold text-gray-700">Store Name <span className="text-red-500">*</span></Label>
-            <Select value={effectiveStoreName} onValueChange={setStoreName}>
+            <Label className="text-sm font-semibold text-gray-700">Store Location <span className="text-red-500">*</span></Label>
+            <Select value={effectiveStoreLocation} onValueChange={setStoreLocation}>
               <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
               <SelectContent>
                 {stores.map((s) => (
@@ -121,7 +127,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
             <Input
               type="number"
               min={1}
-              max={row.readyToMove}
+              max={current.readyToMove}
               placeholder="Enter Handover Qty"
               value={handoverQty}
               onChange={(e) => setHandoverQty(e.target.value)}
@@ -129,7 +135,7 @@ export function HandoverDialog({ open, onClose, row, onConfirm }: HandoverDialog
               className={qtyExceedsReady ? "border-red-400 focus-visible:ring-red-200" : undefined}
             />
             {qtyExceedsReady && (
-              <p className="text-xs text-red-500">Cannot exceed Ready To Move Qty ({row.readyToMove}).</p>
+              <p className="text-xs text-red-500">Cannot exceed Ready To Move Qty ({current.readyToMove}).</p>
             )}
           </div>
         </div>

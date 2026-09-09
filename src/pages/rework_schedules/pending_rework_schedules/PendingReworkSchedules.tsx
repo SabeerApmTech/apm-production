@@ -93,7 +93,7 @@ export function PendingReworkSchedules() {
   const handleAdd = useCallback(async (values: ReworkScheduleFormValues) => {
     const user = getAuthUser()
     if (!user) return
-    const companyLocation = companies?.find((c) => c.companyName === values.companyName)?.companyLocation ?? ""
+    const companyLocation = companies?.find((c) => c.companyName === values.companyName)?.location ?? ""
     const itemCode = products?.find((p) => p.productName === values.productName)?.itemCode ?? ""
     await createReworkPendingSchedule({
       reworkScheduleDate: values.reworkScheduleDate,

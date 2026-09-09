@@ -5,6 +5,7 @@ import {
   Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
@@ -12,27 +13,31 @@ import { LoadingRow } from "@/shared/LoadingRow"
 import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import {
-  useGetOperationsByScheduleQuery,
   useGetAllocatedStaffQuery,
   useLazyGetLastAssignedTeamQuery,
   useAllocateStaffMutation,
 } from "@/store/services/staffAllocationApi"
-import type { AllocatedStaffMember, OperationStepRecord } from "@/types/staffAllocation"
+import {
+  useGetOpenScheduleOperationsQuery,
+  useConsumeScheduleStockMutation,
+  useUpdateScheduleToProduceMutation,
+} from "@/store/services/openScheduleApi"
+import type { AllocatedStaffMember, LastTeamMember } from "@/types/staffAllocation"
+import type { OpenScheduleOperation } from "@/types/openSchedule"
 
-// A sentinel distinct from any real query result (undefined while loading, or an array once
-// fetched) — seeding the "previous value" tracker with this instead of the query's own first
-// value forces the pre-select sync to run on mount even when the cache is already warm (e.g.
-// reopening right after a save), instead of mistaking "already equal to itself" for "unchanged".
 const UNSET = Symbol("unset")
 
-/* ── Manage Team view (rendered inside the same dialog, not a separate one) ── */
+/* ── Manage Team view (rendered inside the same dialog, not a separate one) ────────────
+   Reuses the existing generic staff-allocation endpoints (keyed by scheduleOperationId,
+   the same underlying operation entity id whether it came from a pending or an open
+   schedule) — no new staff-allocation API needed for this. */
 interface ManageTeamViewProps {
-  pendingScheduleId: number
-  step: OperationStepRecord
+  openScheduleId: number
+  step: { operationId: number; sequenceNo: number; operationName: string }
   onBack: () => void
 }
 
-function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps) {
+function ManageTeamView({ openScheduleId, step, onBack }: ManageTeamViewProps) {
   const [search, setSearch] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -73,7 +78,7 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
       toast.info(result.message)
       return
     }
-    setSelected(new Set(result.data.map((m) => m.employeeId)))
+    setSelected(new Set(result.data.map((m: LastTeamMember) => m.employeeId)))
   }
 
   async function handleConfirm() {
@@ -84,7 +89,7 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
         scheduleOperationId: step.operationId,
         employeeIds: [...selected],
         allocatedByEmpId: user.employeeId,
-        pendingScheduleId,
+        pendingScheduleId: openScheduleId,
       }).unwrap()
       onBack()
     } catch {
@@ -94,7 +99,6 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
 
   return (
     <>
-      {/* Header — includes back arrow to return to the steps list, not close the dialog */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
         <button
           type="button"
@@ -110,11 +114,8 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
         </div>
       </div>
 
-      {/* Body — count/fetch and search stay put; only the employee grid below scrolls */}
       <div className="flex flex-col flex-1 min-h-0">
-
         <div className="flex flex-col gap-3 px-5 pt-3 shrink-0">
-          {/* Selection count + fetch */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm font-semibold text-gray-700">
               Selection Count :{" "}
@@ -130,7 +131,6 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
             </button>
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -143,7 +143,6 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
           </div>
         </div>
 
-        {/* Employee grid — the only scrollable part of the body */}
         <div className="grid grid-cols-3 gap-2.5 px-5 pt-3 pb-4 overflow-y-auto flex-1 min-h-0">
           {filtered.length === 0 && (
             <p className="col-span-2 py-8 text-center text-sm text-gray-400">No employees found</p>
@@ -190,7 +189,6 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
         </div>
       </div>
 
-      {/* Sticky footer */}
       <div className="px-5 py-4 border-t border-gray-100 shrink-0">
         <Button
           onClick={handleConfirm}
@@ -204,18 +202,164 @@ function ManageTeamView({ pendingScheduleId, step, onBack }: ManageTeamViewProps
   )
 }
 
-/* ── Allocation Dialog (Operations) ─────────────────────── */
-interface AllocationDialogProps {
-  open: boolean
-  onClose: () => void
-  scheduleId?: number | null
+/* ── One operation step: planned/available/produced read-outs + consume-stock and
+   to-produce inline editors ── */
+function OperationStepRow({ op, openScheduleId, onManageTeam }: {
+  op: OpenScheduleOperation
+  openScheduleId: number
+  onManageTeam: () => void
+}) {
+  const [consumeQty, setConsumeQty] = useState("")
+  const [toProduce, setToProduce] = useState(String(op.toProduce))
+  const [consumeStock, { isLoading: consuming }] = useConsumeScheduleStockMutation()
+  const [updateToProduce, { isLoading: savingToProduce }] = useUpdateScheduleToProduceMutation()
+
+  // Keeps the field in sync when the row's own server value changes (a refetch after another
+  // edit), without clobbering what the user is mid-typing — adjusting state during render only
+  // resets it when `op.toProduce` itself actually changes, not on every render.
+  const [prevServerToProduce, setPrevServerToProduce] = useState(op.toProduce)
+  if (op.toProduce !== prevServerToProduce) {
+    setPrevServerToProduce(op.toProduce)
+    setToProduce(String(op.toProduce))
+  }
+
+  async function handleConsume() {
+    const qty = Number(consumeQty)
+    if (!qty || qty <= 0) return
+    const user = getAuthUser()
+    if (!user) return
+    try {
+      await consumeStock({
+        scheduleOperationId: op.operationId,
+        consumeStockQty: qty,
+        updatedByEmpId: user.employeeId,
+        openScheduleId,
+      }).unwrap()
+      setConsumeQty("")
+    } catch {
+      // Toast middleware already surfaced the error; keep the typed qty so the user can retry.
+    }
+  }
+
+  async function handleSaveToProduce() {
+    const qty = Number(toProduce)
+    if (!qty || qty === op.toProduce) return
+    const user = getAuthUser()
+    if (!user) return
+    try {
+      await updateToProduce({
+        scheduleOperationId: op.operationId,
+        toProduceQty: qty,
+        updatedByEmpId: user.employeeId,
+        openScheduleId,
+      }).unwrap()
+    } catch {
+      // Toast middleware already surfaced the error; keep the typed qty so the user can retry.
+    }
+  }
+
+  return (
+    <div className={cn(
+      "flex flex-col gap-3 rounded-2xl border p-4",
+      op.noOfOperators === 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"
+    )}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900">
+            <div className="h-3.5 w-3.5 rounded-full border-[3px] border-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Step {op.sequenceNo}</p>
+            <p className="wrap-break-word text-sm font-semibold text-gray-900">{op.operationName}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {op.processTeam && (
+                <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", processTeamBadgeClasses(op.processTeam))}>
+                  {op.processTeam}
+                </span>
+              )}
+              <div className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5 text-gray-400" />
+                <span className="text-xs text-gray-500">{op.noOfOperators} operators</span>
+              </div>
+              {op.isQrApplicable && <span className="text-[11px] font-medium text-blue-500">QR</span>}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onManageTeam}
+          className="shrink-0 rounded-full bg-amber-400 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-amber-500"
+        >
+          Manage Team
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-gray-400">Planned Qty</span>
+          <span className="text-sm font-semibold text-gray-800">{op.plannedQty}</span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-gray-400">Available Stock</span>
+          <span className={cn("text-sm font-semibold", op.availableStock > 0 ? "text-blue-600" : "text-red-500")}>
+            {op.availableStock}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-gray-400">Consume Stock</span>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number" min={0} max={op.availableStock}
+              value={consumeQty}
+              onChange={(e) => setConsumeQty(e.target.value)}
+              disabled={consuming || op.availableStock === 0}
+              className="h-8 text-sm"
+            />
+            <Button type="button" size="sm" className="h-8 px-2.5" disabled={consuming || !consumeQty} onClick={handleConsume}>
+              {consuming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Go"}
+            </Button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-medium text-gray-400">To Produce</span>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number" min={0}
+              value={toProduce}
+              onChange={(e) => setToProduce(e.target.value)}
+              disabled={savingToProduce}
+              className="h-8 text-sm font-semibold text-indigo-600"
+            />
+            {Number(toProduce) !== op.toProduce && (
+              <Button type="button" size="sm" className="h-8 px-2.5" disabled={savingToProduce} onClick={handleSaveToProduce}>
+                {savingToProduce ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <p className={cn("rounded-lg px-3 py-2 text-xs font-medium", op.availableStock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+        {op.availableStock > 0
+          ? `${Math.min(op.availableStock, op.plannedQty)} unit(s) can be allocated from existing stock.`
+          : "No stock available. The full planned quantity needs to be produced."}
+        {" "}Produced so far: {op.producedQtyOverall}.
+      </p>
+    </div>
+  )
 }
 
-export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialogProps) {
-  const [manageStep, setManageStep] = useState<OperationStepRecord | null>(null)
+/* ── Operations Dialog ───────────────────────────────────── */
+interface OpenScheduleOperationsDialogProps {
+  open: boolean
+  onClose: () => void
+  openScheduleId?: number | null
+}
 
-  const { data: operations, isLoading } = useGetOperationsByScheduleQuery(scheduleId ?? 0, {
-    skip: scheduleId == null,
+export function OpenScheduleOperationsDialog({ open, onClose, openScheduleId }: OpenScheduleOperationsDialogProps) {
+  const [manageStep, setManageStep] = useState<OpenScheduleOperation | null>(null)
+
+  const { data: operations, isLoading } = useGetOpenScheduleOperationsQuery(openScheduleId ?? 0, {
+    skip: openScheduleId == null,
   })
 
   const handleClose = () => {
@@ -226,63 +370,29 @@ export function AllocationDialog({ open, onClose, scheduleId }: AllocationDialog
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <DialogContent className="max-w-2xl w-full p-0 gap-0 flex flex-col max-h-[85vh] overflow-hidden">
-        {manageStep && scheduleId != null ? (
+        {manageStep && openScheduleId != null ? (
           <ManageTeamView
-            pendingScheduleId={scheduleId}
+            openScheduleId={openScheduleId}
             step={manageStep}
             onBack={() => setManageStep(null)}
           />
         ) : (
           <>
-            {/* Header */}
             <div className="px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
               <DialogTitle className="text-lg font-semibold">Operations</DialogTitle>
             </div>
 
-            {/* Steps — scrollable */}
             <div className="flex flex-col gap-3 px-6 py-4 overflow-y-auto flex-1 min-h-0">
               {isLoading && (
                 <LoadingRow label="Loading operations…" className="justify-center py-8 text-gray-400" />
               )}
-              {!isLoading && (operations ?? []).map((op) => (
-                <div
+              {!isLoading && openScheduleId != null && (operations ?? []).map((op) => (
+                <OperationStepRow
                   key={op.operationId}
-                  className={cn(
-                    "flex items-start justify-between rounded-2xl px-4 py-3.5 gap-3 border",
-                    op.allocatedOperatorCount === 0
-                      ? "bg-red-50 border-red-200"
-                      : "bg-green-50 border-green-200"
-                  )}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900">
-                      <div className="h-3.5 w-3.5 rounded-full border-[3px] border-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
-                        Step {op.sequenceNo}
-                      </p>
-                      <p className="wrap-break-word text-sm font-semibold text-gray-900">{op.operationName}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        {op.processTeam && (
-                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", processTeamBadgeClasses(op.processTeam))}>
-                            {op.processTeam}
-                          </span>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5 text-gray-400" />
-                          <span className="text-xs text-gray-500">{op.allocatedOperatorCount} operators</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setManageStep(op)}
-                    className="shrink-0 rounded-full bg-amber-400 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-amber-500"
-                  >
-                    Manage Team
-                  </button>
-                </div>
+                  op={op}
+                  openScheduleId={openScheduleId}
+                  onManageTeam={() => setManageStep(op)}
+                />
               ))}
               {!isLoading && (operations ?? []).length === 0 && (
                 <p className="py-8 text-center text-sm text-gray-400">No operations found for this schedule</p>

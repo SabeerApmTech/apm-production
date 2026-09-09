@@ -1,64 +1,46 @@
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { useState, useCallback, useMemo } from "react"
 import type { ColDef, RowClickedEvent, ICellRendererParams } from "ag-grid-community"
-import { Tags } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Drawer } from "@/components/ui/drawer"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { AddProductDialog } from "./AddProductDialog"
-import { ManageIdentifiersDialog } from "./ManageIdentifiersDialog"
-import { OperationsPanel } from "./OperationsPanel"
+import { StatesPanel } from "./StatesPanel"
 import { useDialogState } from "@/hooks/useDialogState"
+import { useIsMobile } from "@/hooks/useIsMobile"
 import { EditActionCell } from "@/shared/renderers"
-import type { ProductRecord } from "@/types/product"
+import type { MasterProduct, MasterProductRequest } from "@/types/productHierarchy"
 import {
-  useGetProductsQuery,
-  useCreateProductMutation,
-  useUpdateProductMutation,
-  useDeleteProductsMutation,
-} from "@/store/services/productApi"
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)")
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener("change", handler)
-    return () => mq.removeEventListener("change", handler)
-  }, [])
-  return isMobile
-}
+  useGetMasterProductsQuery,
+  useCreateMasterProductMutation,
+  useUpdateMasterProductMutation,
+  useDeleteMasterProductsMutation,
+} from "@/store/services/productHierarchyApi"
 
 /* ── Cell renderers ─────────────────────────────────────── */
-function StagesCell({ data }: ICellRendererParams<ProductRecord>) {
+function CompanyCell({ data }: ICellRendererParams<MasterProduct>) {
   if (!data) return null
-  return (
-    <div className="flex flex-col justify-center gap-0.5 leading-tight">
-      <span className="text-xs font-semibold text-blue-600">
-        Production : {data.productionOperationCount} Stages
-      </span>
-      <span className="text-xs font-semibold text-amber-600">
-        Rework : {data.reworkOperationCount} Stages
-      </span>
-    </div>
-  )
+  return <span>{data.companyName} - ({data.companyCode})</span>
+}
+
+function ItemNameCell({ data }: ICellRendererParams<MasterProduct>) {
+  if (!data) return null
+  return <span>{data.productionItemName} - ({data.productionCode})</span>
 }
 
 /* ── Page ───────────────────────────────────────────────── */
 export function Products() {
   const isMobile = useIsMobile()
 
-  const { data, isLoading, isFetching, refetch } = useGetProductsQuery()
+  const { data, isLoading, isFetching, isError, refetch } = useGetMasterProductsQuery()
   const products = data ?? []
 
-  const [createProduct] = useCreateProductMutation()
-  const [updateProduct] = useUpdateProductMutation()
-  const [deleteProducts] = useDeleteProductsMutation()
+  const [createProduct] = useCreateMasterProductMutation()
+  const [updateProduct] = useUpdateMasterProductMutation()
+  const [deleteProducts] = useDeleteMasterProductsMutation()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const dialog = useDialogState<ProductRecord>()
-  const [deleteRows, setDeleteRows] = useState<ProductRecord[] | null>(null)
-  const [manageIdentifiersOpen, setManageIdentifiersOpen] = useState(false)
+  const dialog = useDialogState<MasterProduct>()
+  const [deleteRows, setDeleteRows] = useState<MasterProduct[] | null>(null)
 
   const selectedProduct = products.find((p) => p.productId === selectedId) ?? null
 
@@ -75,15 +57,15 @@ export function Products() {
     }
   }, [deleteRows, deleteProducts, selectedId])
 
-  const handleAdd = useCallback(async (product: { itemCode: string; productName: string; identifierTypeId: number }) => {
-    await createProduct(product).unwrap()
+  const handleAdd = useCallback(async (body: MasterProductRequest) => {
+    await createProduct(body).unwrap()
   }, [createProduct])
 
-  const handleEdit = useCallback(async (productId: number, itemCode: string, productName: string, identifierTypeId: number) => {
-    await updateProduct({ productId, body: { itemCode, productName, identifierTypeId } }).unwrap()
+  const handleEdit = useCallback(async (productId: number, body: MasterProductRequest) => {
+    await updateProduct({ productId, body }).unwrap()
   }, [updateProduct])
 
-  const onRowClicked = useCallback((e: RowClickedEvent<ProductRecord>) => {
+  const onRowClicked = useCallback((e: RowClickedEvent<MasterProduct>) => {
     if (!e.data) return
     const target = e.event?.target as HTMLElement
     if (target?.closest(".ag-selection-checkbox")) return
@@ -91,43 +73,43 @@ export function Products() {
     setSelectedId((prev) => (prev === e.data!.productId ? null : e.data!.productId))
   }, [])
 
-  const columnDefs = useMemo<ColDef<ProductRecord>[]>(
+  const columnDefs = useMemo<ColDef<MasterProduct>[]>(
     () => [
-      { field: "itemCode",     headerName: "Item Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
-      { field: "productName",  headerName: "Product Name" },
-      { field: "identifierName", headerName: "Identifier" },
-      { headerName: "Operations", cellRenderer: StagesCell, sortable: false },
-      { headerName: "Action",  cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
+      { field: "itemCode", headerName: "Item Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
+      { headerName: "Company Name", cellRenderer: CompanyCell },
+      { headerName: "Item Name", cellRenderer: ItemNameCell },
+      { headerName: "Action", cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
     ],
     [dialog]
   )
 
   return (
-    <div className="flex flex-1 min-h-0 gap-4">
-      <DataTable<ProductRecord>
-        title="Products"
-        rowData={products}
-        columnDefs={columnDefs}
-        loading={isLoading}
-        onRefresh={refetch}
-        refreshing={isFetching}
-        onAdd={dialog.openAdd}
-        onDelete={setDeleteRows}
-        checkbox
-        onRowClicked={onRowClicked}
-        getRowStyle={(p) => ({
-          cursor: "pointer",
-          ...(p.data?.productId === selectedId ? { background: "#dbeafe" } : {}),
-        })}
-        toolbarExtra={(
-          <Button type="button" variant="outline" onClick={() => setManageIdentifiersOpen(true)}>
-            <Tags className="h-4 w-4 mr-1.5" /> Manage Identifiers
-          </Button>
-        )}
-      />
+    <div className="flex flex-1 min-h-0 gap-4 overflow-x-auto">
+      {/* min-w floor keeps the grid usable once the States column (420px, with Operations
+          stacked below it) is open — without it flex-1 would shrink this all the way to 0
+          instead of scrolling the row. */}
+      <div className="flex flex-1 min-w-140 min-h-0 flex-col">
+        {isError && <p role="alert" className="mb-2 text-sm text-red-600">Unable to load products. Use Refresh to try again.</p>}
+        <DataTable<MasterProduct>
+          title="Products"
+          rowData={products}
+          columnDefs={columnDefs}
+          loading={isLoading}
+          onRefresh={refetch}
+          refreshing={isFetching}
+          onAdd={dialog.openAdd}
+          onDelete={setDeleteRows}
+          checkbox
+          onRowClicked={onRowClicked}
+          getRowStyle={(p) => ({
+            cursor: "pointer",
+            ...(p.data?.productId === selectedId ? { background: "#dbeafe" } : {}),
+          })}
+        />
+      </div>
 
       {selectedProduct && !isMobile && (
-        <OperationsPanel
+        <StatesPanel
           key={selectedProduct.productId}
           productId={selectedProduct.productId}
           onClose={() => setSelectedId(null)}
@@ -137,10 +119,10 @@ export function Products() {
         <Drawer
           open={selectedId !== null}
           onClose={() => setSelectedId(null)}
-          title={selectedProduct?.productName ?? "Operations"}
+          title={selectedProduct ? `${selectedProduct.productionItemName} - States` : "States"}
         >
           {selectedProduct && (
-            <OperationsPanel
+            <StatesPanel
               key={selectedProduct.productId}
               productId={selectedProduct.productId}
               className="w-full self-auto max-h-none border-0 shadow-none rounded-none"
@@ -156,11 +138,6 @@ export function Products() {
         product={dialog.editing}
         onAdd={handleAdd}
         onEdit={handleEdit}
-      />
-
-      <ManageIdentifiersDialog
-        open={manageIdentifiersOpen}
-        onClose={() => setManageIdentifiersOpen(false)}
       />
 
       <DeleteDialog
