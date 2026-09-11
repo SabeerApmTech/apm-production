@@ -24,7 +24,7 @@ export function ScheduleList({ title, schedules, onSelect }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {schedules.map(s => (
-          <div key={s.pendingScheduleId} className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div key={s.openScheduleId} className="rounded-xl border border-blue-200 bg-blue-50 p-4">
             <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-blue-200">
               <span className="text-xs font-medium text-gray-500">Priority No</span>
               <span className="text-xs font-bold text-gray-800">{pad2(s.priorityNo)}</span>
@@ -37,7 +37,7 @@ export function ScheduleList({ title, schedules, onSelect }: Props) {
                 ["State",         s.state],
                 ["Product",       s.productName],
                 ["Target Date",   s.targetDate],
-                ["Target Qty",    s.targetQty],
+                ["Planned Qty",   s.plannedQty],
               ] as [string, string | number][]).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-2 text-xs">
                   <dt className="w-28 shrink-0 text-gray-500">{k}</dt>

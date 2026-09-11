@@ -60,9 +60,10 @@ export function getApiErrorDetails(error: unknown): string | undefined {
 }
 
 /**
- * QR-scan save failures (e.g. POST /rework-qr-scan rejecting an identifier that isn't in the
- * Product List) include a `data.missingIdentifiers` breakdown alongside the main `message` —
- * extracts just those identifiers so the caller can highlight them in the pending-scan list.
+ * QR-scan save failures (e.g. POST /operation-qr-scan/save-bulk rejecting an identifier that
+ * isn't in the Product List) include a `data.missingIdentifiers` breakdown alongside the main
+ * `message` — extracts just those identifiers so the caller can highlight them in the
+ * pending-scan list.
  */
 export function getMissingIdentifiers(error: unknown): string[] {
   if (

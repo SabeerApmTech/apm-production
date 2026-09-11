@@ -23,10 +23,6 @@ interface Props {
   identifiers?: IdentifierRecord[]
   /** The signed-in operator — needed for the QR scan action. */
   employeeId?: string
-  /** Whether `schedule`/`operation` came from the rework flow — the schedule's own `reworkType`
-   *  field isn't reliably populated by the backend, so the caller (which knows which schedule
-   *  list/endpoint this came from) passes this explicitly rather than us inferring it here. */
-  isRework?: boolean
   onStart?: () => void
   onPause?: () => void
   onStop?: () => void
@@ -34,14 +30,14 @@ interface Props {
   readOnly?: boolean
 }
 
-export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, isRework = false, onStart, onPause, onStop, readOnly = false }: Props) {
+export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, onStart, onPause, onStop, readOnly = false }: Props) {
   const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
   const identifierName = identifierRecord?.uniqueIdentifierName
   const [scanOpen, setScanOpen] = useState(false)
   const [sessionScansId, setSessionScansId] = useState<number | null>(null)
   const { scannedQty, entries: scannedEntries } = useScanHistory({
     employeeId: employeeId ?? "", scheduleId: schedule.scheduleId,
-    scheduleOperationId: operation.operationId, operationName: operation.operationName, isRework,
+    scheduleOperationId: operation.operationId, operationName: operation.operationName,
     // No point calling this before the operation has logged anything — there's nothing to have scanned yet.
     skip: !operation.isQrApplicable || !employeeId || logs.length === 0,
   })
@@ -54,7 +50,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
   const currentTransactionLogId = getCurrentSessionLogId(logs)
   // A STOP just ends that work session, not the whole operation — Start is available again after it.
   const isIdle = lastEvent === null || lastEvent === "STOP"
-  const isComplete = operation.producedQty >= operation.targetQty
+  const isComplete = operation.producedQtyOverall >= operation.toProduceQty
 
   // Touch tablet browsers largely ignore ::-webkit-scrollbar styling and only flash a native
   // overlay indicator during an active drag — draw a persistent thumb ourselves instead, so
@@ -129,15 +125,15 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
           <div className="grid grid-cols-2 gap-x-3 gap-y-3 mb-4">
             <div className="min-w-0">
               <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Target Qty</dt>
-              <dd className="text-sm font-semibold text-gray-800">{operation.targetQty}</dd>
+              <dd className="text-sm font-semibold text-gray-800">{operation.toProduceQty}</dd>
             </div>
             <div className="min-w-0">
               <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Produced Qty</dt>
-              <dd className="text-sm font-semibold text-gray-800">{operation.producedQty}</dd>
+              <dd className="text-sm font-semibold text-gray-800">{operation.producedQtyOverall}</dd>
             </div>
             <div className="min-w-0">
               <dt className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Pending Qty</dt>
-              <dd className="text-sm font-semibold text-gray-800">{operation.pendingQty}</dd>
+              <dd className="text-sm font-semibold text-gray-800">{operation.remainingQty}</dd>
             </div>
             {operation.isQrApplicable && (
               <div className="min-w-0">
@@ -269,9 +265,9 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
                       <td className="px-3 py-2 text-gray-600">{entry.remarks || "—"}</td>
                       {operation.isQrApplicable && (
                         <td className="px-3 py-2">
-                          {entry.logEvent === "START" && (entry.transactionLogId != null || entry.reworkTransactionLogId != null) ? (
+                          {entry.logEvent === "START" && entry.transactionLogId != null ? (
                             <button
-                              onClick={() => setSessionScansId(entry.transactionLogId ?? entry.reworkTransactionLogId!)}
+                              onClick={() => setSessionScansId(entry.transactionLogId!)}
                               className="font-medium text-blue-500 hover:text-blue-600 hover:underline whitespace-nowrap"
                             >
                               View Scans
@@ -308,9 +304,7 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         scheduleId={schedule.scheduleId}
         employeeId={employeeId ?? ""}
         scheduleOperationId={operation.operationId}
-        operationName={operation.operationName}
         identifier={identifierRecord}
-        isRework={isRework}
         transactionLogId={currentTransactionLogId}
       />
 
@@ -318,7 +312,6 @@ export function WorkingView({ schedule, operation, logs, activeHours, idleHours,
         open={sessionScansId !== null}
         onOpenChange={(open) => { if (!open) setSessionScansId(null) }}
         transactionLogId={sessionScansId}
-        isRework={isRework}
       />
     </div>
   )

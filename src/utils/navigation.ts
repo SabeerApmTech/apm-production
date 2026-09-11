@@ -8,9 +8,6 @@ import {
   Monitor,
   Navigation,
   FileBarChart,
-  FileChartColumn,
-  RotateCcw,
-  Recycle,
   Warehouse,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -63,37 +60,9 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    label: "Rework Schedules",
-    icon: RotateCcw,
-    children: [
-      { label: "Pending Rework Schedules", path: "/rework-schedules/pending" },
-      { label: "Completed Rework Schedules", path: "/rework-schedules/completed" },
-    ],
-  },
-  {
     label: "Handover To Store",
     icon: Warehouse,
-    children: [
-      { label: "Schedule", path: "/schedules/handover-to-store" },
-      { label: "Rework Schedule", path: "/rework-schedules/handover-to-store" },
-    ],
-  },
-
-  {
-    label: "Rework Data",
-    icon: Recycle,
-    children: [
-      { label: "Transaction Log", path: "/rework-data/log" },
-      { label: "Production History", path: "/rework-data/history" },
-    ],
-  },
-  {
-    label: "Rework Report",
-    icon: FileChartColumn,
-    children: [
-      { label: "Employee Performance Report", path: "/rework/reports/employee-performance" },
-      { label: "Product Wise Report", path: "/rework/reports/product-wise" },
-    ],
+    path: "/schedules/handover-to-store",
   },
   {
     label: "Master Data",

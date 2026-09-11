@@ -7,12 +7,6 @@ import {
   useGetOperatorLogReportQuery,
   useOperatorActionMutation,
 } from "@/store/services/productionMonitoringApi"
-import {
-  useGetOperatorReworkSchedulesQuery,
-  useGetOperatorReworkOperationsQuery,
-  useGetOperatorReworkLogReportQuery,
-  useOperatorReworkActionMutation,
-} from "@/store/services/reworkMonitoringApi"
 import { useGetIdentifiersQuery } from "@/store/services/productApi"
 import { WorkingView } from "@/pages/production_monitoring/WorkingView"
 import { StopDialog } from "@/pages/production_monitoring/StopDialog"
@@ -32,9 +26,6 @@ const POLL_INTERVAL_MS = 3000
  * number the notification's `navigationId` carries). Reuses the same WorkingView layout
  * Production Monitoring shows an operator for their own job; Start/Pause/Stop are wired up only
  * when the `employeeId` in the URL matches the signed-in operator, i.e. this is their own work.
- * Production and rework schedules live behind separate endpoints, so both are queried and
- * whichever one actually contains the requested scheduleId is used for the operations/log-report
- * follow-up calls.
  */
 export function OperatorLogReport() {
   const navigate = useNavigate()
@@ -52,57 +43,31 @@ export function OperatorLogReport() {
 
   const { data: identifiers } = useGetIdentifiersQuery()
 
-  const { data: productionSchedules, isLoading: isProductionSchedulesLoading } = useGetOperatorSchedulesQuery(employeeId, {
+  const { data: schedules, isLoading: isSchedulesLoading } = useGetOperatorSchedulesQuery(employeeId, {
     skip: !employeeId,
   })
-  const { data: reworkSchedules, isLoading: isReworkSchedulesLoading } = useGetOperatorReworkSchedulesQuery(employeeId, {
-    skip: !employeeId,
-  })
-  const isSchedulesLoading = isProductionSchedulesLoading || isReworkSchedulesLoading
-
-  const isRework = !isSchedulesLoading && !productionSchedules?.some((s) => s.scheduleId === scheduleId)
-    && !!reworkSchedules?.some((s) => s.scheduleId === scheduleId)
-  const schedule = isRework
-    ? reworkSchedules?.find((s) => s.scheduleId === scheduleId)
-    : productionSchedules?.find((s) => s.scheduleId === scheduleId)
+  const schedule = schedules?.find((s) => s.scheduleId === scheduleId)
 
   const {
-    data: productionOperations, isLoading: isProductionOperationsLoading, refetch: refetchProductionOperations,
+    data: operations, isLoading: isOperationsLoading, refetch: refetchOperations,
   } = useGetOperatorOperationsQuery(
     { employeeId, scheduleId },
-    { skip: isSchedulesLoading || isRework || !employeeId || !scheduleId }
+    { skip: isSchedulesLoading || !employeeId || !scheduleId }
   )
-  const {
-    data: reworkOperations, isLoading: isReworkOperationsLoading, refetch: refetchReworkOperations,
-  } = useGetOperatorReworkOperationsQuery(
-    { employeeId, scheduleId },
-    { skip: isSchedulesLoading || !isRework || !employeeId || !scheduleId }
-  )
-  const operations = isRework ? reworkOperations : productionOperations
-  const isOperationsLoading = isRework ? isReworkOperationsLoading : isProductionOperationsLoading
   const operation = (sequenceNo != null ? operations?.find((o) => o.sequenceNo === sequenceNo) : undefined)
     ?? operations?.find((o) => o.operationName === operationName)
     ?? operations?.[0]
 
-  const { data: productionReport, isLoading: isProductionReportLoading } = useGetOperatorLogReportQuery(
+  const { data: report, isLoading: isReportLoading } = useGetOperatorLogReportQuery(
     { employeeId, scheduleId, sequenceNo: operation?.sequenceNo ?? 0 },
-    { skip: isRework || !employeeId || !scheduleId || !operation, pollingInterval: POLL_INTERVAL_MS }
+    { skip: !employeeId || !scheduleId || !operation, pollingInterval: POLL_INTERVAL_MS }
   )
-  const { data: reworkReport, isLoading: isReworkReportLoading } = useGetOperatorReworkLogReportQuery(
-    { employeeId, scheduleId, sequenceNo: operation?.sequenceNo ?? 0 },
-    { skip: !isRework || !employeeId || !scheduleId || !operation, pollingInterval: POLL_INTERVAL_MS }
-  )
-  const report = isRework ? reworkReport : productionReport
-  const isReportLoading = isRework ? isReworkReportLoading : isProductionReportLoading
 
   const isLoading = isSchedulesLoading || isOperationsLoading || isReportLoading
   const logs = report?.logs ?? []
   const currentEvent = logs.length ? logs[logs.length - 1].logEvent : null
 
-  const [productionAction] = useOperatorActionMutation()
-  const [reworkAction] = useOperatorReworkActionMutation()
-  const action = isRework ? reworkAction : productionAction
-  const refetchOperations = isRework ? refetchReworkOperations : refetchProductionOperations
+  const [operatorAction] = useOperatorActionMutation()
 
   const buildActionBase = () => ({
     employeeId,
@@ -113,7 +78,7 @@ export function OperatorLogReport() {
 
   const runAction = async (payload: OperatorActionRequest) => {
     try {
-      await action(payload).unwrap()
+      await operatorAction(payload).unwrap()
     } catch {
       // Toast middleware already surfaced the error; stay on this view so the user can retry.
     }
@@ -137,7 +102,7 @@ export function OperatorLogReport() {
   // both the mutation's tag invalidation and its own polling.
   const handleStopSave = async ({ successQty, rejectedQty, remarks, reason }: { successQty: string; rejectedQty: string; remarks: string; reason: string }) => {
     try {
-      await action({
+      await operatorAction({
         ...buildActionBase(),
         action: "STOP",
         successfulQty: successQty ? Number(successQty) : 0,
@@ -181,7 +146,6 @@ export function OperatorLogReport() {
             idleHours={report?.idleHours ?? "0.00"}
             identifiers={identifiers}
             employeeId={employeeId}
-            isRework={isRework}
             readOnly={!isOwnWork}
             onStart={handleStart}
             onPause={() => setPauseOpen(true)}
@@ -195,7 +159,6 @@ export function OperatorLogReport() {
         onOpenChange={setStopOpen}
         operation={operation ?? null}
         targetReached={schedule?.isTargetReached}
-        isRework={isRework}
         transactionLogId={getCurrentSessionLogId(logs)}
         onSave={handleStopSave}
       />

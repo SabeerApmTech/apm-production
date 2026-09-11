@@ -23,11 +23,6 @@ const HandoverToStore        = lazy(() => import("./pages/schedules/handover_to_
 const TransactionLog         = lazy(() => import("./pages/production_data/transaction_log/TransactionLog").then(m => ({ default: m.TransactionLog })));
 const ProductionHistory      = lazy(() => import("./pages/production_data/production_history/ProductionHistory").then(m => ({ default: m.ProductionHistory })));
 const QrScanRecords          = lazy(() => import("./pages/production_data/qr_scan_records/QrScanRecords").then(m => ({ default: m.QrScanRecords })));
-const PendingReworkSchedules = lazy(() => import("./pages/rework_schedules/pending_rework_schedules/PendingReworkSchedules").then(m => ({ default: m.PendingReworkSchedules })));
-const CompletedReworkSchedules = lazy(() => import("./pages/rework_schedules/completed_rework_schedules/CompletedReworkSchedules").then(m => ({ default: m.CompletedReworkSchedules })));
-const ReworkHandoverToStore  = lazy(() => import("./pages/rework_schedules/handover_to_store/HandoverToStore").then(m => ({ default: m.ReworkHandoverToStore })));
-const ReworkTransactionLog   = lazy(() => import("./pages/rework_data/transaction_log/TransactionLog").then(m => ({ default: m.ReworkTransactionLog })));
-const ReworkHistory          = lazy(() => import("./pages/rework_data/rework_history/ReworkHistory").then(m => ({ default: m.ReworkHistory })));
 const Notifications          = lazy(() => import("./pages/notifications/Notifications").then(m => ({ default: m.Notifications })));
 const NotificationSettings   = lazy(() => import("./pages/notifications/NotificationSettings").then(m => ({ default: m.NotificationSettings })));
 const EmployeeWiseLiveTracking  = lazy(() => import("./pages/dashboard/employee_tracking/EmployeeWiseLiveTracking").then(m => ({ default: m.EmployeeWiseLiveTracking })));
@@ -36,8 +31,6 @@ const OperatorLogReport      = lazy(() => import("./pages/live_tracking/Operator
 const ProductionMonitoring   = lazy(() => import("./pages/production_monitoring/ProductionMonitoring").then(m => ({ default: m.ProductionMonitoring })));
 const EmployeePerformanceReport = lazy(() => import("./pages/reports/employee_performance/EmployeePerformanceReport").then(m => ({ default: m.EmployeePerformanceReport })));
 const ProductWiseReport      = lazy(() => import("./pages/reports/product_wise/ProductWiseReport").then(m => ({ default: m.ProductWiseReport })));
-const ReworkEmployeePerformanceReport = lazy(() => import("./pages/rework_reports/employee_performance/EmployeePerformanceReport").then(m => ({ default: m.ReworkEmployeePerformanceReport })));
-const ReworkProductWiseReport = lazy(() => import("./pages/rework_reports/product_wise/ProductWiseReport").then(m => ({ default: m.ReworkProductWiseReport })));
 
 /** Redirects unauthenticated users (or users whose token has expired) to /login */
 function ProtectedLayout() {
@@ -105,15 +98,8 @@ function App() {
               <Route path="/production/log" element={<TransactionLog />} />
               <Route path="/production/history" element={<ProductionHistory />} />
               <Route path="/production/produced-products" element={<QrScanRecords />} />
-              <Route path="/rework-schedules/pending" element={<PendingReworkSchedules />} />
-              <Route path="/rework-schedules/completed" element={<CompletedReworkSchedules />} />
-              <Route path="/rework-schedules/handover-to-store" element={<ReworkHandoverToStore />} />
-              <Route path="/rework-data/log" element={<ReworkTransactionLog />} />
-              <Route path="/rework-data/history" element={<ReworkHistory />} />
               <Route path="/reports/employee-performance" element={<EmployeePerformanceReport />} />
               <Route path="/reports/product-wise" element={<ProductWiseReport />} />
-              <Route path="/rework/reports/employee-performance" element={<ReworkEmployeePerformanceReport />} />
-              <Route path="/rework/reports/product-wise" element={<ReworkProductWiseReport />} />
               <Route path="/dashboard/employee-wise-tracking" element={<EmployeeWiseLiveTracking />} />
               <Route path="/dashboard/schedule-wise-tracking" element={<ScheduleWiseLiveTracking />} />
             </Route>

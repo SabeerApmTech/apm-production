@@ -19,7 +19,7 @@ export const productionMonitoringApi = api.injectEndpoints({
       transformResponse: unwrap,
     }),
     getOperatorLogReport: builder.query<LogReportResponse, { employeeId: string; scheduleId: string; sequenceNo: number }>({
-      query: (params) => ({ url: "/Production/operator-production-log-report", params }),
+      query: (params) => ({ url: "/Production/operator-production-log", params }),
       // The backend returns a bare `[]` instead of the {activeHours, idleHours, logs} shape
       // when there are no logs yet — normalize that here so callers only ever see one shape.
       transformResponse: (res: ApiResponse<RawLogReportResponse>) =>

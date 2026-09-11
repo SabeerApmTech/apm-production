@@ -23,15 +23,13 @@ interface Props {
   operation: Operation | null
   /** True when the schedule already hit its target — the backend rejects a non-zero Successful Qty in that case. */
   targetReached?: boolean
-  /** Whether this is a rework operation — routes to the rework-specific current-session endpoint. */
-  isRework?: boolean
   /** The session being closed out by this Stop — drives the "Current Session Scanned Qty" display,
    *  only relevant when the operation is QR-applicable. */
   transactionLogId?: number | null
   onSave: (data: StopFormData) => Promise<void>
 }
 
-export function StopDialog({ open, onOpenChange, operation, targetReached, isRework = false, transactionLogId = null, onSave }: Props) {
+export function StopDialog({ open, onOpenChange, operation, targetReached, transactionLogId = null, onSave }: Props) {
   const [form, setForm] = useState<StopFormData>({ successQty: "", rejectedQty: "", remarks: "", reason: "" })
   // `reasonOption` drives the Select ("Others" included); `customReason` is only used when
   // "Others" is picked. The actual value sent as `reason` is derived from these two below.
@@ -43,7 +41,7 @@ export function StopDialog({ open, onOpenChange, operation, targetReached, isRew
   const effectiveReason = isOthers ? customReason.trim() : reasonOption
 
   const { totalScannedQty, hasData: hasCurrentSession } = useCurrentSessionScans({
-    transactionLogId, isRework, skip: !open || !operation?.isQrApplicable,
+    transactionLogId, skip: !open || !operation?.isQrApplicable,
   })
   const exceedsScannedQty =
     hasCurrentSession && form.successQty !== "" && Number(form.successQty) > totalScannedQty

@@ -4,7 +4,6 @@ import type {
   EmployeeScanHistory,
   OperationQrScanBulkRequest,
 } from "@/types/productionMonitoring"
-import type { ReworkType } from "@/types/reworkSchedule"
 import type {
   ProducedProductsResponse,
   QrCurrentSessionDetail,
@@ -41,7 +40,7 @@ export const operationQrScanApi = api.injectEndpoints({
     }),
     getEmployeeScanHistory: builder.query<
       EmployeeScanHistory,
-      { employeeId: string; scheduleId: string; scheduleOperationId: number; operationName: string; reworkType: ReworkType | null }
+      { employeeId: string; scheduleId: string; scheduleOperationId: number; operationName: string }
     >({
       query: ({ employeeId, scheduleId, operationName }) => ({
         url: "/operation-qr-scan/employee-scan-history",
@@ -56,11 +55,11 @@ export const operationQrScanApi = api.injectEndpoints({
     // from getEmployeeScanHistory.
     getCurrentSessionScans: builder.query<
       QrCurrentSessionDetail,
-      { transactionLogId: number; reworkType: ReworkType | null }
+      { transactionLogId: number }
     >({
-      query: ({ transactionLogId, reworkType }) => ({
+      query: ({ transactionLogId }) => ({
         url: "/operation-qr-scan/current-session",
-        params: { transactionLogId, reworkType: reworkType ?? undefined },
+        params: { transactionLogId },
       }),
       transformResponse: unwrap,
       providesTags: (_result, _error, arg) => [sessionScanTag(arg.transactionLogId)],
@@ -92,10 +91,7 @@ export const operationQrScanApi = api.injectEndpoints({
       transformResponse: unwrap,
     }),
     getScannedRecordDetails: builder.query<ScannedRecordDetail, number>({
-      query: (transactionLogId) => ({
-        url: "/operation-qr-scan/scanned-record-details",
-        params: { transactionLogId },
-      }),
+      query: (transactionLogId) => `/operation-qr-scan/scanned-record-details/${transactionLogId}`,
       transformResponse: unwrap,
     }),
   }),

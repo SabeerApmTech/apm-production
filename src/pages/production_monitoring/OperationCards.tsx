@@ -57,10 +57,9 @@ export function OperationCards({ schedule, operations, identifiers, onSelect }: 
               <dl className="space-y-1.5">
                 {([
                   ["Identifier",   identifierName ?? "-"],
-                  ["Target Qty",   op.targetQty],
-                  ["Produced Qty", op.producedQty],
-                  ["Pending Qty",  op.pendingQty],
-                  ["Reject Qty",   op.rejectedQty],
+                  ["Target Qty",   op.toProduceQty],
+                  ["Produced Qty", op.producedQtyOverall],
+                  ["Pending Qty",  op.remainingQty],
                 ] as [string, string | number][]).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-2 text-xs">
                     <dt className="w-24 shrink-0 text-gray-500">{k}</dt>

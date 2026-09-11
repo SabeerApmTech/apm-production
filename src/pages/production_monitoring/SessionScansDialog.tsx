@@ -7,14 +7,13 @@ interface Props {
   onOpenChange: (open: boolean) => void
   /** Null while no row is selected — the query is skipped until a STOP row's id is passed in. */
   transactionLogId: number | null
-  isRework: boolean
 }
 
 /** Read-only view of the QR codes scanned during one specific Start-to-Stop session, opened via
  *  the "View Scans" action on a STOP row in the Log Report table. */
-export function SessionScansDialog({ open, onOpenChange, transactionLogId, isRework }: Props) {
+export function SessionScansDialog({ open, onOpenChange, transactionLogId }: Props) {
   const { totalScannedQty, entries: scannedData, isFetching } = useCurrentSessionScans({
-    transactionLogId, isRework, skip: !open,
+    transactionLogId, skip: !open,
   })
 
   return (

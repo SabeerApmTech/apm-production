@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useSaveBulkOperationQrScanMutation } from "@/store/services/operationQrScanApi"
-import { useSaveReworkQrScanMutation } from "@/store/services/reworkQrScanApi"
 import { useCurrentSessionScans } from "./qrScanHooks"
 import { getMissingIdentifiers } from "@/utils/apiError"
 import { cn } from "@/lib/utils"
@@ -17,10 +16,7 @@ interface Props {
   scheduleId: string
   employeeId: string
   scheduleOperationId: number
-  operationName: string
   identifier?: IdentifierRecord
-  /** Whether this is a rework operation — routes to the rework-specific save/scan-history endpoints. */
-  isRework: boolean
   /** The current (possibly still-open) session's id — drives the "Current Session Scanned Qty"
    *  display. Null when the operation hasn't logged anything yet. */
   transactionLogId: number | null
@@ -40,7 +36,7 @@ function validateIdentifierId(value: string, identifier: IdentifierRecord | unde
  *  focused and sends Enter. Each scan is only staged into a local batch (never sent to the
  *  backend on its own); the operator reviews the batch and clicks Save to submit it all at once
  *  via /operation-qr-scan/save-bulk. */
-export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, operationName, identifier, isRework, transactionLogId }: Props) {
+export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, scheduleOperationId, identifier, transactionLogId }: Props) {
   const identifierName = identifier?.uniqueIdentifierName ?? ""
   const [identifierId, setIdentifierId] = useState("")
   const [pendingCodes, setPendingCodes] = useState<string[]>([])
@@ -50,14 +46,12 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const [saveBulkScan, { isLoading: isSavingProduction }] = useSaveBulkOperationQrScanMutation()
-  const [saveReworkScan, { isLoading: isSavingRework }] = useSaveReworkQrScanMutation()
-  const isSaving = isSavingProduction || isSavingRework
+  const [saveBulkScan, { isLoading: isSaving }] = useSaveBulkOperationQrScanMutation()
   // The dialog's own displayed count is scoped to just the current session, not the operation's
   // running total — also doubles as the duplicate-scan check below, since only this session's
   // codes are relevant to catch a re-scan of.
   const { totalScannedQty, entries: scannedEntries, hasData: hasCurrentSession } = useCurrentSessionScans({
-    transactionLogId, isRework, skip: !open,
+    transactionLogId, skip: !open,
   })
 
   // Resets the batch only when the underlying work context actually changes (a different
@@ -151,17 +145,10 @@ export function ScanDialog({ open, onOpenChange, scheduleId, employeeId, schedul
     setIdentifierId("")
     setError(null)
     try {
-      if (isRework) {
-        await saveReworkScan({
-          reworkTransactionLogId: transactionLogId, uniqueIdentifiers: codesToSave,
-          employeeId, scheduleId, operationName, currentTransactionLogId: transactionLogId,
-        }).unwrap()
-      } else {
-        await saveBulkScan({
-          transactionLogId, identifiers: codesToSave,
-          employeeId, scheduleId, scheduleOperationId, currentTransactionLogId: transactionLogId,
-        }).unwrap()
-      }
+      await saveBulkScan({
+        transactionLogId, identifiers: codesToSave,
+        employeeId, scheduleId, scheduleOperationId, currentTransactionLogId: transactionLogId,
+      }).unwrap()
       setPendingCodes([])
       setInvalidCodes(new Set())
     } catch (err) {

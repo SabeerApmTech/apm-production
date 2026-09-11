@@ -9,7 +9,7 @@ export function ScheduleSummaryTable({ schedule }: { schedule: Schedule }) {
     ["State",         schedule.state],
     ["Product",       schedule.productName],
     ["Target Date",   schedule.targetDate],
-    ["Target Qty",    schedule.targetQty],
+    ["Planned Qty",   schedule.plannedQty],
   ]
 
   return (

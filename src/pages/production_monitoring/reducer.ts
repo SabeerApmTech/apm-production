@@ -1,11 +1,9 @@
 import type { LogReportEntry, OperatorSchedule } from "@/types/productionMonitoring"
-import type { Operation, Schedule, ScheduleType, ViewStep } from "./types"
+import type { Operation, Schedule, ViewStep } from "./types"
 
 export interface FlowState {
   view: ViewStep
-  scheduleType: ScheduleType | null
-  productionSchedules: OperatorSchedule[]
-  reworkSchedules: OperatorSchedule[]
+  schedules: OperatorSchedule[]
   selectedSchedule: Schedule | null
   operations: Operation[]
   selectedOperation: Operation | null
@@ -19,9 +17,7 @@ export interface FlowState {
 
 export const initialFlowState: FlowState = {
   view: "loading",
-  scheduleType: null,
-  productionSchedules: [],
-  reworkSchedules: [],
+  schedules: [],
   selectedSchedule: null,
   operations: [],
   selectedOperation: null,
@@ -32,16 +28,9 @@ export const initialFlowState: FlowState = {
 }
 
 export type FlowAction =
-  | {
-      type: "SCHEDULES_LOADED"
-      productionSchedules: OperatorSchedule[]
-      reworkSchedules: OperatorSchedule[]
-      active?: Schedule
-      activeType?: ScheduleType
-    }
+  | { type: "SCHEDULES_LOADED"; schedules: OperatorSchedule[]; active?: Schedule }
   | { type: "AUTO_ROUTE_OPERATIONS_LOADED"; operations: Operation[] }
   | { type: "AUTO_ROUTE_OPERATION_MATCHED"; operation: Operation }
-  | { type: "SELECT_TYPE"; scheduleType: ScheduleType }
   | { type: "SELECT_SCHEDULE_START"; schedule: Schedule }
   | { type: "SELECT_SCHEDULE_SUCCESS"; operations: Operation[] }
   | { type: "SELECT_SCHEDULE_FAILED" }
@@ -55,20 +44,11 @@ export type FlowAction =
 export function flowReducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case "SCHEDULES_LOADED": {
-      const { productionSchedules, reworkSchedules, active, activeType } = action
-      if (active && activeType) {
-        return {
-          ...state,
-          productionSchedules,
-          reworkSchedules,
-          scheduleType: activeType,
-          selectedSchedule: active,
-          cameFromAutoRoute: true,
-          view: "working",
-        }
+      const { schedules, active } = action
+      if (active) {
+        return { ...state, schedules, selectedSchedule: active, cameFromAutoRoute: true, view: "working" }
       }
-      const isEmpty = productionSchedules.length === 0 && reworkSchedules.length === 0
-      return { ...state, productionSchedules, reworkSchedules, view: isEmpty ? "empty" : "type" }
+      return { ...state, schedules, view: schedules.length === 0 ? "empty" : "list" }
     }
 
     case "AUTO_ROUTE_OPERATIONS_LOADED":
@@ -76,9 +56,6 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
 
     case "AUTO_ROUTE_OPERATION_MATCHED":
       return { ...state, selectedOperation: action.operation }
-
-    case "SELECT_TYPE":
-      return { ...state, scheduleType: action.scheduleType, view: "list" }
 
     case "SELECT_SCHEDULE_START":
       return { ...state, selectedSchedule: action.schedule }
@@ -109,7 +86,6 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
     }
 
     case "GO_BACK": {
-      if (state.view === "list") return { ...state, view: "type", scheduleType: null }
       if (state.view === "operations") return { ...state, view: "list", selectedSchedule: null, operations: [] }
       if (state.view === "working" && !state.cameFromAutoRoute) {
         return { ...state, view: "operations", selectedOperation: null, logs: [] }

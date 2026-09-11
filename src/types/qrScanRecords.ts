@@ -1,7 +1,7 @@
 export interface QrCurrentSessionScan {
   qrScanId: number
-  identifierName: string
-  identifier: string
+  uniqueIdentifierName: string
+  uniqueIdentifier: string
   batchNumber: number
   scannedAt: string
 }
@@ -10,12 +10,12 @@ export interface QrCurrentSessionScan {
  *  scanned during one specific transaction log entry, as opposed to a whole schedule/operation. */
 export interface QrCurrentSessionDetail {
   transactionLogId: number
+  employeeId: string
+  employeeName: string
   scheduleId: string
-  productName: string
   operationName: string
-  totalScannedQty: number
-  totalBatches: number
-  scannedData: QrCurrentSessionScan[]
+  totalScanned: number
+  identifiers: QrCurrentSessionScan[]
 }
 
 /** A single row from GET /api/operation-qr-scan/scanned-products. */
@@ -39,7 +39,7 @@ export interface ProducedProductRecord {
 
 /** Wire shape from GET /api/operation-qr-scan/scanned-products. */
 export interface ProducedProductsResponse {
-  count: number
+  totalRecords: number
   records: ProducedProductRecord[]
 }
 
