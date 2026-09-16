@@ -1,22 +1,5 @@
 export type OperationType = "production" | "rework"
 
-export interface ProductRecord {
-  productId: number
-  itemCode: string
-  productName: string
-  identifierName: string
-  productionOperationCount: number
-  reworkOperationCount: number
-}
-
-export interface CreateProductRequest {
-  itemCode: string
-  productName: string
-  identifierTypeId: number
-}
-
-export type UpdateProductRequest = CreateProductRequest
-
 export interface IdentifierRecord {
   identifierTypeId: number
   uniqueIdentifierName: string

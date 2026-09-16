@@ -19,7 +19,8 @@ interface Props {
   logs: LogReportEntry[]
   activeHours: string
   idleHours: string
-  /** Used to resolve `operation.identifierTypeId` to a display name. */
+  /** Used to resolve `schedule.identifierId` to the full identifier record (min/max length,
+   *  digits-only) — the identifier applies to the whole schedule, not per-operation. */
   identifiers?: IdentifierRecord[]
   /** The signed-in operator — needed for the QR scan action. */
   employeeId?: string
@@ -31,7 +32,7 @@ interface Props {
 }
 
 export function WorkingView({ schedule, operation, logs, activeHours, idleHours, identifiers, employeeId, onStart, onPause, onStop, readOnly = false }: Props) {
-  const identifierRecord = identifiers?.find((i) => i.identifierTypeId === operation.identifierTypeId)
+  const identifierRecord = identifiers?.find((i) => i.identifierTypeId === schedule.identifierId)
   const identifierName = identifierRecord?.uniqueIdentifierName
   const [scanOpen, setScanOpen] = useState(false)
   const [sessionScansId, setSessionScansId] = useState<number | null>(null)

@@ -1,11 +1,11 @@
 import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
+  LogReportEntry,
   LogReportResponse,
   OperationRecord,
   OperatorActionRequest,
   OperatorSchedule,
-  RawLogReportResponse,
 } from "@/types/productionMonitoring"
 
 export const productionMonitoringApi = api.injectEndpoints({
@@ -20,10 +20,14 @@ export const productionMonitoringApi = api.injectEndpoints({
     }),
     getOperatorLogReport: builder.query<LogReportResponse, { employeeId: string; scheduleId: string; sequenceNo: number }>({
       query: (params) => ({ url: "/Production/operator-production-log", params }),
-      // The backend returns a bare `[]` instead of the {activeHours, idleHours, logs} shape
-      // when there are no logs yet — normalize that here so callers only ever see one shape.
-      transformResponse: (res: ApiResponse<RawLogReportResponse>) =>
-        Array.isArray(res.data) ? { activeHours: "0.00", idleHours: "0.00", logs: [] } : res.data,
+      // The endpoint's own response is just a bare array of log entries, always — not the
+      // {activeHours, idleHours, logs} shape its name suggests, and it doesn't return
+      // activeHours/idleHours at all, so those are reported as unavailable here.
+      transformResponse: (res: ApiResponse<LogReportEntry[]>) => ({
+        activeHours: "0.00",
+        idleHours: "0.00",
+        logs: res.data,
+      }),
       providesTags: (_result, _error, { scheduleId, sequenceNo }) => [
         { type: "ProductionMonitoringLog", id: `${scheduleId}:${sequenceNo}` },
       ],

@@ -2,42 +2,24 @@ import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
   CreateIdentifierRequest,
-  CreateProductRequest,
   IdentifierRecord,
   OperationRow,
   OperationType,
-  ProductRecord,
-  RawOperationRecord,
   UpdateIdentifierRequest,
-  UpdateProductRequest,
 } from "@/types/product"
-
-function operationTag(productId: number, operationType: OperationType) {
-  return { type: "ProductOperations" as const, id: `${productId}-${operationType}` }
-}
 
 export const productApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getProducts: builder.query<ProductRecord[], void>({
-      query: () => "/master/product",
-      transformResponse: unwrap,
-      providesTags: [{ type: "Product", id: "LIST" }],
-    }),
-    createProduct: builder.mutation<ApiResponse<ProductRecord>, CreateProductRequest>({
-      query: (body) => ({ url: "/Product", method: "POST", body }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
-    }),
-    updateProduct: builder.mutation<
-      ApiResponse<ProductRecord>,
-      { productId: number; body: UpdateProductRequest }
-    >({
-      query: ({ productId, body }) => ({ url: `/Product/${productId}`, method: "PUT", body }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
-    }),
-    deleteProducts: builder.mutation<ApiResponse<null>, number[]>({
-      query: (productIds) => ({ url: "/Product", method: "DELETE", body: { productIds } }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
-    }),
+    // getProducts (GET /master/product, typed as the stale ProductRecord shape) removed — it hit
+    // a real, still-live endpoint, but one already reused (correctly typed as MasterProduct) by
+    // productHierarchyApi's getMasterProducts. Callers now use useGetMasterProductsQuery instead.
+    //
+    // createProduct/updateProduct/deleteProducts (POST/PUT/DELETE /Product, /Product/{id}) and
+    // getOperations's sibling mutations addOperation/editOperation/deleteOperations/
+    // reorderOperations (/Product/{id}/operations/..., /edit-operations/..., /reorder-operations/...)
+    // all removed — none of these bare /Product/* routes exist on the backend
+    // (ProductionTrackerApplication.API only has /api/master/product/*), and none of these hooks
+    // had any callers left in the app.
 
     getIdentifiers: builder.query<IdentifierRecord[], void>({
       query: () => "/master/product-identifier",
@@ -60,87 +42,30 @@ export const productApi = api.injectEndpoints({
       invalidatesTags: [{ type: "Identifier", id: "LIST" }],
     }),
 
+    // GET /Product/{id}/operations/{type} — kept as a hook (still called by the Transaction Log and
+    // Employee Performance Report filter dropdowns) but disabled via a queryFn, since that bare
+    // /Product route doesn't exist on the backend either and there's no direct equivalent under
+    // /master/product (operations there hang off a product *state*, not the product itself).
+    // Reinstate the commented-out `query`/`transformResponse` if the backend adds one.
     getOperations: builder.query<OperationRow[], { productId: number; operationType: OperationType }>({
-      query: ({ productId, operationType }) => `/Product/${productId}/operations/${operationType}`,
-      transformResponse: (res: ApiResponse<RawOperationRecord[]>, _meta, arg) =>
-        res.data.map((op) => ({
-          id: (arg.operationType === "production" ? op.productionOperationId : op.reworkOperationId) ?? 0,
-          sequenceNo: op.sequenceNo,
-          operationName: op.operationName,
-          processTeam: op.processTeam,
-          isQrApplicable: op.isQrApplicable,
-        })),
-      providesTags: (_result, _error, arg) => [operationTag(arg.productId, arg.operationType)],
-    }),
-    addOperation: builder.mutation<
-      ApiResponse<null>,
-      { productId: number; operationType: OperationType; operationName: string; processTeam: string; isQrApplicable: boolean }
-    >({
-      query: ({ productId, operationType, operationName, processTeam, isQrApplicable }) => ({
-        url: `/Product/${productId}/operations/${operationType}`,
-        method: "POST",
-        body: { operationName, processTeam, isQrApplicable },
-      }),
-      invalidatesTags: (_result, _error, arg) => [
-        operationTag(arg.productId, arg.operationType),
-        { type: "Product", id: "LIST" },
-      ],
-    }),
-    editOperation: builder.mutation<
-      ApiResponse<null>,
-      { productId: number; operationType: OperationType; operationId: number; operationName: string; processTeam: string; isQrApplicable: boolean }
-    >({
-      query: ({ productId, operationType, operationId, operationName, processTeam, isQrApplicable }) => ({
-        url: `/Product/${productId}/edit-operations/${operationType}/${operationId}`,
-        method: "PUT",
-        body: { operationName, processTeam, isQrApplicable },
-      }),
-      invalidatesTags: (_result, _error, arg) => [operationTag(arg.productId, arg.operationType)],
-    }),
-    deleteOperations: builder.mutation<
-      ApiResponse<null>,
-      { productId: number; operationType: OperationType; operationIds: number[] }
-    >({
-      query: ({ productId, operationType, operationIds }) => ({
-        url: `/Product/${productId}/operations/${operationType}`,
-        method: "DELETE",
-        body: { operationIds },
-      }),
-      invalidatesTags: (_result, _error, arg) => [
-        operationTag(arg.productId, arg.operationType),
-        { type: "Product", id: "LIST" },
-      ],
-    }),
-    reorderOperations: builder.mutation<
-      ApiResponse<null>,
-      {
-        productId: number
-        operationType: OperationType
-        operations: { sequenceNo: number; operationName: string; processTeam: string; isQrApplicable: boolean }[]
-      }
-    >({
-      query: ({ productId, operationType, operations }) => ({
-        url: `/Product/${productId}/reorder-operations/${operationType}`,
-        method: "PUT",
-        body: { operations },
-      }),
-      invalidatesTags: (_result, _error, arg) => [operationTag(arg.productId, arg.operationType)],
+      // query: ({ productId, operationType }) => `/Product/${productId}/operations/${operationType}`,
+      // transformResponse: (res: ApiResponse<RawOperationRecord[]>, _meta, arg) =>
+      //   res.data.map((op) => ({
+      //     id: (arg.operationType === "production" ? op.productionOperationId : op.reworkOperationId) ?? 0,
+      //     sequenceNo: op.sequenceNo,
+      //     operationName: op.operationName,
+      //     processTeam: op.processTeam,
+      //     isQrApplicable: op.isQrApplicable,
+      //   })),
+      queryFn: async () => ({ data: [] }),
     }),
   }),
 })
 
 export const {
-  useGetProductsQuery,
-  useCreateProductMutation,
-  useUpdateProductMutation,
-  useDeleteProductsMutation,
   useGetIdentifiersQuery,
   useCreateIdentifierMutation,
   useUpdateIdentifierMutation,
   useDeleteIdentifierMutation,
   useGetOperationsQuery,
-  useAddOperationMutation,
-  useEditOperationMutation,
-  useDeleteOperationsMutation,
-  useReorderOperationsMutation,
 } = productApi

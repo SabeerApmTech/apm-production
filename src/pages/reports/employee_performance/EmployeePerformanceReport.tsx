@@ -6,7 +6,8 @@ import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { TabSwitcher, type TabItem } from "@/shared/TabSwitcher"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
-import { useGetProductsQuery, useGetOperationsQuery } from "@/store/services/productApi"
+import { useGetOperationsQuery } from "@/store/services/productApi"
+import { useGetMasterProductsQuery } from "@/store/services/productHierarchyApi"
 import { useGetEmployeePerformanceReportQuery } from "@/store/services/employeePerformanceReportApi"
 import type { EmployeePerformanceRecord } from "@/types/employeePerformanceReport"
 import { useDateRange } from "@/hooks/useDateRange"
@@ -29,7 +30,7 @@ export function EmployeePerformanceReport() {
 
   const { data: operators } = useGetOperatorsQuery()
   const { data: companies } = useGetCompaniesQuery()
-  const { data: products } = useGetProductsQuery()
+  const { data: products } = useGetMasterProductsQuery()
   const { data: operations } = useGetOperationsQuery(
     { productId: Number(productId), operationType: "production" },
     { skip: productId === ALL }
@@ -45,7 +46,7 @@ export function EmployeePerformanceReport() {
 
   // The API has no product filter param — filter client-side by the selected product's name.
   const selectedProductName = useMemo(
-    () => (productId === ALL ? null : products?.find((p) => String(p.productId) === productId)?.productName ?? null),
+    () => (productId === ALL ? null : products?.find((p) => String(p.productId) === productId)?.itemName ?? null),
     [products, productId]
   )
 
@@ -66,7 +67,7 @@ export function EmployeePerformanceReport() {
         (employeeId === ALL || r.employeeId === employeeId)
     )
     const names = new Set(relevant.map((r) => r.productName))
-    return (products ?? []).filter((p) => names.has(p.productName))
+    return (products ?? []).filter((p) => names.has(p.itemName))
   }, [products, companyName, employeeId, allRows])
 
   const companyOptions = useMemo(() => {
@@ -170,7 +171,7 @@ export function EmployeePerformanceReport() {
             value={productId}
             onValueChange={handleProductChange}
             allLabel="All Products"
-            options={productOptions.map((p) => ({ value: String(p.productId), label: p.productName }))}
+            options={productOptions.map((p) => ({ value: String(p.productId), label: p.itemName }))}
             className="w-40"
           />
 

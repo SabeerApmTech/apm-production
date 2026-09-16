@@ -35,7 +35,8 @@ export function ScheduleList({ title, schedules, onSelect }: Props) {
                 ["Schedule Date", s.scheduleDate],
                 ["Company",       `${s.companyName} - ${s.companyLocation}`],
                 ["State",         s.state],
-                ["Product",       s.productName],
+                ["Product Code",  s.productCode],
+                ["Item Name",     s.itemName],
                 ["Target Date",   s.targetDate],
                 ["Planned Qty",   s.plannedQty],
               ] as [string, string | number][]).map(([k, v]) => (

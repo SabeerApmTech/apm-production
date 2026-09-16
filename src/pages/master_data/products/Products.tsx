@@ -4,10 +4,11 @@ import { Drawer } from "@/components/ui/drawer"
 import { DataTable } from "@/shared/DataTable"
 import { DeleteDialog } from "@/shared/DeleteDialog"
 import { AddProductDialog } from "./AddProductDialog"
+import { DuplicateProductDialog } from "./DuplicateProductDialog"
+import { ProductActionCell } from "./ProductActionCell"
 import { StatesPanel } from "./StatesPanel"
 import { useDialogState } from "@/hooks/useDialogState"
 import { useIsMobile } from "@/hooks/useIsMobile"
-import { EditActionCell } from "@/shared/renderers"
 import type { MasterProduct, MasterProductRequest } from "@/types/productHierarchy"
 import {
   useGetMasterProductsQuery,
@@ -15,6 +16,7 @@ import {
   useUpdateMasterProductMutation,
   useDeleteMasterProductsMutation,
 } from "@/store/services/productHierarchyApi"
+import { useGetProductionItemsQuery } from "@/store/services/productionItemApi"
 
 /* ── Cell renderers ─────────────────────────────────────── */
 function CompanyCell({ data }: ICellRendererParams<MasterProduct>) {
@@ -24,7 +26,7 @@ function CompanyCell({ data }: ICellRendererParams<MasterProduct>) {
 
 function ItemNameCell({ data }: ICellRendererParams<MasterProduct>) {
   if (!data) return null
-  return <span>{data.productionItemName} - ({data.productionCode})</span>
+  return <span>{data.itemName} - ({data.itemCode})</span>
 }
 
 /* ── Page ───────────────────────────────────────────────── */
@@ -34,15 +36,22 @@ export function Products() {
   const { data, isLoading, isFetching, isError, refetch } = useGetMasterProductsQuery()
   const products = data ?? []
 
+  // The Operations level needs the Production Item's own operation catalog (Production Stage) to
+  // populate its "add operation" dropdown — a product only carries the item's name/code, not its
+  // id, so resolve it back via the production-items list, same trick used for the edit form.
+  const { data: productionItems } = useGetProductionItemsQuery()
+
   const [createProduct] = useCreateMasterProductMutation()
   const [updateProduct] = useUpdateMasterProductMutation()
   const [deleteProducts] = useDeleteMasterProductsMutation()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const dialog = useDialogState<MasterProduct>()
+  const duplicateDialog = useDialogState<MasterProduct>()
   const [deleteRows, setDeleteRows] = useState<MasterProduct[] | null>(null)
 
   const selectedProduct = products.find((p) => p.productId === selectedId) ?? null
+  const selectedProductionItemId = productionItems?.find((i) => i.itemCode === selectedProduct?.itemCode)?.productionItemId
 
   const closeDelete = useCallback(() => setDeleteRows(null), [])
 
@@ -75,12 +84,18 @@ export function Products() {
 
   const columnDefs = useMemo<ColDef<MasterProduct>[]>(
     () => [
-      { field: "itemCode", headerName: "Item Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
+      { field: "productCode", headerName: "Product Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
       { headerName: "Company Name", cellRenderer: CompanyCell },
       { headerName: "Item Name", cellRenderer: ItemNameCell },
-      { headerName: "Action", cellRenderer: EditActionCell, cellRendererParams: { onEdit: dialog.openEdit }, sortable: false, maxWidth: 80 },
+      {
+        headerName: "Action",
+        cellRenderer: ProductActionCell,
+        cellRendererParams: { onEdit: dialog.openEdit, onDuplicate: duplicateDialog.openEdit },
+        sortable: false,
+        maxWidth: 90,
+      },
     ],
-    [dialog]
+    [dialog, duplicateDialog]
   )
 
   return (
@@ -112,6 +127,7 @@ export function Products() {
         <StatesPanel
           key={selectedProduct.productId}
           productId={selectedProduct.productId}
+          productionItemId={selectedProductionItemId}
           onClose={() => setSelectedId(null)}
         />
       )}
@@ -119,12 +135,13 @@ export function Products() {
         <Drawer
           open={selectedId !== null}
           onClose={() => setSelectedId(null)}
-          title={selectedProduct ? `${selectedProduct.productionItemName} - States` : "States"}
+          title={selectedProduct ? `${selectedProduct.itemName} - States` : "States"}
         >
           {selectedProduct && (
             <StatesPanel
               key={selectedProduct.productId}
               productId={selectedProduct.productId}
+              productionItemId={selectedProductionItemId}
               className="w-full self-auto max-h-none border-0 shadow-none rounded-none"
             />
           )}
@@ -138,6 +155,13 @@ export function Products() {
         product={dialog.editing}
         onAdd={handleAdd}
         onEdit={handleEdit}
+      />
+
+      <DuplicateProductDialog
+        key={duplicateDialog.editing?.productId ?? "none"}
+        open={duplicateDialog.isOpen}
+        onClose={duplicateDialog.close}
+        product={duplicateDialog.editing ?? null}
       />
 
       <DeleteDialog

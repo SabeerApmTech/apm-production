@@ -108,7 +108,7 @@ function StockStatesColumn({ product, onClose }: { product: MasterProduct; onClo
   const isMobile = useIsMobile()
   const [selectedState, setSelectedState] = useState<string | null>(null)
   const { data, isLoading, isError } = useGetStockOperationsQuery({
-    itemCode: product.itemCode, companyName: product.companyName, productName: product.productionItemName,
+    itemCode: product.productCode, companyName: product.companyName, productName: product.itemName,
   })
   const groups = data ?? []
   const selectedGroup = groups.find((g) => g.state === selectedState) ?? null
@@ -182,14 +182,14 @@ export function ProductStockTab() {
   }
 
   const columnDefs: ColDef<MasterProduct>[] = [
-    { field: "itemCode", headerName: "Item Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
+    { field: "productCode", headerName: "Product Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
     {
       headerName: "Company Name",
       cellRenderer: ({ data }: ICellRendererParams<MasterProduct>) => data && <span>{data.companyName} - ({data.companyCode})</span>,
     },
     {
       headerName: "Item Name",
-      cellRenderer: ({ data }: ICellRendererParams<MasterProduct>) => data && <span>{data.productionItemName} - ({data.productionCode})</span>,
+      cellRenderer: ({ data }: ICellRendererParams<MasterProduct>) => data && <span>{data.itemName} - ({data.itemCode})</span>,
     },
   ]
 
@@ -215,7 +215,7 @@ export function ProductStockTab() {
         <StockStatesColumn key={selectedProduct.productId} product={selectedProduct} onClose={() => setSelectedId(null)} />
       )}
       {isMobile && (
-        <Drawer open={selectedId !== null} onClose={() => setSelectedId(null)} title={selectedProduct?.productionItemName ?? "States"}>
+        <Drawer open={selectedId !== null} onClose={() => setSelectedId(null)} title={selectedProduct?.itemName ?? "States"}>
           {selectedProduct && (
             <StockStatesColumn key={selectedProduct.productId} product={selectedProduct} />
           )}

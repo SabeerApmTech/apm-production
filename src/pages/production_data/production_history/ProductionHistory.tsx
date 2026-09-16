@@ -4,7 +4,7 @@ import { DataTable } from "@/shared/DataTable"
 import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { useGetProductionHistoryQuery } from "@/store/services/productionHistoryApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
-import { useGetProductsQuery } from "@/store/services/productApi"
+import { useGetMasterProductsQuery } from "@/store/services/productHierarchyApi"
 import type { ProductionHistoryScheduleRecord } from "@/types/productionHistory"
 import { fromIsoDate, getMonthEndIso, getMonthStartIso } from "@/utils/date"
 import { useDateRange } from "@/hooks/useDateRange"
@@ -23,7 +23,7 @@ export function ProductionHistory() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const { data: companies } = useGetCompaniesQuery()
-  const { data: products } = useGetProductsQuery()
+  const { data: products } = useGetMasterProductsQuery()
 
   // There's no company-product master mapping in this app — the history rows are the only place
   // that link the two — so derive each dropdown's options from rows scoped by the *other* filter
@@ -41,7 +41,7 @@ export function ProductionHistory() {
   const productOptions = useMemo(() => {
     if (companyName === ALL) return products ?? []
     const namesForCompany = new Set((companyRows ?? []).map((r) => r.productName))
-    return (products ?? []).filter((p) => namesForCompany.has(p.productName))
+    return (products ?? []).filter((p) => namesForCompany.has(p.itemName))
   }, [products, companyName, companyRows])
 
   const companyOptions = useMemo(() => {
@@ -136,7 +136,7 @@ export function ProductionHistory() {
             value={productName}
             onValueChange={setProductName}
             allLabel="All Products"
-            options={productOptions.map((p) => ({ value: p.productName, label: p.productName }))}
+            options={productOptions.map((p) => ({ value: p.itemName, label: p.itemName }))}
           />
         </div>
       </div>

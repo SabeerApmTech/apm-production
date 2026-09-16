@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Pencil, X } from "lucide-react"
+import { Copy, Pencil, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { DangerIconButton } from "@/shared/DangerIconButton"
 import { LoadingRow } from "@/shared/LoadingRow"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { OperationsPanel } from "./OperationsPanel"
+import { DuplicateStateOperationsDialog } from "./DuplicateStateOperationsDialog"
 import {
   useGetProductStatesQuery,
   useCreateProductStateMutation,
@@ -59,16 +60,21 @@ function StateForm({ initialState, saving, onSave, onCancel }: {
 
 interface StatesPanelProps {
   productId: number
+  /** The production item this product is based on — passed through to Operations so its
+   *  "add operation" dropdown can offer that item's own Production Stage catalog. Undefined
+   *  until the production-items list (fetched by the parent) resolves it. */
+  productionItemId?: number
   className?: string
   onClose?: () => void
 }
 
-export function StatesPanel({ productId, className, onClose }: StatesPanelProps) {
+export function StatesPanel({ productId, productionItemId, className, onClose }: StatesPanelProps) {
   const isMobile = useIsMobile()
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [editingId, setEditingId] = useState<number | "new" | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [selectedStateId, setSelectedStateId] = useState<number | null>(null)
+  const [duplicatingState, setDuplicatingState] = useState<ProductState | null>(null)
 
   const { data: states = [], isLoading, isError, refetch } = useGetProductStatesQuery(productId)
   const [createState, { isLoading: creating }] = useCreateProductStateMutation()
@@ -188,6 +194,15 @@ export function StatesPanel({ productId, className, onClose }: StatesPanelProps)
                   </span>
                   <button
                     type="button"
+                    aria-label={`Duplicate operations from ${s.state}`}
+                    disabled={busy}
+                    onClick={(e) => { e.stopPropagation(); setDuplicatingState(s) }}
+                    className="shrink-0 text-gray-300 hover:text-blue-500 transition-colors"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
                     aria-label={`Edit state ${s.state}`}
                     disabled={busy}
                     onClick={(e) => { e.stopPropagation(); setEditingId(s.productStateId) }}
@@ -219,6 +234,7 @@ export function StatesPanel({ productId, className, onClose }: StatesPanelProps)
           <OperationsPanel
             key={selectedState.productStateId}
             productStateId={selectedState.productStateId}
+            productionItemId={productionItemId}
             stateName={selectedState.state}
             onClose={() => setSelectedStateId(null)}
             className="w-full self-stretch max-h-125"
@@ -236,6 +252,7 @@ export function StatesPanel({ productId, className, onClose }: StatesPanelProps)
             <OperationsPanel
               key={selectedState.productStateId}
               productStateId={selectedState.productStateId}
+              productionItemId={productionItemId}
               stateName={selectedState.state}
               className="w-full self-auto max-h-none border-0 shadow-none rounded-none"
             />
@@ -249,6 +266,15 @@ export function StatesPanel({ productId, className, onClose }: StatesPanelProps)
         onConfirm={deleteSelected}
         title="Delete States"
         description={`Are you sure you want to delete the selected state${selected.length > 1 ? "s" : ""}? This action cannot be undone.`}
+      />
+
+      <DuplicateStateOperationsDialog
+        key={duplicatingState?.productStateId ?? "none"}
+        open={duplicatingState !== null}
+        onClose={() => setDuplicatingState(null)}
+        sourceState={duplicatingState}
+        states={states}
+        productionItemId={productionItemId}
       />
     </>
   )

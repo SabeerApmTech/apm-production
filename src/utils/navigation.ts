@@ -68,8 +68,8 @@ export const navItems: NavItem[] = [
     label: "Master Data",
     icon: Database,
     children: [
-      { label: "Production Items", path: "/master-data/production-items" },
       { label: "Products", path: "/master-data/products" },
+      { label: "Production Items", path: "/master-data/production-items" },
       { label: "Company", path: "/master-data/company" },
       { label: "Store", path: "/master-data/store" },
     ],

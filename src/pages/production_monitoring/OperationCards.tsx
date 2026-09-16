@@ -5,18 +5,17 @@ import { cn } from "@/lib/utils"
 import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { ScheduleSummaryTable } from "./ScheduleSummaryTable"
 import type { Operation, Schedule } from "./types"
-import type { IdentifierRecord } from "@/types/product"
 
 interface Props {
   schedule: Schedule
   operations: Operation[]
-  /** Used to resolve each operation's `identifierTypeId` to a display name. */
-  identifiers?: IdentifierRecord[]
   onSelect: (operation: Operation) => Promise<void>
 }
 
-export function OperationCards({ schedule, operations, identifiers, onSelect }: Props) {
+export function OperationCards({ schedule, operations, onSelect }: Props) {
   const [loadingId, setLoadingId] = useState<number | null>(null)
+  // One identifier applies across the whole schedule now, not per-operation.
+  const identifierName = schedule.identifierName
 
   const handleSelect = async (op: Operation) => {
     setLoadingId(op.operationId)
@@ -33,7 +32,6 @@ export function OperationCards({ schedule, operations, identifiers, onSelect }: 
       <div className="overflow-y-auto max-h-[calc(100vh-18rem)] pr-0.5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {operations.map(op => {
-            const identifierName = identifiers?.find((i) => i.identifierTypeId === op.identifierTypeId)?.uniqueIdentifierName
             return (
             <div key={op.operationId} className="rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-start justify-between gap-2 mb-3 pb-2.5 border-b border-blue-200">

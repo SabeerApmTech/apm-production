@@ -5,15 +5,20 @@
 
 export interface MasterProduct {
   productId: number
-  itemCode: string
+  /** The auto-generated per-company code, e.g. "LAK-001" — was called `itemCode` until the
+   *  backend split it apart from the production item's own `itemCode` below. */
+  productCode: string
   companyCode: string
   companyName: string
-  productionCode: string
-  productionItemName: string
+  /** The underlying production item's own code, e.g. "001" — see ProductionItem in
+   *  @/types/productionItem (was called `productionCode` here). */
+  itemCode: string
+  /** Was called `productionItemName`. */
+  itemName: string
 }
 
 export interface MasterProductRequest {
-  itemCode: string
+  productCode: string
   companyId: number
   productionItemId: number
 }
@@ -30,18 +35,26 @@ export interface ProductStateRequest {
 }
 
 export interface ProductStateOperation {
-  productionOperationId: number
+  productStateOperationId: number
   sequenceNumber: number
   operationCode: string
   operationName: string
 }
 
-export interface AddProductStateOperationsItem {
-  sequenceNo: number
-  operationCode: string
+// Adds one operation at a time — referenced by its id in the production item's own operation
+// catalog (see ProductionOperation in @/types/productionItem), not by code. The backend appends
+// it at the end of the state's sequence itself; there's no client-supplied sequence number.
+export interface AddProductStateOperationRequest {
+  productStateId: number
+  productionOperationId: number
 }
 
-export interface AddProductStateOperationsRequest {
+export interface ReorderProductStateOperationsItem {
+  sequenceNumber: number
+  productStateOperationId: number
+}
+
+export interface ReorderProductStateOperationsRequest {
   productStateId: number
-  items: AddProductStateOperationsItem[]
+  items: ReorderProductStateOperationsItem[]
 }

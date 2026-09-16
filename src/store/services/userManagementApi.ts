@@ -59,14 +59,22 @@ export const userManagementApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, arg) => [{ type: "UserList", id: arg.role }],
     }),
+    // PUT /UserManagement/{id}/status doesn't exist on the backend (ProductionTrackerApplication.API)
+    // — and the general PUT /UserManagement/{id} it might otherwise go through has no status/isActive
+    // field either (its UpdateUser body only covers name/DOB/employment type/phone), so there's
+    // currently no way to persist this at all. Disabled via a queryFn that resolves to an honest
+    // error (surfaced by the toast middleware) instead of hitting a route that would 404.
     updateUserStatus: builder.mutation<
       ApiResponse<null>,
       { employeeId: string; role: ManagedRole; body: UpdateUserStatusRequest }
     >({
-      query: ({ employeeId, body }) => ({
-        url: `/UserManagement/${encodeURIComponent(employeeId)}/status`,
-        method: "PUT",
-        body,
+      // query: ({ employeeId, body }) => ({
+      //   url: `/UserManagement/${encodeURIComponent(employeeId)}/status`,
+      //   method: "PUT",
+      //   body,
+      // }),
+      queryFn: async () => ({
+        error: { status: "CUSTOM_ERROR", error: "Not available", data: { success: false, message: "Changing employee status isn't available yet." } },
       }),
       invalidatesTags: (_result, _error, arg) => [{ type: "UserList", id: arg.role }],
     }),

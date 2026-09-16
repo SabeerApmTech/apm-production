@@ -5,7 +5,7 @@ export interface ClosedScheduleRecord {
   companyName: string
   companyLocation: string
   state: string
-  itemCode: string
+  productCode: string
   productName: string
   noOfOperations: number
   plannedQty: number

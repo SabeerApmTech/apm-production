@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowLeft, Check, Loader2, Search, UserRound, Users, UsersRound } from "lucide-react"
+import { ArrowLeft, Check, Loader2, Pencil, Search, UserRound, Users, UsersRound, X } from "lucide-react"
 import { toast } from "sonner"
 import {
   Dialog, DialogContent, DialogTitle,
@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils"
 import { fromIsoDate } from "@/utils/date"
 import { getAuthUser } from "@/utils/auth"
 import { LoadingRow } from "@/shared/LoadingRow"
-import { processTeamBadgeClasses } from "@/shared/processTeamBadge"
 import { useGetOperatorsQuery } from "@/store/services/userManagementApi"
 import {
   useGetAllocatedStaffQuery,
@@ -202,13 +201,14 @@ function ManageTeamView({ openScheduleId, step, onBack }: ManageTeamViewProps) {
   )
 }
 
-/* ── One operation step: planned/available/produced read-outs + consume-stock and
-   to-produce inline editors ── */
+/* ── One operation step: planned/available/produced read-outs, each editable value (Stock Used,
+   To Produce) sitting behind its own pencil icon rather than always showing an open input ── */
 function OperationStepRow({ op, openScheduleId, onManageTeam }: {
   op: OpenScheduleOperation
   openScheduleId: number
   onManageTeam: () => void
 }) {
+  const [editingField, setEditingField] = useState<"stock" | "produce" | null>(null)
   const [consumeQty, setConsumeQty] = useState("")
   const [toProduce, setToProduce] = useState(String(op.toProduce))
   const [consumeStock, { isLoading: consuming }] = useConsumeScheduleStockMutation()
@@ -221,6 +221,16 @@ function OperationStepRow({ op, openScheduleId, onManageTeam }: {
   if (op.toProduce !== prevServerToProduce) {
     setPrevServerToProduce(op.toProduce)
     setToProduce(String(op.toProduce))
+  }
+
+  function openStockEditor() {
+    setConsumeQty(String(op.stockUsed))
+    setEditingField("stock")
+  }
+
+  function openProduceEditor() {
+    setToProduce(String(op.toProduce))
+    setEditingField("produce")
   }
 
   async function handleConsume() {
@@ -236,14 +246,15 @@ function OperationStepRow({ op, openScheduleId, onManageTeam }: {
         openScheduleId,
       }).unwrap()
       setConsumeQty("")
+      setEditingField(null)
     } catch {
-      // Toast middleware already surfaced the error; keep the typed qty so the user can retry.
+      // Toast middleware already surfaced the error; keep the editor open so the user can retry.
     }
   }
 
   async function handleSaveToProduce() {
     const qty = Number(toProduce)
-    if (!qty || qty === op.toProduce) return
+    if (!qty || qty === op.toProduce) { setEditingField(null); return }
     const user = getAuthUser()
     if (!user) return
     try {
@@ -253,17 +264,23 @@ function OperationStepRow({ op, openScheduleId, onManageTeam }: {
         updatedByEmpId: user.employeeId,
         openScheduleId,
       }).unwrap()
+      setEditingField(null)
     } catch {
-      // Toast middleware already surfaced the error; keep the typed qty so the user can retry.
+      // Toast middleware already surfaced the error; keep the editor open so the user can retry.
     }
   }
+
+  // "Planned = whatever's allocated from stock + whatever still needs producing" — the allocated
+  // half is just the complement of To Produce, not read from Available/Used Stock directly, since
+  // those track the stock ledger itself rather than how much of *this* plan they cover.
+  const allocatedFromStock = Math.max(op.plannedQty - op.toProduce, 0)
 
   return (
     <div className={cn(
       "flex flex-col gap-3 rounded-2xl border p-4",
       op.noOfOperators === 0 ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"
     )}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900">
             <div className="h-3.5 w-3.5 rounded-full border-[3px] border-white" />
@@ -271,20 +288,96 @@ function OperationStepRow({ op, openScheduleId, onManageTeam }: {
           <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Step {op.sequenceNo}</p>
             <p className="wrap-break-word text-sm font-semibold text-gray-900">{op.operationName}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              {op.processTeam && (
-                <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", processTeamBadgeClasses(op.processTeam))}>
-                  {op.processTeam}
-                </span>
-              )}
-              <div className="flex items-center gap-1">
-                <Users className="h-3.5 w-3.5 text-gray-400" />
-                <span className="text-xs text-gray-500">{op.noOfOperators} operators</span>
-              </div>
-              {op.isQrApplicable && <span className="text-[11px] font-medium text-blue-500">QR</span>}
+            <div className="mt-1 flex items-center gap-1">
+              <Users className="h-3.5 w-3.5 text-gray-400" />
+              <span className="text-xs text-gray-500">{op.noOfOperators} operators</span>
             </div>
           </div>
         </div>
+
+        <div className="flex flex-1 flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-medium text-gray-400">Planned Qty</span>
+            <span className="text-sm font-semibold text-blue-600">{op.plannedQty}</span>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="w-24 shrink-0 text-[11px] font-medium text-gray-400">Available Stock</span>
+              <span className="text-sm font-semibold text-green-600">{op.availableStock}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-24 shrink-0 text-[11px] font-medium text-gray-400">Stock Used</span>
+              {editingField === "stock" ? (
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number" min={0} max={op.availableStock}
+                    value={consumeQty}
+                    onChange={(e) => setConsumeQty(e.target.value)}
+                    disabled={consuming || op.availableStock === 0}
+                    autoFocus
+                    className="h-8 w-24 text-sm"
+                  />
+                  <Button type="button" size="sm" className="h-8 px-2.5" disabled={consuming || !consumeQty} onClick={handleConsume}>
+                    {consuming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Go"}
+                  </Button>
+                  <button
+                    type="button" onClick={() => setEditingField(null)} disabled={consuming}
+                    aria-label="Cancel" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="text-sm font-semibold text-amber-600">{op.stockUsed}</span>
+                  <button
+                    type="button" onClick={openStockEditor} aria-label="Edit stock used"
+                    className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-medium text-gray-400">To Produce</span>
+            {editingField === "produce" ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number" min={0}
+                  value={toProduce}
+                  onChange={(e) => setToProduce(e.target.value)}
+                  disabled={savingToProduce}
+                  autoFocus
+                  className="h-8 w-24 text-sm font-semibold text-violet-600"
+                />
+                <Button type="button" size="sm" className="h-8 px-2.5" disabled={savingToProduce} onClick={handleSaveToProduce}>
+                  {savingToProduce ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+                </Button>
+                <button
+                  type="button" onClick={() => setEditingField(null)} disabled={savingToProduce}
+                  aria-label="Cancel" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-violet-600">{op.toProduce}</span>
+                <button
+                  type="button" onClick={openProduceEditor} aria-label="Edit to produce"
+                  className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         <button
           onClick={onManageTeam}
           className="shrink-0 rounded-full bg-amber-400 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-amber-500"
@@ -293,56 +386,8 @@ function OperationStepRow({ op, openScheduleId, onManageTeam }: {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-gray-400">Planned Qty</span>
-          <span className="text-sm font-semibold text-gray-800">{op.plannedQty}</span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-gray-400">Available Stock</span>
-          <span className={cn("text-sm font-semibold", op.availableStock > 0 ? "text-blue-600" : "text-red-500")}>
-            {op.availableStock}
-          </span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-gray-400">Consume Stock</span>
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="number" min={0} max={op.availableStock}
-              value={consumeQty}
-              onChange={(e) => setConsumeQty(e.target.value)}
-              disabled={consuming || op.availableStock === 0}
-              className="h-8 text-sm"
-            />
-            <Button type="button" size="sm" className="h-8 px-2.5" disabled={consuming || !consumeQty} onClick={handleConsume}>
-              {consuming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Go"}
-            </Button>
-          </div>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-gray-400">To Produce</span>
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="number" min={0}
-              value={toProduce}
-              onChange={(e) => setToProduce(e.target.value)}
-              disabled={savingToProduce}
-              className="h-8 text-sm font-semibold text-indigo-600"
-            />
-            {Number(toProduce) !== op.toProduce && (
-              <Button type="button" size="sm" className="h-8 px-2.5" disabled={savingToProduce} onClick={handleSaveToProduce}>
-                {savingToProduce ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <p className={cn("rounded-lg px-3 py-2 text-xs font-medium", op.availableStock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
-        {op.availableStock > 0
-          ? `${Math.min(op.availableStock, op.plannedQty)} unit(s) can be allocated from existing stock.`
-          : "No stock available. The full planned quantity needs to be produced."}
-        {" "}Produced so far: {op.producedQtyOverall}.
+      <p className="rounded-lg bg-green-100 px-3 py-2 text-xs font-medium text-green-700">
+        {allocatedFromStock} Units will be allocated from existing stock. Only {op.toProduce} Units need to be produced.
       </p>
     </div>
   )

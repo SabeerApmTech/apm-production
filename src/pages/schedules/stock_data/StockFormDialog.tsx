@@ -32,11 +32,11 @@ export function StockFormDialog({ open, onClose, stock, onAdd, onEdit }: StockFo
   const [availableStockQty, setAvailableStockQty] = React.useState(stock ? String(stock.availableStockQty) : "")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
-  const selectedProduct = (products ?? []).find((p) => p.itemCode === itemCode)
+  const selectedProduct = (products ?? []).find((p) => p.productCode === itemCode)
   const { data: states } = useGetProductStatesQuery(selectedProduct?.productId ?? 0, { skip: !selectedProduct })
   const selectedState = (states ?? []).find((s) => s.state === stateValue)
   const { data: operations } = useGetProductStateOperationsQuery(selectedState?.productStateId ?? 0, { skip: !selectedState })
-  const selectedOperation = (operations ?? []).find((o) => String(o.productionOperationId) === operationId)
+  const selectedOperation = (operations ?? []).find((o) => String(o.productStateOperationId) === operationId)
 
   // Resolve the operation select's value once its list arrives, matching the existing stock
   // row's operation by name + code — the row itself only stores those strings, not the id.
@@ -45,7 +45,7 @@ export function StockFormDialog({ open, onClose, stock, onAdd, onEdit }: StockFo
     setPrevOperations(operations)
     if (stock && !operationId) {
       const match = operations?.find((o) => o.operationName === stock.operationName && o.operationCode === stock.productionCode)
-      if (match) setOperationId(String(match.productionOperationId))
+      if (match) setOperationId(String(match.productStateOperationId))
     }
   }
 
@@ -71,11 +71,11 @@ export function StockFormDialog({ open, onClose, stock, onAdd, onEdit }: StockFo
     try {
       const companyLocation = (companies ?? []).find((c) => c.companyName === selectedProduct.companyName)?.location ?? ""
       const body: StockRequest = {
-        itemCode: selectedProduct.itemCode,
+        itemCode: selectedProduct.productCode,
         companyName: selectedProduct.companyName,
         companyLocation,
         state: selectedState.state,
-        productName: selectedProduct.productionItemName,
+        productName: selectedProduct.itemName,
         sequenceNo: selectedOperation.sequenceNumber,
         operationName: selectedOperation.operationName,
         productionCode: selectedOperation.operationCode,
@@ -109,7 +109,7 @@ export function StockFormDialog({ open, onClose, stock, onAdd, onEdit }: StockFo
           <SelectTrigger id="stockItemCode"><SelectValue placeholder="Select item code" /></SelectTrigger>
           <SelectContent>
             {(products ?? []).map((p) => (
-              <SelectItem key={p.productId} value={p.itemCode}>{p.itemCode} - {p.productionItemName}</SelectItem>
+              <SelectItem key={p.productId} value={p.productCode}>{p.productCode} - {p.itemName}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -133,7 +133,7 @@ export function StockFormDialog({ open, onClose, stock, onAdd, onEdit }: StockFo
           <SelectTrigger id="stockOperation"><SelectValue placeholder="Select operation" /></SelectTrigger>
           <SelectContent>
             {(operations ?? []).map((o) => (
-              <SelectItem key={o.productionOperationId} value={String(o.productionOperationId)}>
+              <SelectItem key={o.productStateOperationId} value={String(o.productStateOperationId)}>
                 {o.operationCode} - {o.operationName}
               </SelectItem>
             ))}

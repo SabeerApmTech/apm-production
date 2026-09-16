@@ -7,7 +7,8 @@ export function ScheduleSummaryTable({ schedule }: { schedule: Schedule }) {
     ["Schedule Date", schedule.scheduleDate],
     ["Company",       `${schedule.companyName} - ${schedule.companyLocation}`],
     ["State",         schedule.state],
-    ["Product",       schedule.productName],
+    ["Product Code",  schedule.productCode],
+    ["Item Name",     schedule.itemName],
     ["Target Date",   schedule.targetDate],
     ["Planned Qty",   schedule.plannedQty],
   ]

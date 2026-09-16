@@ -29,7 +29,7 @@ import type { OpenScheduleRecord } from "@/types/openSchedule"
 const schema = z.object({
   scheduleDate: z.string().min(1, "Schedule date is required")
     .refine((val) => !val || val >= getTodayIso(), "Schedule date cannot be in the past"),
-  itemCode:     z.string().min(1, "Product is required"),
+  productCode:  z.string().min(1, "Product is required"),
   state:        z.string().min(1, "State is required"),
   plannedQty:   z.coerce.number({ error: "Required" }).min(1, "Min 1"),
   targetDate:   z.string().min(1, "Target date is required")
@@ -62,24 +62,24 @@ export function OpenScheduleFormDrawer({
     defaultValues: schedule
       ? {
           scheduleDate:  toIsoDate(schedule.scheduleDate),
-          itemCode:      schedule.itemCode,
+          productCode:   schedule.productCode,
           state:         schedule.state,
           plannedQty:    schedule.plannedQty,
           targetDate:    toIsoDate(schedule.targetDate),
           priorityLevel: schedule.priorityLevel,
         }
       : {
-          scheduleDate: "", itemCode: "", state: "",
+          scheduleDate: "", productCode: "", state: "",
           plannedQty: undefined as unknown as number,
           targetDate: "", priorityLevel: undefined,
         },
   })
 
   const { isSubmitting } = form.formState
-  const [itemCode, setItemCode] = useState(schedule?.itemCode ?? "")
+  const [productCode, setProductCode] = useState(schedule?.productCode ?? "")
   const [stateName, setStateName] = useState(schedule?.state ?? "")
 
-  const selectedProduct = (products ?? []).find((p) => p.itemCode === itemCode)
+  const selectedProduct = (products ?? []).find((p) => p.productCode === productCode)
   const { data: states } = useGetProductStatesQuery(selectedProduct?.productId ?? 0, { skip: !selectedProduct })
   const selectedState = (states ?? []).find((s) => s.state === stateName)
   const { data: operations } = useGetProductStateOperationsQuery(selectedState?.productStateId ?? 0, { skip: !selectedState })
@@ -87,7 +87,7 @@ export function OpenScheduleFormDrawer({
 
   async function handleSubmit(data: OpenScheduleFormValues) {
     // The rest of the request body (companyName, companyLocation, productName) is resolved by
-    // the caller from `itemCode` against the same products/companies lists — same split of
+    // the caller from `productCode` against the same products/companies lists — same split of
     // responsibility the old ScheduleFormDrawer used.
     await onExternalSubmit(data)
     form.reset()
@@ -104,7 +104,7 @@ export function OpenScheduleFormDrawer({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-5">
 
-          {/* Schedule Date + Item Code */}
+          {/* Schedule Date + Product Code */}
           <div className="grid grid-cols-2 gap-4">
             <FormField control={form.control} name="scheduleDate" render={({ field }) => (
               <FormItem>
@@ -114,21 +114,21 @@ export function OpenScheduleFormDrawer({
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="itemCode" render={({ field }) => (
+            <FormField control={form.control} name="productCode" render={({ field }) => (
               <FormItem>
-                <FormLabel>Item Code</FormLabel>
+                <FormLabel>Product Code</FormLabel>
                 <Select
                   value={field.value}
-                  onValueChange={(v) => { field.onChange(v); setItemCode(v); form.setValue("state", ""); setStateName("") }}
+                  onValueChange={(v) => { field.onChange(v); setProductCode(v); form.setValue("state", ""); setStateName("") }}
                   disabled={isEdit}
                 >
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Select item code" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select product code" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {(products ?? []).map((p) => (
-                      <SelectItem key={p.productId} value={p.itemCode}>
-                        {p.itemCode} - {p.productionItemName}
+                      <SelectItem key={p.productId} value={p.productCode}>
+                        {p.productCode}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -138,15 +138,15 @@ export function OpenScheduleFormDrawer({
             )} />
           </div>
 
-          {/* Company + Product — read-only context once an item code is picked */}
+          {/* Company + Product — read-only context once a product code is picked */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <Label>Company</Label>
               <Input value={selectedProduct?.companyName ?? ""} disabled placeholder="Company name" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Product</Label>
-              <Input value={selectedProduct?.productionItemName ?? ""} disabled placeholder="Product" />
+              <Label>Item Name</Label>
+              <Input value={selectedProduct?.itemName ?? ""} disabled placeholder="Item Name" />
             </div>
           </div>
 

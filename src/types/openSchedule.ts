@@ -8,7 +8,7 @@ export interface OpenScheduleRecord {
   scheduleId: string
   scheduleNumber: number
   scheduleYear: number
-  itemCode: string
+  productCode: string
   companyName: string
   companyLocation: string
   state: string
@@ -27,7 +27,7 @@ export interface OpenScheduleRecord {
 export interface CreateOpenScheduleRequest {
   scheduleDate: string
   priorityLevel: PriorityLevel
-  itemCode: string
+  productCode: string
   companyName: string
   companyLocation: string
   state: string
@@ -40,7 +40,7 @@ export interface CreateOpenScheduleRequest {
 export interface UpdateOpenScheduleRequest {
   scheduleId: string
   scheduleDate: string
-  itemCode: string
+  productCode: string
   state: string
   plannedQty: number
   targetDate: string

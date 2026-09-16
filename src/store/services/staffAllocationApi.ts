@@ -3,19 +3,14 @@ import type { ApiResponse } from "@/types/auth"
 import type {
   AllocatedStaffMember,
   LastTeamMember,
-  OperationStepRecord,
   StaffAllocationRequest,
 } from "@/types/staffAllocation"
 
 export const staffAllocationApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getOperationsBySchedule: builder.query<OperationStepRecord[], number>({
-      query: (pendingScheduleId) => `/PendingSchedule/get-operations-of-schedule/${pendingScheduleId}`,
-      transformResponse: unwrap,
-      providesTags: (_result, _error, pendingScheduleId) => [
-        { type: "ScheduleOperations", id: pendingScheduleId },
-      ],
-    }),
+    // getOperationsBySchedule (GET /PendingSchedule/get-operations-of-schedule/{id}) removed —
+    // the backend (ProductionTrackerApplication.API) has no PendingSchedule controller at all
+    // (that flow moved to OpenSchedule long ago), and nothing in the app called this hook anyway.
     getAllocatedStaff: builder.query<AllocatedStaffMember[], number>({
       query: (operationId) => `/StaffAllocation/${operationId}`,
       transformResponse: unwrap,
@@ -47,7 +42,6 @@ export const staffAllocationApi = api.injectEndpoints({
 })
 
 export const {
-  useGetOperationsByScheduleQuery,
   useGetAllocatedStaffQuery,
   useLazyGetLastAssignedTeamQuery,
   useAllocateStaffMutation,

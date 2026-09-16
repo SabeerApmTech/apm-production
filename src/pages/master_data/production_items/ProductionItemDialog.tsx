@@ -19,18 +19,18 @@ export function ProductionItemDialog({ open, onClose, product, onAdd, onEdit }: 
   // Inactive identifiers drop out of new selections but stay selectable on a record that's
   // already using one — same convention as the process-team select elsewhere.
   const identifiers = allIdentifiers.filter((i) => i.isActive || i.identifierTypeId === product?.identifierTypeId)
-  const [productionCode, setProductionCode] = useState(product?.productionCode ?? "")
+  const [itemCode, setItemCode] = useState(product?.itemCode ?? "")
   const [itemName, setItemName] = useState(product?.itemName ?? "")
   const [identifierId, setIdentifierId] = useState(product ? String(product.identifierTypeId) : "")
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (saving || !productionCode.trim() || !itemName.trim() || !identifierId) return
+    if (saving || !itemCode.trim() || !itemName.trim() || !identifierId) return
     setSaving(true)
     try {
-      const body = { productionCode: productionCode.trim(), itemName: itemName.trim(), identifierTypeId: Number(identifierId) }
-      if (product) await onEdit(product.productionItemId, body.productionCode, body.itemName, body.identifierTypeId)
+      const body = { itemCode: itemCode.trim(), itemName: itemName.trim(), identifierTypeId: Number(identifierId) }
+      if (product) await onEdit(product.productionItemId, body.itemCode, body.itemName, body.identifierTypeId)
       else await onAdd(body)
       onClose()
     } catch {
@@ -43,10 +43,10 @@ export function ProductionItemDialog({ open, onClose, product, onAdd, onEdit }: 
   return (
     <FormDialog open={open} onClose={() => { if (!saving) onClose() }} title={product ? "Edit Production Item" : "Add Production Item"}
       onSubmit={handleSubmit} submitLabel={saving ? "Saving..." : "Save"}
-      submitDisabled={saving || !productionCode.trim() || !itemName.trim() || !identifierId}>
+      submitDisabled={saving || !itemCode.trim() || !itemName.trim() || !identifierId}>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="productionCode">Production Code</Label>
-        <Input id="productionCode" placeholder="Enter production code" value={productionCode} onChange={(e) => setProductionCode(e.target.value)} disabled={saving} required autoFocus />
+        <Label htmlFor="itemCode">Item Code</Label>
+        <Input id="itemCode" placeholder="Enter item code" value={itemCode} onChange={(e) => setItemCode(e.target.value)} disabled={saving} required autoFocus />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="productionItemName">Item Name</Label>

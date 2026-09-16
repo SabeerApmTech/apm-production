@@ -219,7 +219,6 @@ export const ProductionMonitoring = () => {
           <OperationCards
             schedule={selectedSchedule}
             operations={operations}
-            identifiers={identifiers}
             onSelect={op => selectOperation(selectedSchedule, op)}
           />
         )}

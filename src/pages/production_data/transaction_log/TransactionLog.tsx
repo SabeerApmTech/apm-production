@@ -15,7 +15,8 @@ import {
   useDeleteTransactionLogMutation,
 } from "@/store/services/transactionLogApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
-import { useGetProductsQuery, useGetOperationsQuery } from "@/store/services/productApi"
+import { useGetOperationsQuery } from "@/store/services/productApi"
+import { useGetMasterProductsQuery } from "@/store/services/productHierarchyApi"
 
 export function TransactionLog() {
   const dateRange = useDateRange()
@@ -24,7 +25,7 @@ export function TransactionLog() {
   const [operationName, setOperationName] = useState(ALL)
 
   const { data: companies } = useGetCompaniesQuery()
-  const { data: products } = useGetProductsQuery()
+  const { data: products } = useGetMasterProductsQuery()
   const { data: operations } = useGetOperationsQuery(
     { productId: Number(productId), operationType: "production" },
     { skip: productId === ALL }
@@ -33,7 +34,7 @@ export function TransactionLog() {
   // The API has no product-id filter param — resolve the selected id back to its name for the
   // real server-side `productName` filter.
   const selectedProductName = useMemo(
-    () => (productId === ALL ? undefined : products?.find((p) => String(p.productId) === productId)?.productName),
+    () => (productId === ALL ? undefined : products?.find((p) => String(p.productId) === productId)?.itemName),
     [products, productId]
   )
 
@@ -58,7 +59,7 @@ export function TransactionLog() {
   const productOptions = useMemo(() => {
     if (companyName === ALL) return products ?? []
     const namesForCompany = new Set((companyLogs ?? []).map((r) => r.productName))
-    return (products ?? []).filter((p) => namesForCompany.has(p.productName))
+    return (products ?? []).filter((p) => namesForCompany.has(p.itemName))
   }, [products, companyName, companyLogs])
 
   const companyOptions = useMemo(() => {
@@ -166,7 +167,7 @@ export function TransactionLog() {
             value={productId}
             onValueChange={handleProductChange}
             allLabel="All Products"
-            options={productOptions.map((p) => ({ value: String(p.productId), label: p.productName }))}
+            options={productOptions.map((p) => ({ value: String(p.productId), label: p.itemName }))}
           />
 
           <FilterSelect

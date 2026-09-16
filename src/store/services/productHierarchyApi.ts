@@ -1,12 +1,13 @@
 import { api, unwrap } from "../api"
 import type { ApiResponse } from "@/types/auth"
 import type {
-  AddProductStateOperationsRequest,
+  AddProductStateOperationRequest,
   MasterProduct,
   MasterProductRequest,
   ProductState,
   ProductStateOperation,
   ProductStateRequest,
+  ReorderProductStateOperationsRequest,
 } from "@/types/productHierarchy"
 
 const basePath = "/master/product"
@@ -69,12 +70,18 @@ export const productHierarchyApi = api.injectEndpoints({
       transformResponse: unwrap,
       providesTags: (_result, _error, productStateId) => [operationsTag(productStateId)],
     }),
-    addProductStateOperations: builder.mutation<ApiResponse<null>, AddProductStateOperationsRequest>({
-      query: (body) => ({ url: `${basePath}/operations`, method: "POST", body }),
+    addProductStateOperation: builder.mutation<ApiResponse<null>, AddProductStateOperationRequest>({
+      query: (body) => ({ url: `${basePath}/states/operation`, method: "POST", body }),
       invalidatesTags: (_result, _error, body) => [operationsTag(body.productStateId)],
     }),
     deleteProductStateOperations: builder.mutation<ApiResponse<null>, { productStateId: number; productStateOperationIds: number[] }>({
       query: ({ productStateOperationIds }) => ({ url: `${basePath}/operations`, method: "DELETE", body: { productStateOperationIds } }),
+      invalidatesTags: (_result, _error, { productStateId }) => [operationsTag(productStateId)],
+    }),
+    reorderProductStateOperations: builder.mutation<ApiResponse<null>, ReorderProductStateOperationsRequest>({
+      query: ({ productStateId, items }) => ({
+        url: `${basePath}/states/${productStateId}/operations/reorder`, method: "PUT", body: { items },
+      }),
       invalidatesTags: (_result, _error, { productStateId }) => [operationsTag(productStateId)],
     }),
   }),
@@ -90,6 +97,8 @@ export const {
   useUpdateProductStateMutation,
   useDeleteProductStateMutation,
   useGetProductStateOperationsQuery,
-  useAddProductStateOperationsMutation,
+  useLazyGetProductStateOperationsQuery,
+  useAddProductStateOperationMutation,
   useDeleteProductStateOperationsMutation,
+  useReorderProductStateOperationsMutation,
 } = productHierarchyApi

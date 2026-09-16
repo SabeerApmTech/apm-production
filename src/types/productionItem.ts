@@ -9,12 +9,12 @@ export interface ProductionOperation {
 
 export interface ProductionItem {
   productionItemId: number
-  productionCode: string
+  itemCode: string
   itemName: string
   identifierTypeId: number
   uniqueIdentifierName: string
   operations: ProductionOperation[]
 }
 
-export type ProductionItemRequest = Pick<ProductionItem, "productionCode" | "itemName" | "identifierTypeId">
+export type ProductionItemRequest = Pick<ProductionItem, "itemCode" | "itemName" | "identifierTypeId">
 export type ProductionOperationRequest = Pick<ProductionOperation, "operationCode" | "operationName" | "processTeamName" | "isQrApplicable">

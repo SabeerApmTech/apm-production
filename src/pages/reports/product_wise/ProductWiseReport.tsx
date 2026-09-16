@@ -4,7 +4,7 @@ import { DataTable } from "@/shared/DataTable"
 import { DateRangeFilter } from "@/shared/DateRangeFilter"
 import { FilterSelect, ALL_FILTER_VALUE as ALL } from "@/shared/FilterSelect"
 import { TabSwitcher, type TabItem } from "@/shared/TabSwitcher"
-import { useGetProductsQuery } from "@/store/services/productApi"
+import { useGetMasterProductsQuery } from "@/store/services/productHierarchyApi"
 import { useGetCompaniesQuery } from "@/store/services/companyApi"
 import { useGetProductProductionSummaryQuery } from "@/store/services/productWiseReportApi"
 import type { ProductProductionSummaryRecord } from "@/types/productWiseReport"
@@ -30,7 +30,7 @@ export function ProductWiseReport() {
   const [expandedItemCode, setExpandedItemCode] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<ViewTab>("chart")
 
-  const { data: products } = useGetProductsQuery()
+  const { data: products } = useGetMasterProductsQuery()
   const { data: companies } = useGetCompaniesQuery()
 
   const { data, isLoading, isFetching, refetch } = useGetProductProductionSummaryQuery({
@@ -55,7 +55,7 @@ export function ProductWiseReport() {
         .filter((row) => row.companies.some((c) => c.companyName === companyName))
         .map((row) => row.itemCode)
     )
-    return (products ?? []).filter((p) => codesForCompany.has(p.itemCode))
+    return (products ?? []).filter((p) => codesForCompany.has(p.productCode))
   }, [products, companyName, allSummary])
 
   const companyOptions = useMemo(() => {
@@ -134,7 +134,7 @@ export function ProductWiseReport() {
             value={itemCode}
             onValueChange={setItemCode}
             allLabel="All Products"
-            options={productOptions.map((p) => ({ value: p.itemCode, label: p.productName }))}
+            options={productOptions.map((p) => ({ value: p.productCode, label: p.itemName }))}
           />
 
           <FilterSelect

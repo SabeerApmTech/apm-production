@@ -64,7 +64,7 @@ function CloseScheduleDialog({ schedule, onClose }: { schedule: OpenScheduleReco
         <p className="text-sm text-gray-600">
           Closing <span className="font-semibold">{schedule?.scheduleId}</span> marks it complete. Confirm the final quantity produced.
         </p>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 mt-3">
           <Label htmlFor="closeQty">Close Qty</Label>
           <Input id="closeQty" type="number" min={0} value={closeQty} onChange={(e) => setCloseQty(e.target.value)} autoFocus />
         </div>
@@ -171,17 +171,17 @@ export function OpenSchedules() {
   /* ── CRUD ── */
   const handleAdd = useCallback(async (values: OpenScheduleFormValues) => {
     const user = getAuthUser()
-    const product = products?.find((p) => p.itemCode === values.itemCode)
+    const product = products?.find((p) => p.productCode === values.productCode)
     if (!user || !product) return
     const companyLocation = companies?.find((c) => c.companyName === product.companyName)?.location ?? ""
     await createOpenSchedule({
       scheduleDate: values.scheduleDate,
       priorityLevel: values.priorityLevel,
-      itemCode: values.itemCode,
+      productCode: values.productCode,
       companyName: product.companyName,
       companyLocation,
       state: values.state,
-      productName: product.productionItemName,
+      productName: product.itemName,
       plannedQty: values.plannedQty,
       targetDate: values.targetDate,
       createdByEmpId: user.employeeId,
@@ -194,7 +194,7 @@ export function OpenSchedules() {
     await updateOpenSchedule({
       scheduleId: editSchedule.scheduleId,
       scheduleDate: values.scheduleDate,
-      itemCode: values.itemCode,
+      productCode: values.productCode,
       state: values.state,
       plannedQty: values.plannedQty,
       targetDate: values.targetDate,
@@ -229,16 +229,10 @@ export function OpenSchedules() {
       { field: "priorityLevel",  headerName: "Priority Level",   cellRenderer: PriorityBadge, sortable: false, minWidth: 120 },
       { field: "scheduleDate",   headerName: "Schedule Date",    minWidth: 120 },
       { field: "scheduleId",     headerName: "Schedule ID",      minWidth: 100 },
-      { field: "itemCode",       headerName: "Item Code",        minWidth: 110 },
-      {
-        headerName: "Company",
-        valueGetter: (p: ValueGetterParams<OpenScheduleRecord>) =>
-          p.data ? `${p.data.companyName} - ${p.data.companyLocation}` : "",
-        cellStyle: { fontWeight: 600 },
-        minWidth: 160,
-      },
+      { field: "productCode",    headerName: "Product Code",     minWidth: 110 },
+      { field: "companyName",    headerName: "Company",          cellStyle: { fontWeight: 600 }, minWidth: 140 },
+      { field: "productName",    headerName: "Item Name",        cellStyle: { fontWeight: 600 }, minWidth: 110 },
       { field: "state",          headerName: "State",            minWidth: 140 },
-      { field: "productName",    headerName: "Product",          cellStyle: { fontWeight: 600 }, minWidth: 110 },
       { field: "noOfOperations", headerName: "No of Operations", minWidth: 130 },
       { field: "plannedQty",     headerName: "Planned Qty",      minWidth: 100 },
       { field: "closeQty",       headerName: "Close Qty",        minWidth: 100, valueFormatter: (p) => p.value || "-" },
@@ -268,7 +262,8 @@ export function OpenSchedules() {
               cellRenderer: ScheduleActionsCell,
               cellRendererParams: { onEdit: openEdit, onDelete: openDelete, onCloseSchedule: (row: OpenScheduleRecord) => setClosingSchedule(row) },
               sortable: false,
-              maxWidth: 120,
+              minWidth: 130,
+              maxWidth: 140,
             } satisfies ColDef<OpenScheduleRecord>,
           ]
         : []),

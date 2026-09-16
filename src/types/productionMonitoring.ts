@@ -12,9 +12,14 @@ export interface OperatorSchedule {
   companyName: string
   companyLocation: string
   state: string
-  productName: string
+  productCode: string
+  itemName: string
   targetDate: string
   plannedQty: number
+  /** The one identifier type that applies across the whole schedule (all of its QR-applicable
+   *  operations share it) — operations themselves no longer carry their own identifierTypeId. */
+  identifierId?: number
+  identifierName?: string
   isWorking?: boolean
   isTargetReached?: boolean
   workingSequenceNo?: number
@@ -25,9 +30,10 @@ export interface OperatorSchedule {
  *  step number. `producedQtyOverall` is the running cumulative total that `remainingQty` is the
  *  complement of (toProduceQty - producedQtyOverall); `sumOfProducedQty`/`oldStockQty` are the
  *  finer-grained freshly-produced-vs-carried-over-stock breakdown behind that total, not currently
- *  surfaced in the UI. isQrApplicable/identifierTypeId are optional since only some operations
- *  require a QR scan; rejectedQty is no longer returned per-operation (it's still tracked per
- *  STOP log entry, see LogReportEntry). */
+ *  surfaced in the UI. isQrApplicable is optional since only some operations require a QR scan;
+ *  rejectedQty is no longer returned per-operation (it's still tracked per STOP log entry, see
+ *  LogReportEntry). The identifier that gates a QR-applicable operation is no longer per-operation
+ *  either — see `identifierId`/`identifierName` on OperatorSchedule above. */
 export interface OperationRecord {
   operationId: number
   sequenceNo: number
@@ -37,7 +43,6 @@ export interface OperationRecord {
   producedQtyOverall: number
   remainingQty: number
   isQrApplicable?: boolean
-  identifierTypeId?: number
 }
 
 export interface LogReportEntry {
@@ -45,7 +50,9 @@ export interface LogReportEntry {
   sequenceNo: number
   logEvent: "START" | "PAUSE" | "STOP" | "RESUME"
   successfulQty: number
-  rejectedQty: number
+  /** Not present on every row (e.g. a START entry) — only meaningful once a session's been
+   *  stopped. */
+  rejectedQty?: number
   reason: string | null
   remarks: string | null
   /** Only present on the STOP row that closed out a session — the id to look up that
@@ -53,15 +60,14 @@ export interface LogReportEntry {
   transactionLogId?: number
 }
 
-/** Wire shape from GET /api/Production/operator-production-log. */
+/** The endpoint's own response is a bare array of log entries — no activeHours/idleHours
+ *  wrapper despite the name. This is the shape the rest of the app actually consumes, built by
+ *  productionMonitoringApi from that bare array. */
 export interface LogReportResponse {
   activeHours: string
   idleHours: string
   logs: LogReportEntry[]
 }
-
-/** The backend returns a bare `[]` (not the {activeHours, idleHours, logs} shape) when there are no logs yet. */
-export type RawLogReportResponse = LogReportResponse | []
 
 /** Body for POST /api/operation-qr-scan/save-bulk — codes are accumulated client-side across
  *  several scans and only sent once the operator clicks Save. */

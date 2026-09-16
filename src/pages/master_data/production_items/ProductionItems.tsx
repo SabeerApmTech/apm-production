@@ -78,12 +78,12 @@ export function ProductionItems() {
     }
   }, [deleteRows, deleteProductionItems, selectedId])
 
-  const handleAdd = useCallback(async (product: { productionCode: string; itemName: string; identifierTypeId: number }) => {
+  const handleAdd = useCallback(async (product: { itemCode: string; itemName: string; identifierTypeId: number }) => {
     await createProduct(product).unwrap()
   }, [createProduct])
 
-  const handleEdit = useCallback(async (productionItemId: number, productionCode: string, itemName: string, identifierTypeId: number) => {
-    await updateProduct({ productionItemId, body: { productionCode, itemName, identifierTypeId } }).unwrap()
+  const handleEdit = useCallback(async (productionItemId: number, itemCode: string, itemName: string, identifierTypeId: number) => {
+    await updateProduct({ productionItemId, body: { itemCode, itemName, identifierTypeId } }).unwrap()
   }, [updateProduct])
 
   const onRowClicked = useCallback((e: RowClickedEvent<ProductionItem>) => {
@@ -96,7 +96,7 @@ export function ProductionItems() {
 
   const columnDefs = useMemo<ColDef<ProductionItem>[]>(
     () => [
-      { field: "productionCode",     headerName: "Production Code", cellStyle: { color: "#3b82f6", fontWeight: 500 } },
+      { field: "itemCode",           headerName: "Item Code",       cellStyle: { color: "#3b82f6", fontWeight: 500 } },
       { field: "itemName",  headerName: "Item Name" },
       { field: "uniqueIdentifierName", headerName: "Identifier" },
       { headerName: "Operations", cellRenderer: StagesCell, sortable: false },
